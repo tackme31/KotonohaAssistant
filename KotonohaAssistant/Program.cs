@@ -129,6 +129,8 @@ internal class Program
             manager.AddUserMessage($"私: {stdin}");
 
             var completion = await client.CompleteChatAsync(manager.ChatMessages, options);
+
+            // 連続してお願いした回数をカウント
             if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
             {
                 if (prevSister == manager.CurrentSister)
@@ -146,6 +148,8 @@ internal class Program
             if (ShouldBeLazy(completion.Value, againCounter))
             {
                 completion = await PassTaskToAnotherSisterAsync(client, options, manager);
+
+                // 怠けると姉妹が入れ替わるのでカウンターをリセット
                 againCounter = 1;
             }
 

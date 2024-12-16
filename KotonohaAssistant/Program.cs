@@ -6,12 +6,15 @@ using OpenAI.Chat;
 using KotonohaAssistant.Functions;
 using KotonohaAssistant.Utils;
 using System.Linq;
+using System.ClientModel;
+using System.Text.RegularExpressions;
 
 namespace KotonohaAssistant;
 
 internal class Program
 {
     private static readonly Random R = new();
+    private static readonly VoiceEditorController VoiceEditor = new ();
 
     // 呼び出し可能な関数の一覧
     private static readonly Dictionary<string, ToolFunction> Functions = new()
@@ -36,7 +39,18 @@ internal class Program
     {
         var (client, options) = Setup();
 
-        await StartConversation(client, options);
+        try
+        {
+            await StartConversationAsync(client, options);
+        }
+        catch (Exception e)
+        {
+            await VoiceEditor.SpeakAsync(SisterType.KotonohaAkane, $"おっ、エラーやな。えっと、「{e.Message}」らしいで。");
+            await Task.Delay(750);
+            await VoiceEditor.SpeakAsync(SisterType.KotonohaAoi, $"詳しくはログに書いておいたよ。マスター、早く直してね。");
+
+            // TODO: ログ出力
+        }
     }
 
     private static bool ShouldBeLazy(ChatCompletion completionValue)
@@ -54,14 +68,14 @@ internal class Program
         }
 
         // 1/10の確率で怠け癖発動
-        return R.NextDouble() < 1d / 3d;
+        return R.NextDouble() < 1d / 10d;
     }
 
     private static (ChatClient client, ChatCompletionOptions options) Setup()
     {
         DotNetEnv.Env.TraversePath().Load();
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 
+        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
         var client = new ChatClient("gpt-4o-mini", apiKey);
         var options = new ChatCompletionOptions();
 
@@ -70,14 +84,13 @@ internal class Program
             options.Tools.Add(function.CreateChatTool());
         }
 
+        VoiceEditor.InitializeHost();
+
         return (client, options);
     }
 
-    private static async Task StartConversation(ChatClient client, ChatCompletionOptions options)
+    private static async Task StartConversationAsync(ChatClient client, ChatCompletionOptions options)
     {
-        var editorController = new EditorController();
-        editorController.InitializeHost();
-
         var manager = new ChatMessageManager(SisterType.KotonohaAkane);
         manager.AddAssistantMessage("[葵] はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
         manager.AddAssistantMessage("[茜] 今日からうちらがマスターのことサポートするで。");
@@ -108,39 +121,7 @@ internal class Program
             // 怠け癖発動
             if (ShouldBeLazy(completion.Value))
             {
-                Console.WriteLine("怠け癖発動");
-
-                // 怠け者モードをONにして、再度呼び出し。
-                manager.AddUserMessage("[System] LazyMode=ON: 以降、関数を呼び出さないでください。");
-                completion = await client.CompleteChatAsync(manager.ChatMessages, options);
-
-                // それでも関数呼び出しされることがあるのでチェック
-                if (completion.Value.FinishReason != ChatFinishReason.Stop)
-                {
-                    // 怠け者モードをOFF
-                    manager.AddUserMessage("[System] LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
-                }
-                else
-                {
-                    manager.AddAssistantMessage(completion.Value);
-
-                    Console.WriteLine(completion.Value.Content[0].Text);
-                    await editorController.SpeakAsync(manager.CurrentSister, completion.Value.Content[0].Text.Replace("[茜]", "").Replace("[葵]", ""));
-
-
-                    // 怠け者モードをOFF
-                    manager.AddUserMessage("[System] LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
-
-                    // 姉妹を切り替えて、再度呼び出し
-                    manager.CurrentSister = manager.CurrentSister switch
-                    {
-                        SisterType.KotonohaAkane => SisterType.KotonohaAoi,
-                        SisterType.KotonohaAoi => SisterType.KotonohaAkane,
-                        _ => manager.CurrentSister
-                    };
-                    completion = await client.CompleteChatAsync(manager.ChatMessages, options);
-
-                }
+                completion = await PassTaskToAnotherSisterAsync(client, options, manager);
             }
 
             manager.AddAssistantMessage(completion.Value);
@@ -165,8 +146,49 @@ internal class Program
                 manager.AddAssistantMessage(completion.Value);
             }
 
-            Console.WriteLine(completion.Value.Content[0].Text);
-            await editorController.SpeakAsync(manager.CurrentSister, completion.Value.Content[0].Text.Replace("[茜]", "").Replace("[葵]", ""));
+            await SpeakCompletionAsync(completion, manager.CurrentSister);
         }
+    }
+
+    private static async Task<ClientResult<ChatCompletion>> PassTaskToAnotherSisterAsync(ChatClient client, ChatCompletionOptions options, ChatMessageManager manager)
+    {
+        // 怠け者モードをONにして、再度呼び出し。
+        manager.AddUserMessage("[System] LazyMode=ON: 以降、関数を呼び出さないでください。");
+        var completion = await client.CompleteChatAsync(manager.ChatMessages, options);
+
+        // それでも関数呼び出しされることがあるのでチェック
+        if (completion.Value.FinishReason != ChatFinishReason.Stop)
+        {
+            // 怠け者モードをOFF
+            manager.AddUserMessage("[System] LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
+
+            return completion;
+        }
+
+
+        manager.AddAssistantMessage(completion.Value);
+
+        await SpeakCompletionAsync(completion, manager.CurrentSister);
+
+        // 怠け者モードをOFF
+        manager.AddUserMessage("[System] LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
+
+        // 姉妹を切り替えて、再度呼び出し
+        manager.CurrentSister = manager.CurrentSister switch
+        {
+            SisterType.KotonohaAkane => SisterType.KotonohaAoi,
+            SisterType.KotonohaAoi => SisterType.KotonohaAkane,
+            _ => manager.CurrentSister
+        };
+        return await client.CompleteChatAsync(manager.ChatMessages, options);
+    }
+
+    private static Task SpeakCompletionAsync(ClientResult<ChatCompletion> completion, SisterType sister)
+    {
+        var message = completion.Value.Content[0].Text;
+        Console.WriteLine(message);
+
+        var messageWithoutName = Regex.Replace(message, @"^\[(茜|葵)\]", string.Empty);
+        return VoiceEditor.SpeakAsync(sister, messageWithoutName);
     }
 }

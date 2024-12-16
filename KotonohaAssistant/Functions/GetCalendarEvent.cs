@@ -31,9 +31,9 @@ class GetCalendarEvent : ToolFunction
     System.Console.WriteLine($"  => {nameof(GetCalendarEvent)}(date={date})");
 
     return """
-[終日] 宝石の13巻発売日
-15:00 - 16:00 通院
-21:00 - 21:30 原神バージョン予告放送
+[終日] 原神アップデート日
+[15:00 - 16:00] 通院
+[18:00 - 20:00] Amazon荷物受け取り
 """;
   }
 }

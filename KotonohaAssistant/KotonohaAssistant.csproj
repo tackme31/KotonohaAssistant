@@ -244,7 +244,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SisterType.cs" />
     <Compile Include="SystemMessage.cs" />
-    <Compile Include="Utils\EditorController.cs" />
+    <Compile Include="Utils\VoiceEditorController.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

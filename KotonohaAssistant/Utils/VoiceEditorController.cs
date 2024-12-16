@@ -1,12 +1,11 @@
 ﻿using AI.Talk.Editor.Api;
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace KotonohaAssistant.Utils;
 
-class EditorController
+class VoiceEditorController
 {
     private readonly TtsControl _ttsControl = new();
     private static readonly int _waitCheckInterval = 500;

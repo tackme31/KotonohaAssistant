@@ -4,21 +4,22 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using OpenAI.Chat;
 using KotonohaAssistant.Functions;
+using KotonohaAssistant.Utils;
 
 namespace KotonohaAssistant;
 
 internal class Program
 {
     private static readonly Random R = new();
-    private static Dictionary<string, ToolFunction> Functions = new()
+    private static readonly Dictionary<string, ToolFunction> Functions = new()
     {
         [nameof(SetAlarm)] = new SetAlarm(),
-        //[nameof(StartTimer)] = new StartTimer(),
-        //[nameof(CreateCalendarEvent)] = new CreateCalendarEvent(),
+        [nameof(StartTimer)] = new StartTimer(),
+        [nameof(CreateCalendarEvent)] = new CreateCalendarEvent(),
         [nameof(GetCalendarEvent)] = new GetCalendarEvent(),
         [nameof(GetWeather)] = new GetWeather(),
-        //[nameof(TurnOnHeater)] = new TurnOnHeater(),
-        //[nameof(ForgetMemory)] = new ForgetMemory(),
+        [nameof(TurnOnHeater)] = new TurnOnHeater(),
+        [nameof(ForgetMemory)] = new ForgetMemory(),
     };
 
     static async Task Main(string[] args)
@@ -28,7 +29,7 @@ internal class Program
         await StartConversation(client, options);
     }
 
-    private static bool ShouldBeLazy() => R.NextDouble() < 0.1;
+    private static bool ShouldBeLazy() => R.NextDouble() < 1d/10d; // 1/10の確率で怠け癖発動
 
     private static (ChatClient client, ChatCompletionOptions options) Setup()
     {
@@ -48,6 +49,9 @@ internal class Program
 
     private static async Task StartConversation(ChatClient client, ChatCompletionOptions options)
     {
+        var editorController = new EditorController();
+        editorController.InitializeHost();
+
         var manager = new ChatMessageManager(SisterType.KotonohaAkane);
         manager.AddAssistantMessage("[葵] はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
         manager.AddAssistantMessage("[茜] 今日からうちらがマスターのことサポートするで。");
@@ -56,7 +60,7 @@ internal class Program
 
         while (true)
         {
-            Console.Write("[私]: ");
+            Console.Write("[私] ");
             var stdin = Console.ReadLine();
             if (string.IsNullOrEmpty(stdin))
             {
@@ -72,12 +76,14 @@ internal class Program
                 manager.CurrentSister = SisterType.KotonohaAoi;
             }
 
-            manager.AddUserMessage("[私]: " + stdin);
+            manager.AddUserMessage("[私] " + stdin);
 
             var completion = await client.CompleteChatAsync(manager.ChatMessages, options);
             // 怠け癖発動
             if (ShouldBeLazy() && completion.Value.FinishReason == ChatFinishReason.ToolCalls)
             {
+                Console.WriteLine("怠け癖発動");
+
                 // 怠け者モードをONにして、再度呼び出し。
                 manager.AddUserMessage("[System] LazyMode=ON: 以降、関数を呼び出さないでください。");
                 completion = await client.CompleteChatAsync(manager.ChatMessages, options);
@@ -91,7 +97,10 @@ internal class Program
                 else
                 {
                     manager.AddAssistantMessage(completion.Value);
+
                     Console.WriteLine(completion.Value.Content[0].Text);
+                    await editorController.SpeakAsync(manager.CurrentSister, completion.Value.Content[0].Text.Replace("[茜]", "").Replace("[葵]", ""));
+
 
                     // 怠け者モードをOFF
                     manager.AddUserMessage("[System] LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
@@ -131,6 +140,7 @@ internal class Program
             }
 
             Console.WriteLine(completion.Value.Content[0].Text);
+            await editorController.SpeakAsync(manager.CurrentSister, completion.Value.Content[0].Text.Replace("[茜]", "").Replace("[葵]", ""));
         }
     }
 }

@@ -5,12 +5,15 @@ using System.Text.Json;
 using OpenAI.Chat;
 using KotonohaAssistant.Functions;
 using KotonohaAssistant.Utils;
+using System.Linq;
 
 namespace KotonohaAssistant;
 
 internal class Program
 {
     private static readonly Random R = new();
+
+    // 呼び出し可能な関数の一覧
     private static readonly Dictionary<string, ToolFunction> Functions = new()
     {
         [nameof(SetAlarm)] = new SetAlarm(),
@@ -22,6 +25,13 @@ internal class Program
         [nameof(ForgetMemory)] = new ForgetMemory(),
     };
 
+    // 怠け癖の対象外の関数
+    private static readonly HashSet<string> ForceCalledFunctions = new()
+    {
+        nameof(StartTimer),
+        nameof(ForgetMemory)
+    };
+
     static async Task Main(string[] args)
     {
         var (client, options) = Setup();
@@ -29,7 +39,23 @@ internal class Program
         await StartConversation(client, options);
     }
 
-    private static bool ShouldBeLazy() => R.NextDouble() < 1d/10d; // 1/10の確率で怠け癖発動
+    private static bool ShouldBeLazy(ChatCompletion completionValue)
+    {
+        // 関数呼び出し以外は怠けない
+        if (completionValue.FinishReason != ChatFinishReason.ToolCalls)
+        {
+            return false;
+        }
+
+        // 怠け癖対象外の関数なら怠けない
+        if (completionValue.ToolCalls.Any(toolCall => ForceCalledFunctions.Contains(toolCall.FunctionName)))
+        {
+            return false;
+        }
+
+        // 1/10の確率で怠け癖発動
+        return R.NextDouble() < 1d / 3d;
+    }
 
     private static (ChatClient client, ChatCompletionOptions options) Setup()
     {
@@ -80,7 +106,7 @@ internal class Program
 
             var completion = await client.CompleteChatAsync(manager.ChatMessages, options);
             // 怠け癖発動
-            if (ShouldBeLazy() && completion.Value.FinishReason == ChatFinishReason.ToolCalls)
+            if (ShouldBeLazy(completion.Value))
             {
                 Console.WriteLine("怠け癖発動");
 

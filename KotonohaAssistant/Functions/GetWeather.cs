@@ -7,7 +7,7 @@ class GetWeather : ToolFunction
   public override string Description => """
 指定された日の天気を取得します。天気を尋ねられたときに呼び出されます。
 
-呼び出される例:「今日の天気は？」「今日は傘必要そう？」
+呼び出される例:「今日の天気は？」「今日は傘必要そう？」「今って晴れてる？」
 """;
 
   public override string Parameters =>  """

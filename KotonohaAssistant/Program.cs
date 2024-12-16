@@ -99,9 +99,9 @@ internal class Program
     private static async Task StartConversationAsync(ChatClient client, ChatCompletionOptions options)
     {
         var manager = new ChatMessageManager(SisterType.KotonohaAkane);
-        manager.AddAssistantMessage("[葵] はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
-        manager.AddAssistantMessage("[茜] 今日からうちらがマスターのことサポートするで。");
-        manager.AddUserMessage("[私] うん。よろしくね。");
+        manager.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
+        manager.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
+        manager.AddUserMessage("私: うん。よろしくね。");
         manager.AddUserMessage("======= LazyMode: OFF =======");
 
         // 同じ方に連続してお願いすると怠ける
@@ -110,7 +110,7 @@ internal class Program
 
         while (true)
         {
-            Console.Write("[私] ");
+            Console.Write("私: ");
             var stdin = Console.ReadLine();
             if (string.IsNullOrEmpty(stdin))
             {
@@ -126,7 +126,7 @@ internal class Program
                 manager.CurrentSister = SisterType.KotonohaAoi;
             }
 
-            manager.AddUserMessage("[私] " + stdin);
+            manager.AddUserMessage($"私: {stdin}");
 
             var completion = await client.CompleteChatAsync(manager.ChatMessages, options);
             if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
@@ -141,8 +141,6 @@ internal class Program
                     prevSister = manager.CurrentSister;
                 }
             }
-
-            Console.WriteLine($"counter: {againCounter},sister: {manager.CurrentSister}");
 
             // 怠け癖発動
             if (ShouldBeLazy(completion.Value, againCounter))
@@ -180,14 +178,14 @@ internal class Program
     private static async Task<ClientResult<ChatCompletion>> PassTaskToAnotherSisterAsync(ChatClient client, ChatCompletionOptions options, ChatMessageManager manager)
     {
         // 怠け者モードをONにして、再度呼び出し。
-        manager.AddUserMessage("[System] LazyMode=ON: 以降、関数を呼び出さないでください。");
+        manager.AddUserMessage("[Hint]: LazyMode=ON: 以降、関数を呼び出さないでください。");
         var completion = await client.CompleteChatAsync(manager.ChatMessages, options);
 
         // それでも関数呼び出しされることがあるのでチェック
         if (completion.Value.FinishReason != ChatFinishReason.Stop)
         {
             // 怠け者モードをOFF
-            manager.AddUserMessage("[System] LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
+            manager.AddUserMessage("[Hint]: LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
 
             return completion;
         }
@@ -198,15 +196,31 @@ internal class Program
         await SpeakCompletionAsync(completion, manager.CurrentSister);
 
         // 怠け者モードをOFF
-        manager.AddUserMessage("[System] LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
+        manager.AddUserMessage("[Hint]: LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
 
         // 姉妹を切り替えて、再度呼び出し
-        manager.CurrentSister = manager.CurrentSister switch
+        var nextSister = manager.CurrentSister switch
         {
             SisterType.KotonohaAkane => SisterType.KotonohaAoi,
             SisterType.KotonohaAoi => SisterType.KotonohaAkane,
             _ => manager.CurrentSister
         };
+
+        var prev = manager.CurrentSister switch
+        {
+            SisterType.KotonohaAkane => "茜",
+            SisterType.KotonohaAoi => "葵",
+            _ => string.Empty
+        };
+        var next = nextSister switch
+        {
+            SisterType.KotonohaAkane => "茜",
+            SisterType.KotonohaAoi => "葵",
+            _ => string.Empty
+        };
+        manager.AddUserMessage($"[Hint]: 姉妹が切り替わりました({prev} => {next})");
+
+        manager.CurrentSister = nextSister;
         return await client.CompleteChatAsync(manager.ChatMessages, options);
     }
 
@@ -215,7 +229,7 @@ internal class Program
         var message = completion.Value.Content[0].Text;
         Console.WriteLine(message);
 
-        var messageWithoutName = Regex.Replace(message, @"^\[(茜|葵)\]", string.Empty);
+        var messageWithoutName = Regex.Replace(message, @"^(茜|葵):", string.Empty);
         return VoiceEditor.SpeakAsync(sister, messageWithoutName);
     }
 }

@@ -53,7 +53,7 @@ internal class Program
         }
     }
 
-    private static bool ShouldBeLazy(ChatCompletion completionValue)
+    private static bool ShouldBeLazy(ChatCompletion completionValue, int againCounter)
     {
         // 関数呼び出し以外は怠けない
         if (completionValue.FinishReason != ChatFinishReason.ToolCalls)
@@ -67,8 +67,15 @@ internal class Program
             return false;
         }
 
+        // 4回以上同じ方にお願いすると怠ける
+        if (againCounter > 3)
+        {
+            return true;
+        }
+
         // 1/10の確率で怠け癖発動
-        return R.NextDouble() < 1d / 10d;
+        var lazy = R.NextDouble() < 1d / 10d;
+        return lazy;
     }
 
     private static (ChatClient client, ChatCompletionOptions options) Setup()
@@ -97,6 +104,10 @@ internal class Program
         manager.AddUserMessage("[私] うん。よろしくね。");
         manager.AddUserMessage("======= LazyMode: OFF =======");
 
+        // 同じ方に連続してお願いすると怠ける
+        var againCounter = 0;
+        var prevSister = SisterType.KotonohaAkane;
+
         while (true)
         {
             Console.Write("[私] ");
@@ -118,10 +129,26 @@ internal class Program
             manager.AddUserMessage("[私] " + stdin);
 
             var completion = await client.CompleteChatAsync(manager.ChatMessages, options);
+            if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
+            {
+                if (prevSister == manager.CurrentSister)
+                {
+                    againCounter++;
+                }
+                else
+                {
+                    againCounter = 1;
+                    prevSister = manager.CurrentSister;
+                }
+            }
+
+            Console.WriteLine($"counter: {againCounter},sister: {manager.CurrentSister}");
+
             // 怠け癖発動
-            if (ShouldBeLazy(completion.Value))
+            if (ShouldBeLazy(completion.Value, againCounter))
             {
                 completion = await PassTaskToAnotherSisterAsync(client, options, manager);
+                againCounter = 1;
             }
 
             manager.AddAssistantMessage(completion.Value);

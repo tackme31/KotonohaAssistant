@@ -8,6 +8,7 @@ using KotonohaAssistant.Utils;
 using System.Linq;
 using System.ClientModel;
 using System.Text.RegularExpressions;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace KotonohaAssistant;
 
@@ -117,13 +118,17 @@ internal class Program
                 continue;
             }
 
-            if (stdin.Contains("茜") || stdin.Contains("あかね"))
+            if (manager.CurrentSister == SisterType.KotonohaAoi &&
+                (stdin.Contains("茜") || stdin.Contains("あかね")))
             {
                 manager.CurrentSister = SisterType.KotonohaAkane;
+                manager.AddUserMessage($"[Hint]: 姉妹が切り替わりました(葵 => 茜)");
             }
-            if (stdin.Contains("葵") || stdin.Contains("あおい"))
+            if (manager.CurrentSister == SisterType.KotonohaAkane &&
+                (stdin.Contains("葵") || stdin.Contains("あおい")))
             {
                 manager.CurrentSister = SisterType.KotonohaAoi;
+                manager.AddUserMessage($"[Hint]: 姉妹が切り替わりました(茜 => 葵)");
             }
 
             manager.AddUserMessage($"私: {stdin}");

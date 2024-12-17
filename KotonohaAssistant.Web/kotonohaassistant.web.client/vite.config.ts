@@ -49,7 +49,12 @@ export default defineConfig({
             '^/weatherforecast': {
                 target: 'https://localhost:7296/',
                 secure: false
-            }
+            },
+            '^/chathub': {
+                target: 'https://localhost:7296/', // SignalRエンドポイントを指定
+                ws: true, // WebSocketを使用するための設定
+                secure: false,
+            },
         },
         port: 5173,
         https: {

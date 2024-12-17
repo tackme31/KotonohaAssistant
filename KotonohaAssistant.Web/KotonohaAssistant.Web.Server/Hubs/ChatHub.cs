@@ -8,20 +8,20 @@ public class ChatHub : Hub
 {
     private static readonly List<ToolFunction> Functions =
     [
-        new SetAlarm(),
+/*        new SetAlarm(),
         new StartTimer(),
         new CreateCalendarEvent(),
         new GetCalendarEvent(),
         new GetWeather(),
         new TurnOnHeater(),
-        new ForgetMemory(),
+        new ForgetMemory(),*/
     ];
 
     // 怠け癖の対象外の関数
     private static readonly List<string> ExcludeFunctionNamesFromLazyMode =
     [
-        nameof(StartTimer),
-        nameof(ForgetMemory)
+/*        nameof(StartTimer),
+        nameof(ForgetMemory)*/
     ];
 
     private static ConversationService? ConversationService;
@@ -38,9 +38,9 @@ public class ChatHub : Hub
 
         await foreach (var text in ConversationService.SpeakAI(message))
         {
-            await Clients.Caller.SendAsync("MessageGenerated", text);
+            await Clients.Caller.SendAsync("Generated", text);
         }
 
-        await Clients.Caller.SendAsync("Complete", "読み上げが完了しました。");
+        await Clients.Caller.SendAsync("Complete", "COMPLETED");
     }
 }

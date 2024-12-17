@@ -109,6 +109,10 @@ public class ConversationService
             // 怠けると姉妹が入れ替わるのでカウンターをリセット
             _againCounter = 1;
         }
+        else
+        {
+            _messageManager.AddAssistantMessage(completion.Value);
+        }
 
         while (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
         {

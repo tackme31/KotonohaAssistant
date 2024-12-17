@@ -1,38 +1,15 @@
 ﻿import { useState, useRef, useCallback, useEffect } from 'react';
 import { hasTriggerWords } from '../triggerWords';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
-import * as signalR from '@microsoft/signalr';
-
-const useChatHubConnection = () => {
-    const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
-
-    useEffect(() => {
-        const newConnection = new signalR.HubConnectionBuilder()
-            .withUrl("chathub") // SignalRのURL
-            .build();
-
-        newConnection.start()
-            .then(() => {
-                console.log("SignalR接続成功");
-                setConnection(newConnection);
-            })
-            .catch((err) => {
-                console.error("SignalR接続エラー", err);
-            });
-
-        return () => {
-            newConnection.stop();
-        };
-    }, []);
-
-    return connection;
-}
+import { useChatHubConnection } from '../hooks/useChatHubConnection';
 
 export const Conversation = () => {
     const [messages, setMessages] = useState<string[]>([]);
+    const [talkingText, setTalkingText] = useState<string>();
+    const [isYourTurn, setIsYourTurn] = useState<boolean>(true);
     const [isInConversation, setIsInConversation] = useState<boolean>(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const connection = useChatHubConnection();
+    const [connectionStatus, connection] = useChatHubConnection();
 
     // 無言が5秒以上続いた場合にフラグをfalseにする
     const resetInactivityTimer = useCallback(() => {
@@ -46,14 +23,21 @@ export const Conversation = () => {
     }, []);
 
     const handleSpeechResult = useCallback(async (event: SpeechRecognitionEvent) => {
+        if (!isYourTurn) {
+            return;
+        }
+
         resetInactivityTimer();
 
         const lastResult = event.results[event.results.length - 1];
-        if (!lastResult.isFinal) return;
-
         const lastTranscript = lastResult[0].transcript;
+        setTalkingText(lastTranscript);
+        if (!lastResult.isFinal) {
+            return;
+        }
+
         if (isInConversation) {
-            setMessages(prev => [...prev, lastTranscript]);
+            setMessages(prev => [...prev, "私: " + lastTranscript]);
             if (connection) {
                 // 会話中のメッセージもAPIに送信
                 await connection.send("SendMessage", lastTranscript);
@@ -63,7 +47,7 @@ export const Conversation = () => {
         if (hasTriggerWords(lastTranscript)) {
             if (!isInConversation) {
                 setIsInConversation(true);
-                setMessages(prev => [...prev, lastTranscript]);
+                setMessages(prev => [...prev, "私: " + lastTranscript]);
 
                 if (connection) {
                     // トリガーワード検出時にAPIにメッセージを送信
@@ -71,15 +55,8 @@ export const Conversation = () => {
                 }
             }
         }
-    }, [isInConversation, resetInactivityTimer, hasTriggerWords, connection]);
+    }, [isInConversation, resetInactivityTimer, hasTriggerWords, connection, isYourTurn]);
 
-    useEffect(() => {
-        if (connection) {
-            connection.on("ReceiveMessage", (message: string) => {
-                setMessages(prev => [...prev, message]);
-            });
-        }
-    }, [connection])
 
     useSpeechRecognition({
         lang: "ja-JP",
@@ -88,12 +65,43 @@ export const Conversation = () => {
         onResult: handleSpeechResult
     })
 
+    useEffect(() => {
+        if (connection) {
+            connection.on("Generated", (message: string) => {
+                setIsYourTurn(false);
+                setMessages(prev => [...prev, message]);
+            });
+
+            connection.on("Complete", () => {
+                setIsYourTurn(true);
+                resetInactivityTimer();
+                setIsInConversation(true);
+            });
+        }
+
+        return () => {
+            if (connection) {
+                connection.off("Generated");
+                connection.off("Complete");
+            }
+        }
+    }, [connection, resetInactivityTimer])
+
     return (
         <div>
             <div>
-                {messages.map((message, i) => (<p key={i}>{message}</p>))}
+                <div>
+                    {messages.map((message, i) => (
+                        <div>
+                            <p key={i}>{message}</p>
+                            <hr />
+                        </div>))}
+                </div>
+                {isYourTurn && <p>私: {talkingText}</p>}
+                <p>あなたの番?: {isYourTurn ? "YES" : "NO"}</p>
+                <p>会話中?: {isInConversation ? "YES" : "NO"}</p>
+                <p>接続状況: {connectionStatus}</p>
             </div>
-            <p>Conversation: {isInConversation ? 'ON' : 'OFF'}</p>
         </div>
     );
 }

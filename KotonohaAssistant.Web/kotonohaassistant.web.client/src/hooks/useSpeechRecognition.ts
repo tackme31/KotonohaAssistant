@@ -28,4 +28,6 @@ export const useSpeechRecognition = ({ lang = 'ja-JP', continuous = true, interi
 
         return () => recognition.stop();
     }, [lang, continuous, interimResults, onResult]);
+
+    return recognitionRef;
 };

@@ -3,6 +3,9 @@ import { hasTriggerWords } from '../triggerWords';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useChatHubConnection } from '../hooks/useChatHubConnection';
 
+// 返事を始めるまでのタイムリミット
+const limit = 10 * 1000;
+
 export const Conversation = () => {
     const [messages, setMessages] = useState<string[]>([]);
     const [talkingText, setTalkingText] = useState<string>();
@@ -11,7 +14,7 @@ export const Conversation = () => {
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [connectionStatus, connection] = useChatHubConnection();
 
-    // 無言が5秒以上続いた場合にフラグをfalseにする
+    // 無言が指定時間以上続いた場合にフラグをfalseにする
     const resetInactivityTimer = useCallback(() => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
@@ -19,7 +22,7 @@ export const Conversation = () => {
 
         timeoutRef.current = setTimeout(() => {
             setIsInConversation(false);
-        }, 5000); // 5秒間無言が続いたら反応を停止
+        }, limit);
     }, []);
 
     const handleSpeechResult = useCallback(async (event: SpeechRecognitionEvent) => {

@@ -9,9 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KotonohaAssistant.Core", "K
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.Cli", "KotonohaAssistant.Cli\KotonohaAssistant.Cli.csproj", "{64B30B82-1E67-4065-B2FF-471E9FAE48B7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.Web.Server", "KotonohaAssistant.Web\KotonohaAssistant.Web.Server\KotonohaAssistant.Web.Server.csproj", "{0B01D1C7-10A2-40C4-B00C-9A86A5CF08E9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KotonohaAssistant.Web.Server", "KotonohaAssistant.Web\KotonohaAssistant.Web.Server\KotonohaAssistant.Web.Server.csproj", "{6E51D898-FD57-462B-AA2B-3459E7371666}"
 EndProject
-Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "kotonohaassistant.web.client", "KotonohaAssistant.Web\kotonohaassistant.web.client\kotonohaassistant.web.client.esproj", "{4F3DE24C-561B-4B34-BECE-664CF1B2D8DE}"
+Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "kotonohaassistant.web.client", "KotonohaAssistant.Web\kotonohaassistant.web.client\kotonohaassistant.web.client.esproj", "{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,16 +31,16 @@ Global
 		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0B01D1C7-10A2-40C4-B00C-9A86A5CF08E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0B01D1C7-10A2-40C4-B00C-9A86A5CF08E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0B01D1C7-10A2-40C4-B00C-9A86A5CF08E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0B01D1C7-10A2-40C4-B00C-9A86A5CF08E9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4F3DE24C-561B-4B34-BECE-664CF1B2D8DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4F3DE24C-561B-4B34-BECE-664CF1B2D8DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4F3DE24C-561B-4B34-BECE-664CF1B2D8DE}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
-		{4F3DE24C-561B-4B34-BECE-664CF1B2D8DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4F3DE24C-561B-4B34-BECE-664CF1B2D8DE}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4F3DE24C-561B-4B34-BECE-664CF1B2D8DE}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{6E51D898-FD57-462B-AA2B-3459E7371666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E51D898-FD57-462B-AA2B-3459E7371666}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E51D898-FD57-462B-AA2B-3459E7371666}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E51D898-FD57-462B-AA2B-3459E7371666}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

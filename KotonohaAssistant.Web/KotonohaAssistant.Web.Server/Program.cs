@@ -22,6 +22,9 @@ builder.Services.AddSwaggerGen();
 // SignalR service
 builder.Services.AddSignalR();
 
+// load .env
+DotNetEnv.Env.TraversePath().Load();
+
 var app = builder.Build();
 
 app.UseDefaultFiles();

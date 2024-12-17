@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34408.163
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant", "KotonohaAssistant\KotonohaAssistant.csproj", "{64B30B82-1E67-4065-B2FF-471E9FAE48B7}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.VoiceServer", "KotonohaAssistant.VoiceServer\KotonohaAssistant.VoiceServer.csproj", "{B9A033F0-8C8C-4DE0-832D-BA10BD05A4D1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.Core", "KotonohaAssistant.Core\KotonohaAssistant.Core.csproj", "{F4A07925-FA45-404E-AF02-E6C1699944D3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KotonohaAssistant.Core", "KotonohaAssistant.Core\KotonohaAssistant.Core.csproj", "{F4A07925-FA45-404E-AF02-E6C1699944D3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.Cli", "KotonohaAssistant.Cli\KotonohaAssistant.Cli.csproj", "{64B30B82-1E67-4065-B2FF-471E9FAE48B7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,10 +15,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B9A033F0-8C8C-4DE0-832D-BA10BD05A4D1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B9A033F0-8C8C-4DE0-832D-BA10BD05A4D1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B9A033F0-8C8C-4DE0-832D-BA10BD05A4D1}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -27,6 +23,10 @@ Global
 		{F4A07925-FA45-404E-AF02-E6C1699944D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F4A07925-FA45-404E-AF02-E6C1699944D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F4A07925-FA45-404E-AF02-E6C1699944D3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64B30B82-1E67-4065-B2FF-471E9FAE48B7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

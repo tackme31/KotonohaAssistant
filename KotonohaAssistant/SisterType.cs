@@ -1,5 +1,0 @@
-﻿enum SisterType
-{
-    KotonohaAkane,
-    KotonohaAoi
-}

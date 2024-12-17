@@ -4,18 +4,17 @@ using System.Threading.Tasks;
 using System.Text.Json;
 using OpenAI.Chat;
 using KotonohaAssistant.Functions;
-using KotonohaAssistant.Utils;
 using System.Linq;
 using System.ClientModel;
 using System.Text.RegularExpressions;
-using static System.Net.Mime.MediaTypeNames;
+using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant;
 
 internal class Program
 {
     private static readonly Random R = new();
-    private static readonly VoiceEditorController VoiceEditor = new ();
 
     // 呼び出し可能な関数の一覧
     private static readonly Dictionary<string, ToolFunction> Functions = new()
@@ -38,19 +37,22 @@ internal class Program
 
     static async Task Main(string[] args)
     {
-        var (client, options) = Setup();
+        var (chatClient, options) = Setup();
 
-        try
+        using (var voiceClient = new VoiceClient())
         {
-            await StartConversationAsync(client, options);
-        }
-        catch (Exception e)
-        {
-            await VoiceEditor.SpeakAsync(SisterType.KotonohaAkane, $"おっ、エラーやな。えっと、「{e.Message}」らしいで。");
-            await Task.Delay(750);
-            await VoiceEditor.SpeakAsync(SisterType.KotonohaAoi, $"詳しくはログに書いておいたよ。マスター、早く直してね。");
+            try
+            {
+                await StartConversationAsync(voiceClient, chatClient, options);
+            }
+            catch (Exception e)
+            {
+                await voiceClient.SpeakAsync(Kotonoha.Akane, $"おっ、エラーやな。えっと、「{e.Message}」らしいで。");
+                await Task.Delay(750);
+                await voiceClient.SpeakAsync(Kotonoha.Aoi, $"詳しくはログに書いておいたよ。マスター、早く直してね。");
 
-            // TODO: ログ出力
+                // TODO: ログ出力
+            }
         }
     }
 
@@ -92,14 +94,12 @@ internal class Program
             options.Tools.Add(function.CreateChatTool());
         }
 
-        VoiceEditor.InitializeHost();
-
         return (client, options);
     }
 
-    private static async Task StartConversationAsync(ChatClient client, ChatCompletionOptions options)
+    private static async Task StartConversationAsync(VoiceClient voiceClient, ChatClient chatClient, ChatCompletionOptions options)
     {
-        var manager = new ChatMessageManager(SisterType.KotonohaAkane);
+        var manager = new ChatMessageManager(Kotonoha.Akane);
         manager.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
         manager.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
         manager.AddUserMessage("私: うん。よろしくね。");
@@ -107,7 +107,7 @@ internal class Program
 
         // 同じ方に連続してお願いすると怠ける
         var againCounter = 0;
-        var prevSister = SisterType.KotonohaAkane;
+        var prevSister = Kotonoha.Akane;
 
         while (true)
         {
@@ -118,22 +118,22 @@ internal class Program
                 continue;
             }
 
-            if (manager.CurrentSister == SisterType.KotonohaAoi &&
+            if (manager.CurrentSister == Kotonoha.Aoi &&
                 (stdin.Contains("茜") || stdin.Contains("あかね")))
             {
-                manager.CurrentSister = SisterType.KotonohaAkane;
+                manager.CurrentSister = Kotonoha.Akane;
                 manager.AddUserMessage($"[Hint]: 姉妹が切り替わりました(葵 => 茜)");
             }
-            if (manager.CurrentSister == SisterType.KotonohaAkane &&
+            if (manager.CurrentSister == Kotonoha.Akane &&
                 (stdin.Contains("葵") || stdin.Contains("あおい")))
             {
-                manager.CurrentSister = SisterType.KotonohaAoi;
+                manager.CurrentSister = Kotonoha.Aoi;
                 manager.AddUserMessage($"[Hint]: 姉妹が切り替わりました(茜 => 葵)");
             }
 
             manager.AddUserMessage($"私: {stdin}");
 
-            var completion = await client.CompleteChatAsync(manager.ChatMessages, options);
+            var completion = await chatClient.CompleteChatAsync(manager.ChatMessages, options);
 
             // 連続してお願いした回数をカウント
             if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
@@ -152,7 +152,7 @@ internal class Program
             // 怠け癖発動
             if (ShouldBeLazy(completion.Value, againCounter))
             {
-                completion = await PassTaskToAnotherSisterAsync(client, options, manager);
+                completion = await PassTaskToAnotherSisterAsync(chatClient, options, manager, voiceClient);
 
                 // 怠けると姉妹が入れ替わるのでカウンターをリセット
                 againCounter = 1;
@@ -176,15 +176,15 @@ internal class Program
                     manager.AddToolMessage(toolCall.Id, result);
                 }
 
-                completion = await client.CompleteChatAsync(manager.ChatMessages, options);
+                completion = await chatClient.CompleteChatAsync(manager.ChatMessages, options);
                 manager.AddAssistantMessage(completion.Value);
             }
 
-            await SpeakCompletionAsync(completion, manager.CurrentSister);
+            await SpeakCompletionAsync(completion, manager.CurrentSister, voiceClient);
         }
     }
 
-    private static async Task<ClientResult<ChatCompletion>> PassTaskToAnotherSisterAsync(ChatClient client, ChatCompletionOptions options, ChatMessageManager manager)
+    private static async Task<ClientResult<ChatCompletion>> PassTaskToAnotherSisterAsync(ChatClient client, ChatCompletionOptions options, ChatMessageManager manager, VoiceClient voiceClient)
     {
         // 怠け者モードをONにして、再度呼び出し。
         manager.AddUserMessage("[Hint]: LazyMode=ON: 以降、関数を呼び出さないでください。");
@@ -202,7 +202,7 @@ internal class Program
 
         manager.AddAssistantMessage(completion.Value);
 
-        await SpeakCompletionAsync(completion, manager.CurrentSister);
+        await SpeakCompletionAsync(completion, manager.CurrentSister, voiceClient);
 
         // 怠け者モードをOFF
         manager.AddUserMessage("[Hint]: LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
@@ -210,21 +210,21 @@ internal class Program
         // 姉妹を切り替えて、再度呼び出し
         var nextSister = manager.CurrentSister switch
         {
-            SisterType.KotonohaAkane => SisterType.KotonohaAoi,
-            SisterType.KotonohaAoi => SisterType.KotonohaAkane,
+            Kotonoha.Akane => Kotonoha.Aoi,
+            Kotonoha.Aoi => Kotonoha.Akane,
             _ => manager.CurrentSister
         };
 
         var prev = manager.CurrentSister switch
         {
-            SisterType.KotonohaAkane => "茜",
-            SisterType.KotonohaAoi => "葵",
+            Kotonoha.Akane => "茜",
+            Kotonoha.Aoi => "葵",
             _ => string.Empty
         };
         var next = nextSister switch
         {
-            SisterType.KotonohaAkane => "茜",
-            SisterType.KotonohaAoi => "葵",
+            Kotonoha.Akane => "茜",
+            Kotonoha.Aoi => "葵",
             _ => string.Empty
         };
         manager.AddUserMessage($"[Hint]: 姉妹が切り替わりました({prev} => {next})");
@@ -233,12 +233,12 @@ internal class Program
         return await client.CompleteChatAsync(manager.ChatMessages, options);
     }
 
-    private static Task SpeakCompletionAsync(ClientResult<ChatCompletion> completion, SisterType sister)
+    private static Task SpeakCompletionAsync(ClientResult<ChatCompletion> completion, Kotonoha sister, VoiceClient voiceClient)
     {
         var message = completion.Value.Content[0].Text;
         Console.WriteLine(message);
 
         var messageWithoutName = Regex.Replace(message, @"^(茜|葵):", string.Empty);
-        return VoiceEditor.SpeakAsync(sister, messageWithoutName);
+        return voiceClient.SpeakAsync(sister, messageWithoutName);
     }
 }

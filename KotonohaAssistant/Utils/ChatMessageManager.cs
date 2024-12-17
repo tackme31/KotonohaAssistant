@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System;
 using System.Linq;
+using KotonohaAssistant.Core;
 
-class ChatMessageManager(SisterType defaultSister)
+class ChatMessageManager(Kotonoha defaultSister)
 {
     private readonly List<ChatMessage> _chatMessages = [];
-    public SisterType CurrentSister { get; set; } = defaultSister;
+    public Kotonoha CurrentSister { get; set; } = defaultSister;
 
     public void AddAssistantMessage(string message)
     {
@@ -30,8 +31,8 @@ class ChatMessageManager(SisterType defaultSister)
 
     public IEnumerable<ChatMessage> ChatMessages => CurrentSister switch
     {
-        SisterType.KotonohaAkane => _chatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane)),
-        SisterType.KotonohaAoi => _chatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi)),
+        Kotonoha.Akane => _chatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane)),
+        Kotonoha.Aoi => _chatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi)),
         _ => throw new NotSupportedException()
     };
 }

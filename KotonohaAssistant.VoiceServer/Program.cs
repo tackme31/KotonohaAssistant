@@ -4,6 +4,9 @@ using System.Threading.Tasks;
 using AI.Talk.Editor.Api;
 using System.IO;
 using System.IO.Pipes;
+using System.Text.Json;
+using KotonohaAssistant.Core.Models;
+using KotonohaAssistant.Core;
 
 namespace KotonohaAssistant.VoiceServer
 {
@@ -23,7 +26,7 @@ namespace KotonohaAssistant.VoiceServer
             while (true) // クライアントの接続を待ち続ける
             {
                 // パイプサーバーを作成
-                using (var pipeServer = new NamedPipeServerStream("KotonohaAssistant.VoiceServer", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None))
+                using (var pipeServer = new NamedPipeServerStream(Const.VoiceEditorPipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None))
                 {
                     Console.WriteLine("Waiting for client connection...");
 
@@ -35,17 +38,31 @@ namespace KotonohaAssistant.VoiceServer
                         using (var reader = new StreamReader(pipeServer))
                         using (var writer = new StreamWriter(pipeServer) { AutoFlush = true })
                         {
-                            var message = await reader.ReadToEndAsync();
+                            string line;
+                            while ((line = reader.ReadLine()) != null)
+                            {
+                                var request = ParseSpeakRequest(line);
+                                if (request != null)
+                                {
+                                    await SpeakAsync(request.SisterType, request.Message);
+                                    writer.WriteLine("OK");
+                                }
+                                else
+                                {
+                                    writer.WriteLine("ERROR");
+                                }
 
-                            await SpeakAsync(message);
-
-                            writer.WriteLine("OK");
+                            }
                         }
                     }
                     catch (IOException ex)
                     {
                         // 接続エラー処理
                         Console.WriteLine($"IOException: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Exception: {ex.Message}");
                     }
                     finally
                     {
@@ -86,13 +103,22 @@ namespace KotonohaAssistant.VoiceServer
             }
         }
 
-        public static async Task SpeakAsync(string message)
+        public static async Task SpeakAsync(Kotonoha sister, string message)
         {
             try
             {
                 await WaitForStatusAsync(HostStatus.Idle);
 
-                _ttsControl.CurrentVoicePresetName = "琴葉 茜";
+                switch (sister)
+                {
+                    case Kotonoha.Akane:
+                        _ttsControl.CurrentVoicePresetName = "琴葉 茜";
+                        break;
+                    case Kotonoha.Aoi:
+                        _ttsControl.CurrentVoicePresetName = "琴葉 葵";
+                        break;
+                }
+
                 _ttsControl.Text = message;
                 _ttsControl.Play();
 
@@ -120,5 +146,20 @@ namespace KotonohaAssistant.VoiceServer
                 await Task.Delay(_waitCheckInterval);
             }
         }
+
+        public static SpeakRequest ParseSpeakRequest(string line)
+        {
+            try
+            {
+                var request = JsonSerializer.Deserialize<SpeakRequest>(line);
+                return request;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"An error occurred when parsing request: {ex.Message}");
+                return null;
+            }
+        }
+
     }
 }

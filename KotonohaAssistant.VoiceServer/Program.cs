@@ -94,7 +94,7 @@ namespace KotonohaAssistant.VoiceServer
 
                 if (_ttsControl.Status == HostStatus.NotRunning)
                 {
-                    throw new Exception("エディターが起動していません。");
+                    _ttsControl.StartHost();
                 }
 
                 _ttsControl.Connect();

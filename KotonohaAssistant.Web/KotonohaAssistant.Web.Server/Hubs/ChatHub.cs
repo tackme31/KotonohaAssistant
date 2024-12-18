@@ -24,23 +24,29 @@ public class ChatHub : Hub
         nameof(ForgetMemory)*/
     ];
 
-    private static ConversationService? ConversationService;
+    private readonly ConversationService _conversationService;
+
+    public ChatHub()
+    {
+        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw new Exception("環境変数 'OPENAI_API_KEY' が設定されていません。環境変数に設定するか、または '.env' ファイルにAPIキーを記載してください。");
+        var modelName = "gpt-4o-mini";
+        _conversationService = new ConversationService(apiKey, modelName, Functions, ExcludeFunctionNamesFromLazyMode);
+    }
 
     // クライアントからメッセージを受け取る
     public async Task SendMessage(string message)
     {
-        if (ConversationService is null)
-        {
-            var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-            var modelName = "gpt-4o-mini";
-            ConversationService = new ConversationService(apiKey, modelName, Functions, ExcludeFunctionNamesFromLazyMode);
-        }
-
-        await foreach (var text in ConversationService.TalkingWithKotonohaSisters(message))
+        await foreach (var text in _conversationService.TalkingWithKotonohaSisters(message))
         {
             await Clients.Caller.SendAsync("Generated", text);
         }
 
         await Clients.Caller.SendAsync("Complete", "COMPLETED");
+    }
+
+    public override Task OnDisconnectedAsync(Exception? exception)
+    {
+        _conversationService.Dispose();
+        return base.OnDisconnectedAsync(exception);
     }
 }

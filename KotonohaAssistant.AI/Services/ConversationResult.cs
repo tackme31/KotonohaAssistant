@@ -5,7 +5,7 @@ namespace KotonohaAssistant.AI.Services;
 public class ConversationResult
 {
     public required string Message { get; set; }
-    public Kotonoha Sister { get; set; }
+    public required Kotonoha Sister { get; set; }
     public List<ConversationFunction>? Functions { get; set; }
 }
 

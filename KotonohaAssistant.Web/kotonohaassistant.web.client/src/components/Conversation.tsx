@@ -4,43 +4,16 @@ import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useChatHubConnection } from '../hooks/useChatHubConnection';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMicrophone, faMicrophoneSlash } from '@fortawesome/free-solid-svg-icons'
-import { ConversationResult } from '../types/ConversationResult';
+import { ConversationResult } from '../types/conversationResult';
+import { ChatBox } from './ChatBox';
+import { ChatMessage } from '../types/chatMessage';
 
 
 // 返事を始めるまでのタイムリミット
 const limit = 7500;
 
-const ChatBox = ({ message }: { message: string }) => {
-    let talking = "me"
-    if (message.startsWith("茜:")) {
-        talking = "akane"
-    }
-    if (message.startsWith("葵:")) {
-        talking = "aoi"
-    }
-
-    return (<div style={{
-        display: "flex",
-        justifyContent: talking == "me" ? "flex-end" : "flex-start"
-    }}>
-        <div style={{
-            margin: "7px 10px",
-            padding: "0px 20px",
-            borderRadius: 10,
-            color: "black",
-            backgroundColor: {
-                "akane": "pink",
-                "aoi": "lightblue",
-                "me": "lightgrey"
-            }[talking]
-        }}>
-            <p>{message.replace(/^(茜|葵): /, "")}</p>
-        </div>
-    </div>);
-}
-
 export const Conversation = () => {
-    const [messages, setMessages] = useState<string[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [talkingText, setTalkingText] = useState<string>();
     const [isYourTurn, setIsYourTurn] = useState<boolean>(true);
     const [isInConversation, setIsInConversation] = useState<boolean>(false);
@@ -73,7 +46,9 @@ export const Conversation = () => {
         }
 
         if (isInConversation) {
-            setMessages(prev => [...prev, lastTranscript]);
+            setMessages(prev => [...prev, {
+                text: lastTranscript
+            }]);
             if (connection) {
                 // 会話中のメッセージもAPIに送信
                 await connection.send("SendMessage", lastTranscript);
@@ -84,7 +59,9 @@ export const Conversation = () => {
         if (hasTriggerWords(lastTranscript)) {
             if (!isInConversation) {
                 setIsInConversation(true);
-                setMessages(prev => [...prev, lastTranscript]);
+                setMessages(prev => [...prev, {
+                    text: lastTranscript
+                }]);
 
                 if (connection) {
                     // トリガーワード検出時にAPIにメッセージを送信
@@ -110,7 +87,11 @@ export const Conversation = () => {
 
                 const result = JSON.parse(data) as ConversationResult;
                 console.log(result)
-                setMessages(prev => [...prev, result.message]);
+                setMessages(prev => [...prev, {
+                    text: result.message,
+                    talking: result.sister,
+                    functions: result.functions
+                }]);
             });
 
             connection.on("Complete", () => {
@@ -159,10 +140,22 @@ export const Conversation = () => {
                             : <p>(ボイス再生中)</p>}
                     </div>
                 </div>
-                <div style={{ width: "50%" }}>
+                <div style={{ width: "60%" }}>
                     <h2>会話履歴</h2>
                     {messages.map((message, i) => (
-                        <ChatBox key={i} message={message} />
+                        <>
+                            {message.functions != null && message.functions.map(func => (
+                                <div style={{ background: "#f5f5f5", color: "#adadad", padding: "5px 20px 5px", margin: "5px 0px" }}>
+                                    <details>
+                                        <summary>
+                                            {func.name}({Object.entries(func.arguments).map(([key, value]) => `${key}=${value}`).join(", ")})
+                                        </summary>
+                                        <p style={{ whiteSpace: "pre-line" }}>{func.result}</p>
+                                    </details>
+                                </div>
+                            ))}
+                            <ChatBox key={i} message={message} />
+                        </>
                     ))}
                 </div>
             </div>

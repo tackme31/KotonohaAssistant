@@ -109,7 +109,8 @@ public class ConversationService : IDisposable
                     // フロントに生成テキストを送信
                     yield return new ConversationResult
                     {
-                        Message = c.Value.Content[0].Text,
+                        Message = TrimSisterName(c.Value.Content[0].Text),
+                        Sister = _messageManager.CurrentSister
                     };
                 }
 
@@ -165,12 +166,15 @@ public class ConversationService : IDisposable
         // フロントに生成テキストを送信
         yield return new ConversationResult
         {
-            Message = completion.Value.Content[0].Text,
+            Message = TrimSisterName(completion.Value.Content[0].Text),
+            Sister = _messageManager.CurrentSister,
             Functions = functions
         };
 
         // 読み上げ
         await SpeakCompletionAsync(completion, voiceClient);
+
+        string TrimSisterName(string input) => Regex.Replace(input, @"^(茜|葵):\s+", string.Empty);
     }
 
     private Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages) => _chatClient.CompleteChatAsync(messages, _options);

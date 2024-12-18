@@ -1,5 +1,6 @@
 ﻿using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.Core;
 
 // load .env
 DotNetEnv.Env.TraversePath().Load();
@@ -37,6 +38,14 @@ try
 
         await foreach (var result in service.TalkingWithKotonohaSisters(input))
         {
+            var name = result.Sister switch
+            {
+                Kotonoha.Akane => "茜: ",
+                Kotonoha.Aoi => "葵: ",
+                _ => string.Empty
+            };
+
+            Console.Write(name);
             Console.WriteLine(result.Message);
         }
     }

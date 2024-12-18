@@ -11,4 +11,5 @@ export interface ConversationFunction {
 export interface ConversationResult {
     message: string;
     sister: Kotonoha;
+    functions?: ConversationFunction[]
 }

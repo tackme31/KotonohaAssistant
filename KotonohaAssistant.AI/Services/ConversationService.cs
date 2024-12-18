@@ -1,4 +1,5 @@
-﻿using KotonohaAssistant.AI.Functions;
+﻿using KotonohaAssistant.AI.Extensions;
+using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
@@ -6,6 +7,7 @@ using OpenAI.Chat;
 using System.ClientModel;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace KotonohaAssistant.AI.Services;
 
@@ -84,7 +86,8 @@ public class ConversationService : IDisposable
         _messageManager.AddUserMessage($"私: {input}");
 
         var completion = await CompleteChatAsync(_messageManager.ChatMessages);
-        
+
+        // 忍耐値カウント
         if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
         {
             if (_lastToolCallSister == _messageManager.CurrentSister)
@@ -99,38 +102,76 @@ public class ConversationService : IDisposable
             _lastToolCallSister = _messageManager.CurrentSister;
         }
 
+        // TODO: 怠け癖発動し、その後に関数の呼び出しが入らなかった場合
+        // 2回読み上げられる
+
         // 怠け癖発動
         if (ShouldBeLazy(completion.Value))
         {
-            await foreach (var c in PassTaskToAnotherSisterAsync())
+            // 怠け者モードをONにして、再度呼び出し。
+            _messageManager.AddUserMessage("[Hint]: LazyMode=ON: 以降、関数を呼び出さないでください");
+            completion = await CompleteChatAsync(_messageManager.ChatMessages);
+
+            // それでも関数呼び出しされることがあるのでチェック
+            if (completion.Value.FinishReason != ChatFinishReason.Stop)
             {
-                if (c.Value.FinishReason == ChatFinishReason.Stop)
-                {
-                    // フロントに生成テキストを送信
-                    yield return new ConversationResult
-                    {
-                        Message = TrimSisterName(c.Value.Content[0].Text),
-                        Sister = _messageManager.CurrentSister
-                    };
-                }
-
-                _messageManager.AddAssistantMessage(c.Value);
-
-                // 読み上げ
-                await SpeakCompletionAsync(c);
-
-                completion = c;
+                _messageManager.AddUserMessage("[Hint]: LazyMode=OFF: 以降、通常通り**関数を呼び出してください**");
             }
+            // 実際に怠けた場合の処理
+            else
+            {
+                // フロントに生成テキストを送信
+                yield return new ConversationResult
+                {
+                    Message = TrimSisterName(completion.Value.Content[0].Text),
+                    Sister = _messageManager.CurrentSister
+                };
 
-            // 怠けると姉妹が入れ替わるのでカウンターをリセット
-            _patienceCount = 1;
+                _messageManager.AddAssistantMessage(completion.Value);
+
+                // 押し付けセリフを読み上げ
+                await SpeakCompletionAsync(completion);
+
+                // 怠け者モードをOFF
+                _messageManager.AddUserMessage("[Hint]: LazyMode=OFF: 以降、通常通り**関数を呼び出してください**");
+
+
+                // 姉妹を切り替えて、再度呼び出し
+                var prev = _messageManager.CurrentSister.ToDisplayName();
+                var next = _messageManager.CurrentSister.Switch().ToDisplayName();
+                _messageManager.CurrentSister = _messageManager.CurrentSister.Switch();
+
+                _messageManager.AddUserMessage($"[Hint]: 姉妹が切り替わりました({prev} => {next})");
+
+                completion = await CompleteChatAsync(_messageManager.ChatMessages);
+
+                // 怠けると姉妹が入れ替わるのでカウンターをリセット
+                _patienceCount = 1;
+            }
         }
-        else
+
+        _messageManager.AddAssistantMessage(completion.Value);
+
+        List<ConversationFunction> functions;
+        (completion, functions) = await InvokeFunctions(completion);
+
+        // フロントに生成テキストを送信
+        yield return new ConversationResult
         {
-            _messageManager.AddAssistantMessage(completion.Value);
-        }
+            Message = TrimSisterName(completion.Value.Content[0].Text),
+            Sister = _messageManager.CurrentSister,
+            Functions = functions
+        };
 
-        var functions = new List<ConversationFunction>();
+        // 読み上げ
+        await SpeakCompletionAsync(completion);
+
+        static string TrimSisterName(string input) => Regex.Replace(input, @"^(茜|葵):\s+", string.Empty);
+    }
+
+    private async Task<(ClientResult<ChatCompletion> result, List<ConversationFunction> functions)> InvokeFunctions(ClientResult<ChatCompletion> completion)
+    {
+        var invokedFunctions = new List<ConversationFunction>();
         while (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
         {
             foreach (var toolCall in completion.Value.ToolCalls)
@@ -149,7 +190,7 @@ public class ConversationService : IDisposable
                 }
 
                 var result = function.Invoke(arguments);
-                functions.Add(new ConversationFunction
+                invokedFunctions.Add(new ConversationFunction
                 {
                     Name = toolCall.FunctionName,
                     Arguments = arguments,
@@ -163,18 +204,7 @@ public class ConversationService : IDisposable
             _messageManager.AddAssistantMessage(completion.Value);
         }
 
-        // フロントに生成テキストを送信
-        yield return new ConversationResult
-        {
-            Message = TrimSisterName(completion.Value.Content[0].Text),
-            Sister = _messageManager.CurrentSister,
-            Functions = functions
-        };
-
-        // 読み上げ
-        await SpeakCompletionAsync(completion);
-
-        string TrimSisterName(string input) => Regex.Replace(input, @"^(茜|葵):\s+", string.Empty);
+        return (completion, invokedFunctions);
     }
 
     private Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages) => _chatClient.CompleteChatAsync(messages, _options);
@@ -202,55 +232,6 @@ public class ConversationService : IDisposable
         // 1/10の確率で怠け癖発動
         var lazy = _r.NextDouble() < 1d / 10d;
         return lazy;
-    }
-
-    private async IAsyncEnumerable<ClientResult<ChatCompletion>> PassTaskToAnotherSisterAsync()
-    {
-        // 怠け者モードをONにして、再度呼び出し。
-        _messageManager.AddUserMessage("[Hint]: LazyMode=ON: 以降、関数を呼び出さないでください。");
-        var completion = await CompleteChatAsync(_messageManager.ChatMessages);
-
-        // それでも関数呼び出しされることがあるのでチェック
-        if (completion.Value.FinishReason != ChatFinishReason.Stop)
-        {
-            // 怠け者モードをOFF
-            _messageManager.AddUserMessage("[Hint]: LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
-
-            yield return completion;
-            yield break;
-        }
-
-
-        yield return completion;
-        _messageManager.AddAssistantMessage(completion.Value);
-
-        // 怠け者モードをOFF
-        _messageManager.AddUserMessage("[Hint]: LazyMode=OFF: 以降、通常通り関数を呼び出してください。");
-
-        // 姉妹を切り替えて、再度呼び出し
-        var nextSister = _messageManager.CurrentSister switch
-        {
-            Kotonoha.Akane => Kotonoha.Aoi,
-            Kotonoha.Aoi => Kotonoha.Akane,
-            _ => _messageManager.CurrentSister
-        };
-
-        var prev = _messageManager.CurrentSister switch
-        {
-            Kotonoha.Akane => "茜",
-            Kotonoha.Aoi => "葵",
-            _ => string.Empty
-        };
-        var next = nextSister switch
-        {
-            Kotonoha.Akane => "茜",
-            Kotonoha.Aoi => "葵",
-            _ => string.Empty
-        };
-        _messageManager.AddUserMessage($"[Hint]: 姉妹が切り替わりました({prev} => {next})");
-
-        _messageManager.CurrentSister = nextSister;
-        yield return await CompleteChatAsync(_messageManager.ChatMessages);
     }
 
     private async Task SpeakCompletionAsync(ClientResult<ChatCompletion> completion)

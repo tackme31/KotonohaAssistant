@@ -6,8 +6,7 @@ namespace KotonohaAssistant.AI.Functions;
 public class WillCall : ToolFunction
 {
     public override string Description => """
-指定された時間になったら知らせるようにします（内部的には、アラームが設定されまｓ）。
-設定に成功した場合はokを返し、失敗した場合はngを返します。
+指定された時間になったら知らせることを覚えます（内部的には、アラームを設定します）。
 
 呼び出される例:
 「10時にアラームを設定して」
@@ -15,8 +14,6 @@ public class WillCall : ToolFunction
 「{予定}の時間になったら呼んでくれる？」
 
 時間がわからない、あるいは過去の会話から推測できない場合は、聞き返してください。
-また「少し前」などの表現があった場合は、10分ほど前のことだと解釈してください。
-
 設定に成功したら、呼び出し時の指示に応じて、以下の例ように返信内容をしてください。
 
 - アラームの設定: アラームを設定した旨の返事
@@ -57,6 +54,6 @@ public class WillCall : ToolFunction
     {
         Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
 
-        return "ok";
+        return "SUCCESS";
     }
 }

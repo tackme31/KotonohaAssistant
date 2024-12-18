@@ -35,7 +35,7 @@ try
         var stdin = Console.ReadLine();
         var input = "私: " + stdin;
 
-        await foreach (var text in service.SpeakAI(input))
+        await foreach (var text in service.TalkingWithKotonohaSisters(input))
         {
             Console.WriteLine(text);
         }

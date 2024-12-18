@@ -50,7 +50,7 @@ public class ConversationService
         _prevSister = 0;
     }
 
-    public async IAsyncEnumerable<string> SpeakAI(string input)
+    public async IAsyncEnumerable<string> TalkingWithKotonohaSisters(string input)
     {
         using var voiceClient = new VoiceClient();
 

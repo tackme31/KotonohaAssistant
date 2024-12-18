@@ -36,7 +36,7 @@ public class ChatHub : Hub
             ConversationService = new ConversationService(apiKey, modelName, Functions, ExcludeFunctionNamesFromLazyMode);
         }
 
-        await foreach (var text in ConversationService.SpeakAI(message))
+        await foreach (var text in ConversationService.TalkingWithKotonohaSisters(message))
         {
             await Clients.Caller.SendAsync("Generated", text);
         }

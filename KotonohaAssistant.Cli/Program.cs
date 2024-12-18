@@ -9,20 +9,20 @@ var modelName = "gpt-4o-mini";
 
 List<ToolFunction> functions =
 [
-/*        new SetAlarm(),
-        new StartTimer(),
-        new CreateCalendarEvent(),
-        new GetCalendarEvent(),
-        new GetWeather(),
-        new TurnOnHeater(),
-        new ForgetMemory(),*/
+    new SetAlarm(),
+    new StartTimer(),
+    new CreateCalendarEvent(),
+    new GetCalendarEvent(),
+    new GetWeather(),
+    new TurnOnHeater(),
+    new ForgetMemory(),
 ];
 
 // 怠け癖の対象外の関数
 List<string> excludeFunctionNamesFromLazyMode =
 [
-/*        nameof(StartTimer),
-        nameof(ForgetMemory)*/
+    nameof(StartTimer),
+    nameof(ForgetMemory)
 ];
 
 var service = new ConversationService(apiKey, modelName, functions, excludeFunctionNamesFromLazyMode);
@@ -35,9 +35,9 @@ try
         var stdin = Console.ReadLine();
         var input = "私: " + stdin;
 
-        await foreach (var text in service.TalkingWithKotonohaSisters(input))
+        await foreach (var result in service.TalkingWithKotonohaSisters(input))
         {
-            Console.WriteLine(text);
+            Console.WriteLine(result.Message);
         }
     }
 }

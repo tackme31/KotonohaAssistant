@@ -2,6 +2,6 @@
 
 public enum Kotonoha
 {
-    Akane,
-    Aoi
+    Akane = 0,
+    Aoi = 1
 }

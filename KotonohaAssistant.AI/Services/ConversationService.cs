@@ -58,7 +58,7 @@ public class ConversationService : IDisposable
         _lastToolCallSister = 0;
     }
 
-    public async IAsyncEnumerable<string> TalkingWithKotonohaSisters(string input)
+    public async IAsyncEnumerable<ConversationResult> TalkingWithKotonohaSisters(string input)
     {
         using var voiceClient = new VoiceClient();
 
@@ -107,7 +107,10 @@ public class ConversationService : IDisposable
                 if (c.Value.FinishReason == ChatFinishReason.Stop)
                 {
                     // フロントに生成テキストを送信
-                    yield return c.Value.Content[0].Text;
+                    yield return new ConversationResult
+                    {
+                        Message = c.Value.Content[0].Text,
+                    };
                 }
 
                 _messageManager.AddAssistantMessage(c.Value);
@@ -126,17 +129,32 @@ public class ConversationService : IDisposable
             _messageManager.AddAssistantMessage(completion.Value);
         }
 
+        var functions = new List<ConversationFunction>();
         while (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
         {
             foreach (var toolCall in completion.Value.ToolCalls)
             {
-                using var arguments = JsonDocument.Parse(toolCall.FunctionArguments);
+                using var doc = JsonDocument.Parse(toolCall.FunctionArguments);
                 if (!_functions.TryGetValue(toolCall.FunctionName, out var function) || function is null)
                 {
+                    _messageManager.AddToolMessage(toolCall.Id, "ERROR");
+                    continue;
+                }
+
+                if (!function.TryParseArguments(doc, out var arguments))
+                {
+                    _messageManager.AddToolMessage(toolCall.Id, "ERROR");
                     continue;
                 }
 
                 var result = function.Invoke(arguments);
+                functions.Add(new ConversationFunction
+                {
+                    Name = toolCall.FunctionName,
+                    Arguments = arguments,
+                    Result = result
+                });
+
                 _messageManager.AddToolMessage(toolCall.Id, result);
             }
 
@@ -145,7 +163,11 @@ public class ConversationService : IDisposable
         }
 
         // フロントに生成テキストを送信
-        yield return completion.Value.Content[0].Text;
+        yield return new ConversationResult
+        {
+            Message = completion.Value.Content[0].Text,
+            Functions = functions
+        };
 
         // 読み上げ
         await SpeakCompletionAsync(completion, voiceClient);

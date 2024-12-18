@@ -15,7 +15,7 @@ public class SetAlarm : ToolFunction
 また「少し前」などの表現があった場合は、10分前のことだと解釈してください。
 """;
 
-  public override string Parameters => """
+    public override string Parameters => """
 {
     "type": "object",
     "properties": {
@@ -29,12 +29,25 @@ public class SetAlarm : ToolFunction
 }
 """;
 
-  public override string Invoke(JsonDocument arguments)
-  {
-    var time = arguments.RootElement.GetStringProperty("time");
+    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+    {
+        arguments = new Dictionary<string, object>();
 
-    System.Console.WriteLine($"  => {nameof(SetAlarm)}(time={time})");
+        var time = doc.RootElement.GetTimeSpanProperty("time");
+        if (time is null)
+        {
+            return false;
+        }
 
-    return "ok";
-  }
+        arguments["time"] = time;
+
+        return true;
+    }
+
+    public override string Invoke(IDictionary<string, object> arguments)
+    {
+        Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
+
+        return "ok";
+    }
 }

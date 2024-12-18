@@ -4,6 +4,7 @@ import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useChatHubConnection } from '../hooks/useChatHubConnection';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMicrophone, faMicrophoneSlash } from '@fortawesome/free-solid-svg-icons'
+import { ConversationResult } from '../types/ConversationResult';
 
 
 // 返事を始めるまでのタイムリミット
@@ -95,7 +96,6 @@ export const Conversation = () => {
 
     }, [isInConversation, resetInactivityTimer, hasTriggerWords, connection, isYourTurn]);
 
-
     useSpeechRecognition({
         lang: "ja-JP",
         continuous: true,
@@ -105,9 +105,12 @@ export const Conversation = () => {
 
     useEffect(() => {
         if (connection) {
-            connection.on("Generated", (message: string) => {
+            connection.on("Generated", (data: string) => {
                 setIsYourTurn(false);
-                setMessages(prev => [...prev, message]);
+
+                const result = JSON.parse(data) as ConversationResult;
+                console.log(result)
+                setMessages(prev => [...prev, result.message]);
             });
 
             connection.on("Complete", () => {

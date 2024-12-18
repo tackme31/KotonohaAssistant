@@ -1,6 +1,7 @@
 ﻿using KotonohaAssistant.AI.Services;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace KotonohaAssistant.Web.Server.Hubs;
 
@@ -11,10 +12,15 @@ public class ChatHub : Hub
     public async Task SendMessage(string message)
     {
         var service = _services.GetOrAdd(Context.ConnectionId, CreateConversationService);
-
-        await foreach (var text in service.TalkingWithKotonohaSisters(message))
+        var options = new JsonSerializerOptions
         {
-            await Clients.Caller.SendAsync("Generated", text);
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+
+        await foreach (var result in service.TalkingWithKotonohaSisters(message))
+        {
+            var json = JsonSerializer.Serialize(result, options);
+            await Clients.Caller.SendAsync("Generated", json);
         }
 
         await Clients.Caller.SendAsync("Complete", "COMPLETED");

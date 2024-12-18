@@ -25,9 +25,16 @@ public class ForgetMemory : ToolFunction
 }
 """;
 
-    public override string Invoke(JsonDocument arguments)
+    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
-        Console.WriteLine($"  => {nameof(ForgetMemory)}()");
+        arguments = new Dictionary<string, object>();
+
+        return true;
+    }
+
+    public override string Invoke(IDictionary<string, object> arguments)
+    {
+        Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
 
         // 1/10の確率で失敗する。頑張ってもっかい説得してね。
         var r = new Random();

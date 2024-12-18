@@ -5,7 +5,7 @@ namespace KotonohaAssistant.AI.Functions;
 
 public class CreateCalendarEvent : ToolFunction
 {
-  public override string Description => """
+    public override string Description => """
 予定の作成を依頼されたときに呼び出されます。
 予定の作成に成功した場合はokを返し、失敗した場合はngを返します。
 
@@ -14,7 +14,7 @@ public class CreateCalendarEvent : ToolFunction
 タイトル、日時が不明な場合は、呼び出さず、聞き返してください。
 """;
 
-  public override string Parameters => """
+    public override string Parameters => """
 {
     "type": "object",
     "properties": {
@@ -36,14 +36,37 @@ public class CreateCalendarEvent : ToolFunction
 }
 """;
 
-  public override string Invoke(JsonDocument arguments)
-  {
-    var title = arguments.RootElement.GetStringProperty("title");
-    var date = arguments.RootElement.GetStringProperty("date");
-    var time = arguments.RootElement.GetStringProperty("time");
+    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+    {
+        arguments = new Dictionary<string, object>();
 
-    System.Console.WriteLine($"  => {nameof(CreateCalendarEvent)}(title={title}, date={date}, time={time})");
+        var title = doc.RootElement.GetStringProperty("title");
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return false;
+        }
+        arguments["title"] = title;
 
-    return "ok";
-  }
+        var date = doc.RootElement.GetDateTimeProperty("date");
+        if (date is null)
+        {
+            return false;
+        }
+        arguments["date"] = date;
+
+        var time = doc.RootElement.GetTimeSpanProperty("time");
+        if (time is not null)
+        {
+            arguments["time"] = time;
+        }
+
+        return true;
+    }
+
+    public override string Invoke(IDictionary<string, object> arguments)
+    {
+        Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
+
+        return "ok";
+    }
 }

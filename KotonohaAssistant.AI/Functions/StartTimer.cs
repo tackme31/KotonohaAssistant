@@ -5,7 +5,7 @@ namespace KotonohaAssistant.AI.Functions;
 
 public class StartTimer : ToolFunction
 {
-  public override string Description => """
+    public override string Description => """
 タイマーの設定を依頼されたときに呼び出されます。
 タイマーの設定に成功した場合はokを返し、失敗した場合はngを返します。
 
@@ -14,7 +14,7 @@ public class StartTimer : ToolFunction
 秒数が不明な場合は呼び出さず、聞き返してください。
 """;
 
-  public override string Parameters => """
+    public override string Parameters => """
 {
     "type": "object",
     "properties": {
@@ -28,12 +28,24 @@ public class StartTimer : ToolFunction
 }
 """;
 
-  public override string Invoke(JsonDocument arguments)
-  {
-    var seconds = arguments.RootElement.GetIntProperty("seconds");
+    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+    {
+        arguments = new Dictionary<string, object>();
 
-    System.Console.WriteLine($"  => {nameof(StartTimer)}(seconds={seconds})");
+        var seconds = doc.RootElement.GetIntProperty("seconds");
+        if (seconds is null)
+        {
+            return false;
+        }
 
-    return "ok";
-  }
+        arguments["seconds"] = seconds.Value;
+
+        return true;
+    }
+
+    public override string Invoke(IDictionary<string, object> arguments)
+    {
+        Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
+        return "ok";
+    }
 }

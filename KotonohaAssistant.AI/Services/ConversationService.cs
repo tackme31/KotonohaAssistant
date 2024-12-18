@@ -117,7 +117,7 @@ public class ConversationService : IDisposable
                 _messageManager.AddAssistantMessage(c.Value);
 
                 // 読み上げ
-                await SpeakCompletionAsync(c, voiceClient);
+                await SpeakCompletionAsync(c);
 
                 completion = c;
             }
@@ -172,7 +172,7 @@ public class ConversationService : IDisposable
         };
 
         // 読み上げ
-        await SpeakCompletionAsync(completion, voiceClient);
+        await SpeakCompletionAsync(completion);
 
         string TrimSisterName(string input) => Regex.Replace(input, @"^(茜|葵):\s+", string.Empty);
     }
@@ -253,7 +253,7 @@ public class ConversationService : IDisposable
         yield return await CompleteChatAsync(_messageManager.ChatMessages);
     }
 
-    private async Task SpeakCompletionAsync(ClientResult<ChatCompletion> completion, VoiceClient voiceClient)
+    private async Task SpeakCompletionAsync(ClientResult<ChatCompletion> completion)
     {
         if (completion.Value.FinishReason != ChatFinishReason.Stop)
         {
@@ -262,7 +262,7 @@ public class ConversationService : IDisposable
         var message = completion.Value.Content[0].Text;
 
         var messageWithoutName = Regex.Replace(message, @"^(茜|葵):", string.Empty);
-        await voiceClient.SpeakAsync(_messageManager.CurrentSister, messageWithoutName);
+        await _voiceClient.SpeakAsync(_messageManager.CurrentSister, messageWithoutName);
     }
 
     public void Dispose()

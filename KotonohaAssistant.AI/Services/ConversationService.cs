@@ -221,7 +221,6 @@ public class ConversationService
             return;
         }
         var message = completion.Value.Content[0].Text;
-        Console.WriteLine(message);
 
         var messageWithoutName = Regex.Replace(message, @"^(茜|葵):", string.Empty);
         await voiceClient.SpeakAsync(_messageManager.CurrentSister, messageWithoutName);

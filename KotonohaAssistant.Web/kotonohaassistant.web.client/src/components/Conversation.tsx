@@ -2,6 +2,9 @@
 import { hasTriggerWords } from '../triggerWords';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import { useChatHubConnection } from '../hooks/useChatHubConnection';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faMicrophone, faMicrophoneSlash } from '@fortawesome/free-solid-svg-icons'
+
 
 // 返事を始めるまでのタイムリミット
 const limit = 10 * 1000;
@@ -30,7 +33,7 @@ const ChatBox = ({ message }: { message: string }) => {
                 "me": "lightgrey"
             }[talking]
         }}>
-            <p style={{lineHeight: 1} }>{message.replace(/^(茜|葵): /, "")}</p>
+            <p>{message.replace(/^(茜|葵): /, "")}</p>
         </div>
     </div>);
 }
@@ -38,6 +41,7 @@ const ChatBox = ({ message }: { message: string }) => {
 export const Conversation = () => {
     const [messages, setMessages] = useState<string[]>([]);
     const [talkingText, setTalkingText] = useState<string>();
+    const [isRecognizing, setIsRecognizing] = useState<boolean>();
     const [isYourTurn, setIsYourTurn] = useState<boolean>(true);
     const [isInConversation, setIsInConversation] = useState<boolean>(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,6 +63,7 @@ export const Conversation = () => {
             return;
         }
 
+        setIsRecognizing(true);
         resetInactivityTimer();
 
         const lastResult = event.results[event.results.length - 1];
@@ -87,6 +92,8 @@ export const Conversation = () => {
                 }
             }
         }
+
+        setIsRecognizing(false);
     }, [isInConversation, resetInactivityTimer, hasTriggerWords, connection, isYourTurn]);
 
 
@@ -121,16 +128,34 @@ export const Conversation = () => {
 
     return (
         <div>
-            <div style={{ display: "flex" }}>
+            <div style={{ display: "flex", gap: 30 }}>
                 <div style={{ width: "30%" }}>
                     <h2>ステータス</h2>
                     <div>
-                        <p>あなたの番?: {isYourTurn ? "YES" : "NO"}</p>
-                        <p>会話中?: {isInConversation ? "YES" : "NO"}</p>
-                        <p>接続状況: {connectionStatus}</p>
+                        <p>Is your turn: <b>{isYourTurn ? "YES" : "NO"}</b></p>
+                        <p>Is in conversation: <b>{isInConversation ? "YES" : "NO"}</b></p>
+                        <p>SignalR connection: <b>{connectionStatus}</b></p>
                     </div>
+
+                    <h2>トリガーワード</h2>
+                    <div>
+                        <p>「ねえ、あかねちゃん」</p>
+                        <p>「ねえ、あおいちゃん」</p>
+                        <p>「あかねちゃん、いる？」</p>
+                        <p>「あおいちゃん、いる？」</p>
+                    </div>
+
                     <h2>音声入力</h2>
-                    <p>&gt; {talkingText}</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, borderBottom: "solid 1px", height: 50 }}>
+                        <div style={{ width: 30, display: "flex", justifyContent: "center" }}>
+                            {isYourTurn
+                                ? <FontAwesomeIcon icon={faMicrophone} style={{ color: isRecognizing ? "red" : undefined }} />
+                                : <FontAwesomeIcon icon={faMicrophoneSlash} />}
+                        </div>
+                        {isYourTurn
+                            ? <p>{talkingText}</p>
+                            : <p>(ボイス再生中)</p>}
+                    </div>
                 </div>
                 <div style={{ width: "50%" }}>
                     <h2>会話履歴</h2>

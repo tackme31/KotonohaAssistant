@@ -25,7 +25,6 @@ export const useSpeechRecognition = ({ lang = 'ja-JP', continuous = true, interi
 
         recognitionRef.current = recognition;
         recognition.start();
-
         return () => recognition.stop();
     }, [lang, continuous, interimResults, onResult]);
 

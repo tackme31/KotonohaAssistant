@@ -103,8 +103,26 @@ namespace KotonohaAssistant.VoiceServer
             }
         }
 
+        public static void EnsureEditorConnected()
+        {
+            try
+            {
+                if (_ttsControl.Status == HostStatus.NotConnected)
+                {
+                    _ttsControl.Connect();
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                throw;
+            }
+        }
+
         public static async Task SpeakAsync(Kotonoha sister, string message)
         {
+            EnsureEditorConnected();
+
             try
             {
                 await WaitForStatusAsync(HostStatus.Idle);

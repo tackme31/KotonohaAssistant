@@ -6,6 +6,35 @@ import { useChatHubConnection } from '../hooks/useChatHubConnection';
 // 返事を始めるまでのタイムリミット
 const limit = 10 * 1000;
 
+const ChatBox = ({ message }: { message: string }) => {
+    let talking = "me"
+    if (message.startsWith("茜")) {
+        talking = "akane"
+    }
+    if (message.startsWith("葵")) {
+        talking = "aoi"
+    }
+
+    return (<div style={{
+        display: "flex",
+        justifyContent: talking == "me" ? "flex-end" : "flex-start"
+    }}>
+        <div style={{
+            margin: "7px 10px",
+            padding: "0px 20px",
+            borderRadius: 10,
+            color: "black",
+            backgroundColor: {
+                "akane": "pink",
+                "aoi": "lightblue",
+                "me": "lightgrey"
+            }[talking]
+        }}>
+            <p style={{lineHeight: 1} }>{message.replace(/^(茜|葵): /, "")}</p>
+        </div>
+    </div>);
+}
+
 export const Conversation = () => {
     const [messages, setMessages] = useState<string[]>([]);
     const [talkingText, setTalkingText] = useState<string>();
@@ -40,7 +69,7 @@ export const Conversation = () => {
         }
 
         if (isInConversation) {
-            setMessages(prev => [...prev, "私: " + lastTranscript]);
+            setMessages(prev => [...prev, lastTranscript]);
             if (connection) {
                 // 会話中のメッセージもAPIに送信
                 await connection.send("SendMessage", lastTranscript);
@@ -50,7 +79,7 @@ export const Conversation = () => {
         if (hasTriggerWords(lastTranscript)) {
             if (!isInConversation) {
                 setIsInConversation(true);
-                setMessages(prev => [...prev, "私: " + lastTranscript]);
+                setMessages(prev => [...prev, lastTranscript]);
 
                 if (connection) {
                     // トリガーワード検出時にAPIにメッセージを送信
@@ -92,18 +121,23 @@ export const Conversation = () => {
 
     return (
         <div>
-            <div>
-                <div>
-                    {messages.map((message, i) => (
-                        <div>
-                            <p key={i}>{message}</p>
-                            <hr />
-                        </div>))}
+            <div style={{ display: "flex" }}>
+                <div style={{ width: "30%" }}>
+                    <h2>ステータス</h2>
+                    <div>
+                        <p>あなたの番?: {isYourTurn ? "YES" : "NO"}</p>
+                        <p>会話中?: {isInConversation ? "YES" : "NO"}</p>
+                        <p>接続状況: {connectionStatus}</p>
+                    </div>
+                    <h2>音声入力</h2>
+                    <p>&gt; {talkingText}</p>
                 </div>
-                {isYourTurn && <p>私: {talkingText}</p>}
-                <p>あなたの番?: {isYourTurn ? "YES" : "NO"}</p>
-                <p>会話中?: {isInConversation ? "YES" : "NO"}</p>
-                <p>接続状況: {connectionStatus}</p>
+                <div style={{ width: "50%" }}>
+                    <h2>会話履歴</h2>
+                    {messages.map((message, i) => (
+                        <ChatBox key={i} message={message} />
+                    ))}
+                </div>
             </div>
         </div>
     );

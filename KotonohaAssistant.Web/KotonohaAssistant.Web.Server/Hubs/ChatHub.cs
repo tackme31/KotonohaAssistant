@@ -24,18 +24,16 @@ public class ChatHub : Hub
         nameof(ForgetMemory)*/
     ];
 
-    private readonly ConversationService _conversationService;
-
-    public ChatHub()
-    {
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw new Exception("環境変数 'OPENAI_API_KEY' が設定されていません。環境変数に設定するか、または '.env' ファイルにAPIキーを記載してください。");
-        var modelName = "gpt-4o-mini";
-        _conversationService = new ConversationService(apiKey, modelName, Functions, ExcludeFunctionNamesFromLazyMode);
-    }
+    private static ConversationService? _conversationService;
 
     // クライアントからメッセージを受け取る
     public async Task SendMessage(string message)
     {
+        if (_conversationService is null)
+        {
+            return;
+        }
+
         await foreach (var text in _conversationService.TalkingWithKotonohaSisters(message))
         {
             await Clients.Caller.SendAsync("Generated", text);
@@ -44,9 +42,23 @@ public class ChatHub : Hub
         await Clients.Caller.SendAsync("Complete", "COMPLETED");
     }
 
+    public override Task OnConnectedAsync()
+    {
+        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw new Exception("環境変数 'OPENAI_API_KEY' が設定されていません。環境変数に設定するか、または '.env' ファイルにAPIキーを記載してください。");
+        var modelName = "gpt-4o-mini";
+        _conversationService = new ConversationService(apiKey, modelName, Functions, ExcludeFunctionNamesFromLazyMode);
+
+        return base.OnConnectedAsync();
+    }
+
     public override Task OnDisconnectedAsync(Exception? exception)
     {
-        _conversationService.Dispose();
+        if (_conversationService != null)
+        {
+            _conversationService.Dispose();
+            _conversationService = null;
+        }
+
         return base.OnDisconnectedAsync(exception);
     }
 }

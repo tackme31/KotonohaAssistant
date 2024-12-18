@@ -8,10 +8,10 @@ const limit = 10 * 1000;
 
 const ChatBox = ({ message }: { message: string }) => {
     let talking = "me"
-    if (message.startsWith("茜")) {
+    if (message.startsWith("茜:")) {
         talking = "akane"
     }
-    if (message.startsWith("葵")) {
+    if (message.startsWith("葵:")) {
         talking = "aoi"
     }
 

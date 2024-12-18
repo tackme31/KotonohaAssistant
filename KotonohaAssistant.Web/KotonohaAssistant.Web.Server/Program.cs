@@ -1,5 +1,8 @@
 using KotonohaAssistant.Web.Server.Hubs;
 
+// load .env
+DotNetEnv.Env.TraversePath().Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
@@ -21,9 +24,6 @@ builder.Services.AddSwaggerGen();
 
 // SignalR service
 builder.Services.AddSignalR();
-
-// load .env
-DotNetEnv.Env.TraversePath().Load();
 
 var app = builder.Build();
 

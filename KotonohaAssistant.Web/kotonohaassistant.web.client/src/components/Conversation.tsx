@@ -7,7 +7,7 @@ import { faMicrophone, faMicrophoneSlash } from '@fortawesome/free-solid-svg-ico
 
 
 // 返事を始めるまでのタイムリミット
-const limit = 10 * 1000;
+const limit = 7500;
 
 const ChatBox = ({ message }: { message: string }) => {
     let talking = "me"
@@ -41,7 +41,6 @@ const ChatBox = ({ message }: { message: string }) => {
 export const Conversation = () => {
     const [messages, setMessages] = useState<string[]>([]);
     const [talkingText, setTalkingText] = useState<string>();
-    const [isRecognizing, setIsRecognizing] = useState<boolean>();
     const [isYourTurn, setIsYourTurn] = useState<boolean>(true);
     const [isInConversation, setIsInConversation] = useState<boolean>(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,7 +62,6 @@ export const Conversation = () => {
             return;
         }
 
-        setIsRecognizing(true);
         resetInactivityTimer();
 
         const lastResult = event.results[event.results.length - 1];
@@ -78,6 +76,7 @@ export const Conversation = () => {
             if (connection) {
                 // 会話中のメッセージもAPIに送信
                 await connection.send("SendMessage", lastTranscript);
+                setTalkingText("");
             }
         }
 
@@ -89,11 +88,11 @@ export const Conversation = () => {
                 if (connection) {
                     // トリガーワード検出時にAPIにメッセージを送信
                     await connection.send("SendMessage", lastTranscript); // "SendMessage" はサーバー側のメソッド名
+                    setTalkingText("");
                 }
             }
         }
 
-        setIsRecognizing(false);
     }, [isInConversation, resetInactivityTimer, hasTriggerWords, connection, isYourTurn]);
 
 
@@ -149,8 +148,8 @@ export const Conversation = () => {
                     <div style={{ display: "flex", alignItems: "center", gap: 5, borderBottom: "solid 1px", height: 50 }}>
                         <div style={{ width: 30, display: "flex", justifyContent: "center" }}>
                             {isYourTurn
-                                ? <FontAwesomeIcon icon={faMicrophone} style={{ color: isRecognizing ? "red" : undefined }} />
-                                : <FontAwesomeIcon icon={faMicrophoneSlash} />}
+                                ? <FontAwesomeIcon icon={faMicrophone} style={{ color: isInConversation ? "red" : undefined }} />
+                                : <FontAwesomeIcon icon={faMicrophoneSlash} style={{ color: "red" }} />}
                         </div>
                         {isYourTurn
                             ? <p>{talkingText}</p>

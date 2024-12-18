@@ -41,6 +41,8 @@ namespace KotonohaAssistant.VoiceServer
                             string line;
                             while ((line = reader.ReadLine()) != null)
                             {
+                                Console.WriteLine($"Data received: {line}");
+
                                 var request = ParseSpeakRequest(line);
                                 if (request != null)
                                 {
@@ -58,7 +60,8 @@ namespace KotonohaAssistant.VoiceServer
                     catch (IOException ex)
                     {
                         // 接続エラー処理
-                        Console.WriteLine($"IOException: {ex.Message}");
+                        // streamのdisposeのタイミングの関係か必ず発生するので一旦無視
+                        //Console.WriteLine($"IOException: {ex.Message}");
                     }
                     catch (Exception ex)
                     {

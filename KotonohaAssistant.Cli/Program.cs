@@ -10,7 +10,7 @@ var modelName = "gpt-4o-mini";
 
 List<ToolFunction> functions =
 [
-    new WillCall(),
+    new RememberToCall(),
     new StartTimer(),
     new CreateCalendarEvent(),
     new GetCalendarEvent(),

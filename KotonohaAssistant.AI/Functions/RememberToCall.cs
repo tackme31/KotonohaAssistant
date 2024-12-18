@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class WillCall : ToolFunction
+public class RememberToCall : ToolFunction
 {
     public override string Description => """
 指定された時間になったら知らせることを覚えます（内部的には、アラームを設定します）。

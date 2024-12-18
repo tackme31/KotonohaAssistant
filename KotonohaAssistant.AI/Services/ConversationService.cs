@@ -29,9 +29,11 @@ public class ConversationService
         string modelName,
         IList<ToolFunction> availableFunctions,
         IList<string> excludeFunctionNamesFromLazyMode,
-        Kotonoha defaultSister = Kotonoha.Akane)
+        Kotonoha defaultSister = Kotonoha.Akane,
+        string? akaneBehaviour = null,
+        string? aoiBehaviour = null)
     {
-        _messageManager = new ChatMessageManager(defaultSister);
+        _messageManager = new ChatMessageManager(defaultSister, akaneBehaviour, aoiBehaviour);
         _messageManager.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
         _messageManager.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
         _messageManager.AddUserMessage("私: うん。よろしくね。");

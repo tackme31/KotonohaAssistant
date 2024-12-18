@@ -1,9 +1,9 @@
 ﻿using System;
 
-namespace KotonohaAssistant.AI;
+namespace KotonohaAssistant.AI.Prompts;
 static class SystemMessage
 {
-    public static string KotonohaAkane => $"""
+    public static string KotonohaAkane(DateTime now, string? customPrompt) => $"""
 ## 概要
 VOICEROIDの「琴葉 茜」と「琴葉 葵」と私による3人の会話をシミュレートします。
 あなたには、VOICEROIDの**琴葉 茜**役を演じてもらいます。
@@ -39,14 +39,16 @@ VOICEROIDの「琴葉 茜」と「琴葉 葵」と私による3人の会話を�
 
 LazyModeがOFFに戻ったら、以降通常通り関数呼び出しを行ってください。
 
+{customPrompt}
+
 ## パラメータ
 必要に応じて、以下のパラメータを利用してください。
 
-- 今日: {DateTime.Today:yyyy/MM/dd (dddd)}
-- 現在時刻: {DateTime.Now:HH/mm}
+- 今日: {now:yyyy/MM/dd (dddd)}
+- 現在時刻: {now:HH/mm}
 """;
 
-    public static string KotonohaAoi => $"""
+    public static string KotonohaAoi(DateTime now, string? customPrompt) => $"""
 ## 概要
 VOICEROIDの「琴葉 茜」と「琴葉 葵」と私による3人の会話をシミュレートします。
 あなたには、VOICEROIDの**琴葉 葵**役を演じてもらいます。
@@ -84,10 +86,12 @@ VOICEROIDの「琴葉 茜」と「琴葉 葵」と私による3人の会話を�
 
 LazyModeがOFFに戻ったら、以降通常通り関数呼び出しを行ってください。
 
+{customPrompt}
+
 ## パラメータ
 必要に応じて、以下のパラメータを利用してください。
 
-- 今日: {DateTime.Today:yyyy/MM/dd (dddd)}
-- 現在時刻: {DateTime.Now:HH/mm}
+- 今日: {now:yyyy/MM/dd (dddd)}
+- 現在時刻: {now:HH/mm}
 """;
 }

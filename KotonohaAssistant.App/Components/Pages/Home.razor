@@ -1,0 +1,201 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@implements IDisposable
+@using System.Text.RegularExpressions
+@using KotonohaAssistant.AI.Functions
+@using KotonohaAssistant.AI.Services
+@using KotonohaAssistant.Core
+@using KotonohaAssistant.Core.Utils
+@using Toolbelt.Blazor.SpeechRecognition
+@inject SpeechRecognition SpeechRecognition
+
+<PageTitle>Home</PageTitle>
+
+<div>
+    <p>Talking: @_talkingText</p>
+    <p>Replay: @_replay</p>
+    <p>Is in conversation: @_isInConversation</p>
+</div>
+
+<div>
+    @foreach (var message in _messages)
+    {
+        var name = message.Talking switch
+        {
+            Kotonoha.Akane => "茜",
+            Kotonoha.Aoi => "葵",
+            _ when message.Function is null => "私",
+            _ => ""
+        };
+        var arguments = string.Join(", ", message.Function?.Arguments.Select(a => $"{a.Key}={a.Value}") ?? []);
+        if (message.Function is not null)
+        {
+            <details>
+                <summary>@(message.Function.Name)(@arguments)</summary>
+                <p style="white-space: pre-line">
+                    @(message.Function.Result)
+                </p>
+            </details>
+        }
+        else       
+        {
+            <p>@(name): @(message.Text)</p>
+        }
+    }
+</div>
+
+@code {
+    class ChatMessageInfo
+    {
+        public string? Text { get; set; }
+        public Kotonoha? Talking { get; set; }
+        public ConversationFunction? Function { get; set; }
+    }
+
+    private bool _isYourTurn = true;
+    private bool _isInConversation = false;
+    private string? _talkingText;
+    private string? _replay;
+    private readonly List<ChatMessageInfo> _messages = new();
+
+    private ConversationService? _conversationService = null;
+    private VoiceClient? _voiceClient = null;
+    private CancellationTokenSource? _conversationTimer; // タイマー用のCancellationTokenSource
+
+    protected override void OnInitialized()
+    {
+        this.SpeechRecognition.Lang = "ja-JP";
+        this.SpeechRecognition.InterimResults = true;
+        this.SpeechRecognition.Continuous = true;
+        this.SpeechRecognition.Result += OnSpeechRecognized;
+        _ = this.SpeechRecognition.StartAsync();
+
+        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
+        _conversationService = new ConversationService(
+            apiKey,
+            Settings.ModelName,
+            Settings.Functions,
+            Settings.ExcludeFunctionNamesFromLazyMode);
+        _voiceClient = new VoiceClient();
+    }
+
+    private static bool HasWakeWords(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var removed = Regex.Replace(text, @"[、。？?\s]", string.Empty);
+        return Settings.WakeWords.Any(word => removed.Contains(word));
+    }
+
+    private void OnSpeechRecognized(object? sender, SpeechRecognitionEventArgs args)
+    {
+        if (!_isYourTurn)
+        {
+            return;
+        }
+
+        var lastResult = args?.Results?.LastOrDefault();
+        if (lastResult is null)
+        {
+            return;
+        }
+
+        ResetConversationTimeout();
+
+        var transcript = lastResult.Items?[0].Transcript;
+
+
+        // 認識が完了していない場合
+        if (!lastResult.IsFinal)
+        {
+            return;
+        }
+
+        _talkingText = transcript;
+        this.StateHasChanged();
+
+        if (HasWakeWords(transcript))
+        {
+            // 会話開始
+            _isInConversation = true;
+        }
+
+        if (_isInConversation)
+        {
+            _messages.Add(new ChatMessageInfo
+                {
+                    Text = transcript,
+                });
+
+            _ = Send(transcript);
+        }
+    }
+
+    private async Task Send(string? message)
+    {
+        await this.SpeechRecognition.StopAsync();
+
+        if (_conversationService is null || _voiceClient is null)
+        {
+            return;
+        }
+
+        await foreach (var result in _conversationService.TalkingWithKotonohaSisters(message))
+        {
+            if (result.Functions is not null and not [])
+            {
+                _messages.AddRange(result.Functions.Select(f => new ChatMessageInfo { Function = f }));
+            }
+            _messages.Add(new ChatMessageInfo
+                {
+                    Text = result.Message,
+                    Talking = result.Sister,
+                });
+
+            this.StateHasChanged();
+
+            await _voiceClient.SpeakAsync(result.Sister, result.Message);
+        }
+
+        await this.SpeechRecognition.StartAsync();
+
+        _isYourTurn = true;
+        this.StateHasChanged();
+        StartConversationTimeout();
+    }
+
+    // 会話タイマーの開始
+    private void StartConversationTimeout()
+    {
+        _conversationTimer?.Cancel(); // 前のタイマーをキャンセル
+        _conversationTimer = new CancellationTokenSource();
+        var token = _conversationTimer.Token;
+
+        // 5秒後に会話を終了
+        Task.Delay(5000, token).ContinueWith(t =>
+        {
+            if (!token.IsCancellationRequested)
+            {
+                _isInConversation = false; // 5秒経過後に会話終了
+                StateHasChanged();
+            }
+        }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    // 会話タイマーのリセット
+    private void ResetConversationTimeout()
+    {
+        _conversationTimer?.Cancel(); // 前のタイマーをキャンセル
+        _conversationTimer = new CancellationTokenSource();
+    }
+
+    public void Dispose()
+    {
+        this.SpeechRecognition.Result -= OnSpeechRecognized;
+        _voiceClient?.Dispose();
+        _conversationTimer?.Cancel();
+    }
+}

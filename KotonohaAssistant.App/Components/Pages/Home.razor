@@ -168,6 +168,8 @@
             return;
         }
 
+        transcript = ReplaceFuzzyMatchWord(transcript);
+
         _talkingText = transcript;
         this.StateHasChanged();
 
@@ -178,6 +180,7 @@
         }
 
         // ウェイクワードが含まれていたら会話開始
+
         if (ContainsWakeWord(transcript))
         {
             _isInConversation = true;
@@ -189,6 +192,13 @@
             _messages.Add(new ChatMessageInfo { Text = transcript });
 
             _ = SendMessage(transcript);
+        }
+
+        string ReplaceFuzzyMatchWord(string input)
+        {
+            input = Regex.Replace(input, Settings.FuzzyMatchAkane.From, Settings.FuzzyMatchAkane.To);
+            input = Regex.Replace(input, Settings.FuzzyMatchAoi.From, Settings.FuzzyMatchAoi.To);
+            return input;
         }
     }
 

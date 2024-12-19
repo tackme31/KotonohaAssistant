@@ -78,7 +78,7 @@ export const Conversation = () => {
             }
         }
 
-    }, [isInConversation, resetInactivityTimer, hasTriggerWords, connection, isYourTurn]);
+    }, [isInConversation, resetInactivityTimer, connection, isYourTurn]);
 
     useSpeechRecognition({
         lang: "ja-JP",

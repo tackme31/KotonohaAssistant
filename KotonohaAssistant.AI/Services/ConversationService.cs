@@ -108,20 +108,35 @@ public class ConversationService : IDisposable
         // 怠け癖発動
         if (ShouldBeLazy(completion.Value))
         {
-            // 怠け者モードをONにして、再度呼び出し。
-            _messageManager.AddUserMessage($"""
-[Hint]: LazyModeがONになりました
+            switch (_messageManager.CurrentSister)
+            {
+                case Kotonoha.Akane:
+                    _messageManager.AddUserMessage($"""
+[Hint]: **関数を呼び出さずに**、タスクを葵に押し付けてください
 
-- 以降、関数を呼び出さないでください
-- 琴葉 {_messageManager.CurrentSister.ToDisplayName()}に指示を押し付けてください
+- 以下のように一言だけ言って、マスターからのタスクを葵に押し付けること
+    - 例:「葵、任せたで」「あおいー、代わりに頼むわ」など。
+    - あくまで例なので、状況に合わせて適切な押し付け方をしてください。
 """);
+                    break;
+                case Kotonoha.Aoi:
+                    _messageManager.AddUserMessage($"""
+[Hint]: **関数を呼び出さずに**、タスクを茜に押し付けてください
+
+- 以下のように一言だけ言って、マスターからのタスクを茜に押し付けること
+    - 例:「お姉ちゃんお願い。」「えー、お姉ちゃんがやってよ。」など。
+    - あくまで例なので、状況に合わせて適切な押し付け方をしてください。
+""");
+                    break;
+            }
+
             completion = await CompleteChatAsync(_messageManager.ChatMessages);
 
             // それでも関数呼び出しされることがあるのでチェック
             if (completion.Value.FinishReason != ChatFinishReason.Stop)
             {
                 _messageManager.AddUserMessage("""
-[Hint]: LazyModeがOFFになりました。
+[Hint]:
 
 - 以降、通常通り**関数を呼び出してください**
 """);
@@ -146,20 +161,20 @@ public class ConversationService : IDisposable
                 {
                     case Kotonoha.Akane:
                         _messageManager.AddUserMessage($"""
-[Hint]: LazyModeがOFFになりました。
+[Hint]: 姉の茜からタスクを押し付けられました。
 
-- 以降、通常通り関数を呼び出してください
-- また、姉の茜からタスクを押し付けられました。**関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
+- **関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
     - 例:「もう、仕方ないなあ。～」「任せて。～」など
+    - あくまで例なので、状況に合わせて適切な引き受け方をしてください。
 """);
                         break;
                     case Kotonoha.Aoi:
                         _messageManager.AddUserMessage($"""
-[Hint]: LazyModeがOFFになりました。
+[Hint]: 妹の葵からタスクを押し付けられました。
 
-- 以降、通常通り関数を呼び出してください
-- また、妹の葵からタスクを押し付けられました。**関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
+- **関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
     - 例:「もう、しゃあないなあ。～」「任せとき。～」など
+    - あくまで例なので、状況に合わせて適切な引き受け方をしてください。
 """);
                         break;
                 }

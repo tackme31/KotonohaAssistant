@@ -3,10 +3,10 @@ using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class RememberToCall : ToolFunction
+public class CallMaster : ToolFunction
 {
     public override string Description => """
-この関数は、指定された時間に「呼ぶ」ことを覚える際に呼び出されます。
+指定された時間になったら知らせるための関数です。
 以下は、呼び出される例です。
 
 - 「10時にアラームを設定して」

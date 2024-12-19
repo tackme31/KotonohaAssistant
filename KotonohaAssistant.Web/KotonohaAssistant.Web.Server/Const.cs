@@ -9,7 +9,7 @@ public class Const
     /// </summary>
     public static readonly List<ToolFunction> Functions =
     [
-        new RememberToCall(),
+        new CallMaster(),
         new StartTimer(),
         new CreateCalendarEvent(),
         new GetCalendarEvent(),

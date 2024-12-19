@@ -109,13 +109,22 @@ public class ConversationService : IDisposable
         if (ShouldBeLazy(completion.Value))
         {
             // 怠け者モードをONにして、再度呼び出し。
-            _messageManager.AddUserMessage("[Hint]: LazyMode=ON: 以降、関数を呼び出さないでください");
+            _messageManager.AddUserMessage($"""
+[Hint]: LazyModeがONになりました
+
+- 以降、関数を呼び出さないでください
+- 琴葉 {_messageManager.CurrentSister.ToDisplayName()}に指示を押し付けてください
+""");
             completion = await CompleteChatAsync(_messageManager.ChatMessages);
 
             // それでも関数呼び出しされることがあるのでチェック
             if (completion.Value.FinishReason != ChatFinishReason.Stop)
             {
-                _messageManager.AddUserMessage("[Hint]: LazyMode=OFF: 以降、通常通り**関数を呼び出してください**");
+                _messageManager.AddUserMessage("""
+[Hint]: LazyModeがOFFになりました。
+
+- 以降、通常通り**関数を呼び出してください**
+""");
             }
             // 実際に怠けた場合の処理
             else
@@ -133,7 +142,27 @@ public class ConversationService : IDisposable
                 await SpeakCompletionAsync(completion);
 
                 // 怠け者モードをOFF
-                _messageManager.AddUserMessage("[Hint]: LazyMode=OFF: 以降、通常通り**関数を呼び出してください**");
+                switch (_messageManager.CurrentSister)
+                {
+                    case Kotonoha.Akane:
+                        _messageManager.AddUserMessage($"""
+[Hint]: LazyModeがOFFになりました。
+
+- 以降、通常通り関数を呼び出してください
+- また、姉の茜からタスクを押し付けられました。**関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
+    - 例:「もう、仕方ないなあ。～」「任せて。～」など
+""");
+                        break;
+                    case Kotonoha.Aoi:
+                        _messageManager.AddUserMessage($"""
+[Hint]: LazyModeがOFFになりました。
+
+- 以降、通常通り関数を呼び出してください
+- また、妹の葵からタスクを押し付けられました。**関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
+    - 例:「もう、しゃあないなあ。～」「任せとき。～」など
+""");
+                        break;
+                }
 
 
                 // 姉妹を切り替えて、再度呼び出し
@@ -224,7 +253,7 @@ public class ConversationService : IDisposable
         }
 
         // 4回以上同じ方にお願いすると怠ける
-        if (_patienceCount > 3)
+        if (_patienceCount > 2)
         {
             return true;
         }

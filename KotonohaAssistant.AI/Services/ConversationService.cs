@@ -67,13 +67,13 @@ public class ConversationService
 
         // 姉妹切り替え
         if (_state.CurrentSister == Kotonoha.Aoi &&
-            (input.Contains("茜") || input.Contains("あかね")))
+            (input.Contains("茜") || input.Contains("あかねちゃん")))
         {
             _state.CurrentSister = Kotonoha.Akane;
             _state.AddHint(Hint.SwitchSisterTo(Kotonoha.Akane));
         }
         if (_state.CurrentSister == Kotonoha.Akane &&
-            (input.Contains("葵") || input.Contains("あおい")))
+            (input.Contains("葵") || input.Contains("あおいちゃん")))
         {
             _state.CurrentSister = Kotonoha.Aoi;
             _state.AddHint(Hint.SwitchSisterTo(Kotonoha.Aoi));

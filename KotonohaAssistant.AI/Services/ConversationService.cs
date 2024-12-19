@@ -194,13 +194,13 @@ public class ConversationService
                 using var doc = JsonDocument.Parse(toolCall.FunctionArguments);
                 if (!_functions.TryGetValue(toolCall.FunctionName, out var function) || function is null)
                 {
-                    _state.AddToolMessage(toolCall.Id, "ERROR");
+                    _state.AddToolMessage(toolCall.Id, $"Function '{toolCall.FunctionName} does not exist.'");
                     continue;
                 }
 
                 if (!function.TryParseArguments(doc, out var arguments))
                 {
-                    _state.AddToolMessage(toolCall.Id, "ERROR");
+                    _state.AddToolMessage(toolCall.Id, $"Failed to parse arguments of '{toolCall.FunctionName}'.");
                     continue;
                 }
 

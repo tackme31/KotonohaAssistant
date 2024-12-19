@@ -1,6 +1,5 @@
 ﻿using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
-using KotonohaAssistant.Core;
 
 namespace KotonohaAssistant.App;
 
@@ -35,11 +34,6 @@ public class Settings
     /// ウェイクワードの曖昧一致（葵）
     /// </summary>
     public static readonly (string From, string To) FuzzyMatchAoi = (@"^(ネオちゃん|ね愛ちゃん|なおちゃん)", "ねえ、あおいちゃん");
-
-    /// <summary>
-    /// デフォルトの会話対象
-    /// </summary>
-    public static readonly Kotonoha DefaultSister = Kotonoha.Akane;
 
     /// <summary>
     /// 茜ちゃんの性格（振る舞い）

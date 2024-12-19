@@ -9,39 +9,73 @@
 @using Toolbelt.Blazor.SpeechRecognition
 @inject SpeechRecognition SpeechRecognition
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Kotonoha Assistant</PageTitle>
 
-<div>
-    <p>Talking: @_talkingText</p>
-    <p>Replay: @_replay</p>
-    <p>Is in conversation: @_isInConversation</p>
-</div>
+<h1>Kotonoha Assistant</h1>
+<div style="display: flex; gap: 30px">
+    <div style="width: 30%">
+        <h2>ステータス</h2>
+        <div>
+            <p>Is your turn: <b>@(_isYourTurn ? "YES" : "NO")</b></p>
+            <p>Is in conversation: <b>@(_isInConversation ? "YES" : "NO")</b></p>
+        </div>
+        <h2>ウェイクワード</h2>
+        <div>
+            <p>「ねえ、あかねちゃん」</p>
+            <p>「ねえ、あおいちゃん」</p>
+            <p>「あかねちゃん、いる？」</p>
+            <p>「あおいちゃん、いる？」</p>
+        </div>
+        <h2>音声入力</h2>
+        <p>
+            @if(_isInConversation)
+            {
+                <span style="color: red">INPUT: </span>
+            }
+            else
+            {
+                <span style="color: black">INPUT: </span>
+            }
+            @(_isYourTurn ? _talkingText : "(ボイス再生中)")
+        </p>
+    </div>
+    <div style="width: 50%">
+        <h2>会話履歴</h2>
+        @foreach (var message in _messages)
+        {
+            if (message.Function is not null)
+            {
+                var arguments = string.Join(", ", message.Function.Arguments.Select(a => $"{a.Key}={a.Value}") ?? []);
 
-<div>
-    @foreach (var message in _messages)
-    {
-        var name = message.Talking switch
-        {
-            Kotonoha.Akane => "茜",
-            Kotonoha.Aoi => "葵",
-            _ when message.Function is null => "私",
-            _ => ""
-        };
-        var arguments = string.Join(", ", message.Function?.Arguments.Select(a => $"{a.Key}={a.Value}") ?? []);
-        if (message.Function is not null)
-        {
-            <details>
-                <summary>@(message.Function.Name)(@arguments)</summary>
-                <p style="white-space: pre-line">
-                    @(message.Function.Result)
-                </p>
-            </details>
+                <div style="background: #f5f5f5; color: #adadad; padding: 5px 20px 5px; margin: 5px 0px">
+                    <details>
+                        <summary>
+                            @(message.Function.Name)(@(arguments))
+                        </summary>
+                        <p style="white-space: pre-line">
+                            @(message.Function.Result)
+                        </p>
+                    </details>
+                </div>
+            }
+            else
+            {
+                var color = message.Talking switch
+                {
+                    Kotonoha.Akane => "pink",
+                    Kotonoha.Aoi => "lightblue",
+                    _ => "lightgray"
+                };
+                var justifyContent = message.Talking is null ? "flex-end" : "flex-start";
+
+                <div style="display: flex; justify-content: @justifyContent">
+                    <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 10px; background-color: @color;">
+                        <p>@(message.Text)</p>
+                    </div>
+                </div>
+            }
         }
-        else       
-        {
-            <p>@(name): @(message.Text)</p>
-        }
-    }
+    </div>
 </div>
 
 @code {
@@ -106,16 +140,14 @@
         ResetConversationTimeout();
 
         var transcript = lastResult.Items?[0].Transcript;
-
+        _talkingText = transcript;
+        this.StateHasChanged();
 
         // 認識が完了していない場合
         if (!lastResult.IsFinal)
         {
             return;
         }
-
-        _talkingText = transcript;
-        this.StateHasChanged();
 
         if (HasWakeWords(transcript))
         {
@@ -136,12 +168,15 @@
 
     private async Task Send(string? message)
     {
-        await this.SpeechRecognition.StopAsync();
-
         if (_conversationService is null || _voiceClient is null)
         {
             return;
         }
+
+        _isYourTurn = false;
+        this.StateHasChanged();
+
+        await this.SpeechRecognition.StopAsync();
 
         await foreach (var result in _conversationService.TalkingWithKotonohaSisters(message))
         {
@@ -164,6 +199,8 @@
 
         _isYourTurn = true;
         this.StateHasChanged();
+
+        // 5秒間入力を受け付ける
         StartConversationTimeout();
     }
 

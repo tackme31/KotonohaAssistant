@@ -10,6 +10,11 @@ using KotonohaAssistant.Core;
 
 namespace KotonohaAssistant.VoiceServer
 {
+    /// <summary>
+    /// A.I. VOICEのエディターを操作するためのサーバー
+    /// エディタのAPIが.NET Frameworkにしか対応していないのので
+    /// Blazor/CLIアプリからはこのサーバーを介してボイスの読み上げを行う
+    /// </summary>
     internal class Program
     {
         private static readonly TtsControl _ttsControl = new TtsControl();

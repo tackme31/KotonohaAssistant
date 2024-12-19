@@ -86,15 +86,33 @@
         public ConversationFunction? Function { get; set; }
     }
 
+    /// <summary>
+    /// 自分の番かどうか
+    /// </summary>
     private bool _isYourTurn = true;
+
+    /// <summary>
+    /// 会話中かどうか
+    /// </summary>
     private bool _isInConversation = false;
+
+    /// <summary>
+    /// 入力中のメッセージ
+    /// </summary>
     private string? _talkingText;
-    private string? _replay;
+
+    /// <summary>
+    /// 会話履歴
+    /// </summary>
     private readonly List<ChatMessageInfo> _messages = new();
+
+    /// <summary>
+    /// 会話終了タイムアウト用
+    /// </summary>
+    private CancellationTokenSource? _conversationTimer;
 
     private ConversationService? _conversationService = null;
     private VoiceClient? _voiceClient = null;
-    private CancellationTokenSource? _conversationTimer; // タイマー用のCancellationTokenSource
 
     protected override void OnInitialized()
     {
@@ -116,7 +134,7 @@
         _voiceClient = new VoiceClient();
     }
 
-    private static bool HasWakeWords(string? text)
+    private static bool ContainsWakeWord(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -129,6 +147,7 @@
 
     private void OnSpeechRecognized(object? sender, SpeechRecognitionEventArgs args)
     {
+        // 琴葉姉妹の会話中は受け付けない
         if (!_isYourTurn)
         {
             return;
@@ -140,36 +159,45 @@
             return;
         }
 
+        // 一言でも喋ると会話終了タイムアウトをリセットする
         ResetConversationTimeout();
 
         var transcript = lastResult.Items?[0].Transcript;
+        if (transcript is null)
+        {
+            return;
+        }
+
         _talkingText = transcript;
         this.StateHasChanged();
 
-        // 認識が完了していない場合
+        // こちらの入力がまだ終わっていない場合
         if (!lastResult.IsFinal)
         {
             return;
         }
 
-        if (HasWakeWords(transcript))
+        // ウェイクワードが含まれていたら会話開始
+        if (ContainsWakeWord(transcript))
         {
-            // 会話開始
             _isInConversation = true;
         }
 
+        // 会話中の入力はすべて送信する
         if (_isInConversation)
         {
-            _messages.Add(new ChatMessageInfo
-                {
-                    Text = transcript,
-                });
+            _messages.Add(new ChatMessageInfo { Text = transcript });
 
-            _ = Send(transcript);
+            _ = SendMessage(transcript);
         }
     }
 
-    private async Task Send(string? message)
+    /// <summary>
+    /// メッセージの生成＆読み上げ
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private async Task SendMessage(string message)
     {
         if (_conversationService is null || _voiceClient is null)
         {
@@ -183,10 +211,12 @@
 
         await foreach (var result in _conversationService.TalkingWithKotonohaSisters(message))
         {
+            // 関数呼び出しがあった場合は個別に表示
             if (result.Functions is not null and not [])
             {
                 _messages.AddRange(result.Functions.Select(f => new ChatMessageInfo { Function = f }));
             }
+
             _messages.Add(new ChatMessageInfo
                 {
                     Text = result.Message,
@@ -195,6 +225,7 @@
 
             this.StateHasChanged();
 
+            // 読み上げ
             await _voiceClient.SpeakAsync(result.Sister, result.Message);
         }
 
@@ -204,28 +235,32 @@
         this.StateHasChanged();
 
         // 5秒間入力を受け付ける
-        StartConversationTimeout();
+        StartConversationTimeout(Settings.CoversationTimeout);
     }
 
-    // 会話タイマーの開始
-    private void StartConversationTimeout()
+    /// <summary>
+    /// 指定した時間経過すると会話を終了する
+    /// </summary>
+    private void StartConversationTimeout(int interval)
     {
         _conversationTimer?.Cancel(); // 前のタイマーをキャンセル
         _conversationTimer = new CancellationTokenSource();
         var token = _conversationTimer.Token;
 
         // 5秒後に会話を終了
-        Task.Delay(5000, token).ContinueWith(t =>
+        Task.Delay(interval, token).ContinueWith(t =>
         {
             if (!token.IsCancellationRequested)
             {
-                _isInConversation = false; // 5秒経過後に会話終了
+                _isInConversation = false; // 指定時間経過後に会話終了
                 StateHasChanged();
             }
         }, TaskScheduler.FromCurrentSynchronizationContext());
     }
 
-    // 会話タイマーのリセット
+    /// <summary>
+    /// 会話終了のタイムアウトをリセットする
+    /// </summary>
     private void ResetConversationTimeout()
     {
         _conversationTimer?.Cancel(); // 前のタイマーをキャンセル

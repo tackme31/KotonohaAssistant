@@ -7,6 +7,12 @@ namespace KotonohaAssistant.App;
 public class Settings
 {
     /// <summary>
+    /// 会話が終了するまでの時間
+    /// この時間だけ沈黙が続くと会話が終了する
+    /// </summary>
+    public static readonly int CoversationTimeout = 7500;
+
+    /// <summary>
     /// ウェイクワード
     /// </summary>
     public static readonly string[] WakeWords = [
@@ -60,5 +66,8 @@ public class Settings
         nameof(ForgetMemory),
     ];
 
+    /// <summary>
+    /// 使用するモデル名
+    /// </summary>
     public static readonly string ModelName = "gpt-4o-mini";
 }

@@ -7,6 +7,9 @@ using Newtonsoft.Json;
 
 namespace KotonohaAssistant.Core.Utils;
 
+/// <summary>
+/// KotonohaAssistant.VoiceServerのクライアント
+/// </summary>
 public class VoiceClient : IDisposable
 {
     private NamedPipeClientStream _pipeClient;

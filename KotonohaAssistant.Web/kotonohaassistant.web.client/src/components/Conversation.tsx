@@ -49,6 +49,13 @@ export const Conversation = () => {
             setMessages(prev => [...prev, {
                 text: lastTranscript
             }]);
+
+            // TODO: 終了ワード「なんでもない」「さようなら」とかが含まれていると、終了する
+            if (lastTranscript.includes('何でもない') || lastTranscript.includes('会話中止')) {
+                setIsInConversation(false);
+                return;
+            }
+
             if (connection) {
                 // 会話中のメッセージもAPIに送信
                 await connection.send("SendMessage", lastTranscript);
@@ -120,7 +127,7 @@ export const Conversation = () => {
                         <p>SignalR connection: <b>{connectionStatus}</b></p>
                     </div>
 
-                    <h2>トリガーワード</h2>
+                    <h2>ウェイクワード</h2>
                     <div>
                         <p>「ねえ、あかねちゃん」</p>
                         <p>「ねえ、あおいちゃん」</p>
@@ -133,7 +140,7 @@ export const Conversation = () => {
                         <div style={{ width: 30, display: "flex", justifyContent: "center" }}>
                             {isYourTurn
                                 ? <FontAwesomeIcon icon={faMicrophone} style={{ color: isInConversation ? "red" : undefined }} />
-                                : <FontAwesomeIcon icon={faMicrophoneSlash} style={{ color: "red" }} />}
+                                : <FontAwesomeIcon icon={faMicrophoneSlash} style={{ color: isInConversation ? "red" : undefined }} />}
                         </div>
                         {isYourTurn
                             ? <p>{talkingText}</p>

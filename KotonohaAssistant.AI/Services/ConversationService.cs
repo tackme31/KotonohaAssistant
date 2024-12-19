@@ -3,7 +3,6 @@ using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core;
-using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
 using System.ClientModel;
 using System.Text.Json;

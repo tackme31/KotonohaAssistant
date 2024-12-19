@@ -1,4 +1,5 @@
 ﻿using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.Core.Utils;
 using Microsoft.AspNetCore.SignalR;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -11,6 +12,7 @@ public class ChatHub : Hub
 
     public async Task SendMessage(string message)
     {
+        using var voiceClient = new VoiceClient();
         var service = _services.GetOrAdd(Context.ConnectionId, CreateConversationService);
         var options = new JsonSerializerOptions
         {
@@ -21,6 +23,8 @@ public class ChatHub : Hub
         {
             var json = JsonSerializer.Serialize(result, options);
             await Clients.Caller.SendAsync("Generated", json);
+
+            await voiceClient.SpeakAsync(result.Sister, result.Message);
         }
 
         await Clients.Caller.SendAsync("Complete", "COMPLETED");
@@ -45,10 +49,7 @@ public class ChatHub : Hub
 
     public override Task OnDisconnectedAsync(Exception? exception)
     {
-        if (_services.TryRemove(Context.ConnectionId, out var service))
-        {
-            service.Dispose();
-        }
+        _ = _services.TryRemove(Context.ConnectionId, out var service);
 
         return base.OnDisconnectedAsync(exception);
     }

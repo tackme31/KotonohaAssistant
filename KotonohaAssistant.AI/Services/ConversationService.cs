@@ -11,11 +11,10 @@ using System.Text.RegularExpressions;
 
 namespace KotonohaAssistant.AI.Services;
 
-public class ConversationService : IDisposable
+public class ConversationService
 {
     private readonly ConversationState _state;
     private readonly ChatClient _chatClient;
-    private readonly VoiceClient _voiceClient;
     private readonly IDictionary<string, ToolFunction> _functions;
     private readonly IList<string> _excludeFunctionNamesFromLazyMode;
     private readonly ChatCompletionOptions _options;
@@ -43,7 +42,6 @@ public class ConversationService : IDisposable
         _state.AddUserMessage("私: うん。よろしくね。");
 
         _chatClient = new ChatClient(modelName, chatApiKey);
-        _voiceClient = new VoiceClient();
         _functions = availableFunctions.ToDictionary(f => f.GetType().Name);
         _excludeFunctionNamesFromLazyMode = excludeFunctionNamesFromLazyMode;
         _options = new ChatCompletionOptions();
@@ -56,10 +54,13 @@ public class ConversationService : IDisposable
         _state.LastToolCallSister = 0;
     }
 
+    /// <summary>
+    /// 入力したテキストで琴葉姉妹と会話します
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
     public async IAsyncEnumerable<ConversationResult> TalkingWithKotonohaSisters(string input)
     {
-        using var voiceClient = new VoiceClient();
-
         if (string.IsNullOrWhiteSpace(input))
         {
             yield break;
@@ -120,12 +121,9 @@ public class ConversationService : IDisposable
                 {
                     Message = TrimSisterName(completion.Value.Content[0].Text),
                     Sister = _state.CurrentSister
-                };
+                }; ;
 
                 _state.AddAssistantMessage(completion.Value);
-
-                // 押し付けセリフを読み上げ
-                await SpeakCompletionAsync(completion, _state.CurrentSister);
 
                 EndLazyMode();
 
@@ -151,10 +149,7 @@ public class ConversationService : IDisposable
             Message = TrimSisterName(completion.Value.Content[0].Text),
             Sister = _state.CurrentSister,
             Functions = functions
-        };
-
-        // 読み上げ
-        await SpeakCompletionAsync(completion, _state.CurrentSister);
+        }; ;
 
         void BeginLazyMode()
         {
@@ -185,6 +180,11 @@ public class ConversationService : IDisposable
         static string TrimSisterName(string input) => Regex.Replace(input, @"^(茜|葵):\s+", string.Empty);
     }
 
+    /// <summary>
+    /// Function callingで呼び出された関数の実行を行います
+    /// </summary>
+    /// <param name="completion"></param>
+    /// <returns></returns>
     private async Task<(ClientResult<ChatCompletion> result, List<ConversationFunction> functions)> InvokeFunctions(ClientResult<ChatCompletion> completion)
     {
         var invokedFunctions = new List<ConversationFunction>();
@@ -248,22 +248,5 @@ public class ConversationService : IDisposable
         // 1/10の確率で怠け癖発動
         var lazy = _r.NextDouble() < 1d / 10d;
         return lazy;
-    }
-
-    private async Task SpeakCompletionAsync(ClientResult<ChatCompletion> completion, Kotonoha sister)
-    {
-        if (completion.Value.FinishReason != ChatFinishReason.Stop)
-        {
-            return;
-        }
-        var message = completion.Value.Content[0].Text;
-
-        var messageWithoutName = Regex.Replace(message, @"^(茜|葵):", string.Empty);
-        await _voiceClient.SpeakAsync(sister, messageWithoutName);
-    }
-
-    public void Dispose()
-    {
-        _voiceClient?.Dispose();
     }
 }

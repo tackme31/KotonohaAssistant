@@ -1,6 +1,7 @@
 ﻿using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Utils;
 
 // load .env
 DotNetEnv.Env.TraversePath().Load();
@@ -26,6 +27,7 @@ List<string> excludeFunctionNamesFromLazyMode =
     nameof(ForgetMemory)
 ];
 
+using var voiceClient = new VoiceClient();
 var service = new ConversationService(apiKey, modelName, functions, excludeFunctionNamesFromLazyMode);
 
 try
@@ -47,6 +49,8 @@ try
 
             Console.Write(name);
             Console.WriteLine(result.Message);
+
+            await voiceClient.SpeakAsync(result.Sister, result.Message);
         }
     }
 }

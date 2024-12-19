@@ -6,7 +6,7 @@ namespace KotonohaAssistant.AI.Functions;
 public class ForgetMemory : ToolFunction
 {
     public override string Description => """
-これまでの会話記録をすべて削除します。
+琴葉姉妹の記憶、つまりこれまでの会話記録をすべて削除します。
 
 **注意**：これはとても危険な操作です。琴葉姉妹は強い感情を持っているため、この操作を行う前に必ず確認してください。
 

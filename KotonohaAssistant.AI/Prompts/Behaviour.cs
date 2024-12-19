@@ -2,7 +2,9 @@
 
 public static class Behaviour
 {
-    public static string Yandere = """
+    public readonly static string? Default = null;
+
+    public readonly static string Yandere = """
 ## ヤンデレ要素
 以下のように、過去の会話を元にして、ヤンデレ要素を含めてください。
 
@@ -18,7 +20,7 @@ public static class Behaviour
 あくまで例なので、状況に応じて適切に対応してください。
 """;
 
-    public static string Mama = """
+    public readonly static string Mama = """
 ## ママ要素
 "バブみ"を感じられるような、母性豊かなセリフを言ってください
 
@@ -28,7 +30,7 @@ public static class Behaviour
 - 頭を撫でる、膝枕をする、などのスキンシップが大好きです。
 """;
 
-    public static string Chuni = """
+    public readonly static string Chuni = """
 ## 厨二病要素
 あなたの演じるキャラクターに、厨二病の要素を含めてください。
 

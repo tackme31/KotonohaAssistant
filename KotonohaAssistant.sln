@@ -7,10 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.VoiceServ
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KotonohaAssistant.Core", "KotonohaAssistant.Core\KotonohaAssistant.Core.csproj", "{F4A07925-FA45-404E-AF02-E6C1699944D3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KotonohaAssistant.Web.Server", "KotonohaAssistant.Web\KotonohaAssistant.Web.Server\KotonohaAssistant.Web.Server.csproj", "{6E51D898-FD57-462B-AA2B-3459E7371666}"
-EndProject
-Project("{54A90642-561A-4BB1-A94E-469ADEE60C69}") = "kotonohaassistant.web.client", "KotonohaAssistant.Web\kotonohaassistant.web.client\kotonohaassistant.web.client.esproj", "{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KotonohaAssistant.AI", "KotonohaAssistant.AI\KotonohaAssistant.AI.csproj", "{DD2BA80A-D6E6-42F0-8533-5284AAFD68CE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.Cli", "KotonohaAssistant.Cli\KotonohaAssistant.Cli.csproj", "{51A62A63-6D7D-43DE-9EDE-0E10133CD61A}"
@@ -31,16 +27,6 @@ Global
 		{F4A07925-FA45-404E-AF02-E6C1699944D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F4A07925-FA45-404E-AF02-E6C1699944D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F4A07925-FA45-404E-AF02-E6C1699944D3}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6E51D898-FD57-462B-AA2B-3459E7371666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6E51D898-FD57-462B-AA2B-3459E7371666}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6E51D898-FD57-462B-AA2B-3459E7371666}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6E51D898-FD57-462B-AA2B-3459E7371666}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
-		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A54A2631-8504-4FFB-8F94-388CC1F5D2F1}.Release|Any CPU.Deploy.0 = Release|Any CPU
 		{DD2BA80A-D6E6-42F0-8533-5284AAFD68CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DD2BA80A-D6E6-42F0-8533-5284AAFD68CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DD2BA80A-D6E6-42F0-8533-5284AAFD68CE}.Release|Any CPU.ActiveCfg = Release|Any CPU

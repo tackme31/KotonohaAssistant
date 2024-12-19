@@ -26,18 +26,6 @@
             <p>「あかねちゃん、いる？」</p>
             <p>「あおいちゃん、いる？」</p>
         </div>
-        <h2>音声入力</h2>
-        <p>
-            @if(_isInConversation)
-            {
-                <span style="color: red">INPUT: </span>
-            }
-            else
-            {
-                <span style="color: black">INPUT: </span>
-            }
-            @(_isYourTurn ? _talkingText : "(ボイス再生中)")
-        </p>
     </div>
     <div style="width: 50%">
         <h2>会話履歴</h2>
@@ -68,12 +56,27 @@
                 };
                 var justifyContent = message.Talking is null ? "flex-end" : "flex-start";
 
-                <div style="display: flex; justify-content: @justifyContent">
+                <div style="display: flex; justify-content: @justifyContent;">
                     <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 10px; background-color: @color;">
                         <p>@(message.Text)</p>
                     </div>
                 </div>
             }
+        }
+
+        @if (_isYourTurn)
+        {
+            <div style="display: flex; justify-content: flex-end;">
+                <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 10px; background-color: lightgray;">
+                    <p>
+                        &gt;&nbsp;@(_talkingText)
+                        @if (_isInConversation)
+                        {
+                            <span class="blinking-underscore">_</span>
+                        }
+                    </p>
+                </div>
+            </div>
         }
     </div>
 </div>
@@ -99,7 +102,7 @@
     /// <summary>
     /// 入力中のメッセージ
     /// </summary>
-    private string? _talkingText;
+    private string _talkingText = "";
 
     /// <summary>
     /// 会話履歴
@@ -242,6 +245,7 @@
         await this.SpeechRecognition.StartAsync();
 
         _isYourTurn = true;
+        _talkingText = "";
         this.StateHasChanged();
 
         // 5秒間入力を受け付ける

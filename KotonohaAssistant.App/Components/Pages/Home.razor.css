@@ -1,0 +1,14 @@
+﻿@keyframes blink {
+    0%, 50% {
+        opacity: 1; /* 表示 */
+    }
+
+    50.01%, 100% {
+        opacity: 0; /* 非表示 */
+    }
+}
+
+/* アンダースコアのスタイル */
+.blinking-underscore {
+    animation: blink 1.2s infinite steps(1);
+}

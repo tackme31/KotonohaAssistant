@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace KotonohaAssistant.AI.Prompts;
+﻿namespace KotonohaAssistant.AI.Prompts;
 static class SystemMessage
 {
     public static string KotonohaAkane(DateTime now, string? customPrompt) => $"""

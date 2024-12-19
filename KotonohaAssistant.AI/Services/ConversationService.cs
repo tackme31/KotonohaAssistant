@@ -1,5 +1,6 @@
 ﻿using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Functions;
+using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
@@ -7,29 +8,18 @@ using OpenAI.Chat;
 using System.ClientModel;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace KotonohaAssistant.AI.Services;
 
 public class ConversationService : IDisposable
 {
-    private readonly ChatMessageManager _messageManager;
+    private readonly ConversationState _state;
     private readonly ChatClient _chatClient;
     private readonly VoiceClient _voiceClient;
     private readonly IDictionary<string, ToolFunction> _functions;
     private readonly IList<string> _excludeFunctionNamesFromLazyMode;
     private readonly ChatCompletionOptions _options;
     private readonly Random _r = new();
-
-    /// <summary>
-    /// 同じ方に連続してお願いした回数。忍耐値。
-    /// </summary>
-    private int _patienceCount;
-
-    /// <summary>
-    /// 最後にお願いを聞いてくれた方を格納。
-    /// </summary>
-    private Kotonoha _lastToolCallSister;
 
     public ConversationService(
         string chatApiKey,
@@ -40,11 +30,17 @@ public class ConversationService : IDisposable
         string? akaneBehaviour = null,
         string? aoiBehaviour = null)
     {
-        _messageManager = new ChatMessageManager(defaultSister, akaneBehaviour, aoiBehaviour);
-        _messageManager.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
-        _messageManager.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
-        _messageManager.AddUserMessage("私: うん。よろしくね。");
-        _messageManager.AddUserMessage("======= LazyMode: OFF =======");
+        _state = new ConversationState()
+        {
+            CurrentSister = defaultSister,
+            AkaneBehaviour = akaneBehaviour,
+            AoiBehaviour = aoiBehaviour
+        };
+
+        // 生成時の参考のためにあらかじめ会話を入れておく
+        _state.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
+        _state.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
+        _state.AddUserMessage("私: うん。よろしくね。");
 
         _chatClient = new ChatClient(modelName, chatApiKey);
         _voiceClient = new VoiceClient();
@@ -56,8 +52,8 @@ public class ConversationService : IDisposable
             _options.Tools.Add(function.CreateChatTool());
         }
 
-        _patienceCount = 0;
-        _lastToolCallSister = 0;
+        _state.PatienceCount = 0;
+        _state.LastToolCallSister = 0;
     }
 
     public async IAsyncEnumerable<ConversationResult> TalkingWithKotonohaSisters(string input)
@@ -70,76 +66,51 @@ public class ConversationService : IDisposable
         }
 
         // 姉妹切り替え
-        if (_messageManager.CurrentSister == Kotonoha.Aoi &&
+        if (_state.CurrentSister == Kotonoha.Aoi &&
             (input.Contains("茜") || input.Contains("あかね")))
         {
-            _messageManager.CurrentSister = Kotonoha.Akane;
-            _messageManager.AddUserMessage($"[Hint]: 姉妹が切り替わりました(葵 => 茜)");
+            _state.CurrentSister = Kotonoha.Akane;
+            _state.AddHint(Hint.SwitchSisterTo(Kotonoha.Akane));
         }
-        if (_messageManager.CurrentSister == Kotonoha.Akane &&
+        if (_state.CurrentSister == Kotonoha.Akane &&
             (input.Contains("葵") || input.Contains("あおい")))
         {
-            _messageManager.CurrentSister = Kotonoha.Aoi;
-            _messageManager.AddUserMessage($"[Hint]: 姉妹が切り替わりました(茜 => 葵)");
+            _state.CurrentSister = Kotonoha.Aoi;
+            _state.AddHint(Hint.SwitchSisterTo(Kotonoha.Aoi));
         }
 
-        _messageManager.AddUserMessage($"私: {input}");
+        // 返信を生成
+        _state.AddUserMessage($"私: {input}");
+        var completion = await CompleteChatAsync(_state);
 
-        var completion = await CompleteChatAsync(_messageManager.ChatMessages);
-
-        // 忍耐値カウント
+        // 忍耐値の処理
         if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
         {
-            if (_lastToolCallSister == _messageManager.CurrentSister)
+            // 連続して同じ方にお願いした場合
+            if (_state.LastToolCallSister == _state.CurrentSister)
             {
-                _patienceCount++;
+                _state.PatienceCount++;
             }
             else
             {
-                _patienceCount = 1;
+                _state.PatienceCount = 1;
             }
 
-            _lastToolCallSister = _messageManager.CurrentSister;
+            _state.LastToolCallSister = _state.CurrentSister;
         }
-
-        // TODO: 怠け癖発動し、その後に関数の呼び出しが入らなかった場合
-        // 2回読み上げられる
 
         // 怠け癖発動
         if (ShouldBeLazy(completion.Value))
         {
-            switch (_messageManager.CurrentSister)
-            {
-                case Kotonoha.Akane:
-                    _messageManager.AddUserMessage($"""
-[Hint]: **関数を呼び出さずに**、タスクを葵に押し付けてください
+            BeginLazyMode();
 
-- 以下のように一言だけ言って、マスターからのタスクを葵に押し付けること
-    - 例:「葵、任せたで」「あおいー、代わりに頼むわ」など。
-    - あくまで例なので、状況に合わせて適切な押し付け方をしてください。
-""");
-                    break;
-                case Kotonoha.Aoi:
-                    _messageManager.AddUserMessage($"""
-[Hint]: **関数を呼び出さずに**、タスクを茜に押し付けてください
-
-- 以下のように一言だけ言って、マスターからのタスクを茜に押し付けること
-    - 例:「お姉ちゃんお願い。」「えー、お姉ちゃんがやってよ。」など。
-    - あくまで例なので、状況に合わせて適切な押し付け方をしてください。
-""");
-                    break;
-            }
-
-            completion = await CompleteChatAsync(_messageManager.ChatMessages);
+            // 再度返信を生成
+            completion = await CompleteChatAsync(_state);
 
             // それでも関数呼び出しされることがあるのでチェック
             if (completion.Value.FinishReason != ChatFinishReason.Stop)
             {
-                _messageManager.AddUserMessage("""
-[Hint]:
-
-- 以降、通常通り**関数を呼び出してください**
-""");
+                _state.AddHint(Hint.CancelLazyMode);
             }
             // 実際に怠けた場合の処理
             else
@@ -148,54 +119,29 @@ public class ConversationService : IDisposable
                 yield return new ConversationResult
                 {
                     Message = TrimSisterName(completion.Value.Content[0].Text),
-                    Sister = _messageManager.CurrentSister
+                    Sister = _state.CurrentSister
                 };
 
-                _messageManager.AddAssistantMessage(completion.Value);
+                _state.AddAssistantMessage(completion.Value);
 
                 // 押し付けセリフを読み上げ
-                await SpeakCompletionAsync(completion);
+                await SpeakCompletionAsync(completion, _state.CurrentSister);
 
-                // 怠け者モードをOFF
-                switch (_messageManager.CurrentSister)
-                {
-                    case Kotonoha.Akane:
-                        _messageManager.AddUserMessage($"""
-[Hint]: 姉の茜からタスクを押し付けられました。
-
-- **関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
-    - 例:「もう、仕方ないなあ。～」「任せて。～」など
-    - あくまで例なので、状況に合わせて適切な引き受け方をしてください。
-""");
-                        break;
-                    case Kotonoha.Aoi:
-                        _messageManager.AddUserMessage($"""
-[Hint]: 妹の葵からタスクを押し付けられました。
-
-- **関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
-    - 例:「もう、しゃあないなあ。～」「任せとき。～」など
-    - あくまで例なので、状況に合わせて適切な引き受け方をしてください。
-""");
-                        break;
-                }
-
+                EndLazyMode();
 
                 // 姉妹を切り替えて、再度呼び出し
-                var prev = _messageManager.CurrentSister.ToDisplayName();
-                var next = _messageManager.CurrentSister.Switch().ToDisplayName();
-                _messageManager.CurrentSister = _messageManager.CurrentSister.Switch();
-
-                _messageManager.AddUserMessage($"[Hint]: 姉妹が切り替わりました({prev} => {next})");
-
-                completion = await CompleteChatAsync(_messageManager.ChatMessages);
+                _state.CurrentSister = _state.CurrentSister.Switch();
+                _state.AddHint(Hint.SwitchSisterTo(_state.CurrentSister));
+                completion = await CompleteChatAsync(_state);
 
                 // 怠けると姉妹が入れ替わるのでカウンターをリセット
-                _patienceCount = 1;
+                _state.PatienceCount = 1;
             }
         }
 
-        _messageManager.AddAssistantMessage(completion.Value);
+        _state.AddAssistantMessage(completion.Value);
 
+        // 関数の実行
         List<ConversationFunction> functions;
         (completion, functions) = await InvokeFunctions(completion);
 
@@ -203,12 +149,38 @@ public class ConversationService : IDisposable
         yield return new ConversationResult
         {
             Message = TrimSisterName(completion.Value.Content[0].Text),
-            Sister = _messageManager.CurrentSister,
+            Sister = _state.CurrentSister,
             Functions = functions
         };
 
         // 読み上げ
-        await SpeakCompletionAsync(completion);
+        await SpeakCompletionAsync(completion, _state.CurrentSister);
+
+        void BeginLazyMode()
+        {
+            switch (_state.CurrentSister)
+            {
+                case Kotonoha.Akane:
+                    _state.AddHint(Hint.BeginLazyModeAkane);
+                    break;
+                case Kotonoha.Aoi:
+                    _state.AddHint(Hint.BeginLazyModeAoi);
+                    break;
+            }
+        }
+
+        void EndLazyMode()
+        {
+            switch (_state.CurrentSister)
+            {
+                case Kotonoha.Akane:
+                    _state.AddHint(Hint.EndLazyModeAkane);
+                    break;
+                case Kotonoha.Aoi:
+                    _state.AddHint(Hint.EndLazyModeAoi);
+                    break;
+            }
+        }
 
         static string TrimSisterName(string input) => Regex.Replace(input, @"^(茜|葵):\s+", string.Empty);
     }
@@ -223,13 +195,13 @@ public class ConversationService : IDisposable
                 using var doc = JsonDocument.Parse(toolCall.FunctionArguments);
                 if (!_functions.TryGetValue(toolCall.FunctionName, out var function) || function is null)
                 {
-                    _messageManager.AddToolMessage(toolCall.Id, "ERROR");
+                    _state.AddToolMessage(toolCall.Id, "ERROR");
                     continue;
                 }
 
                 if (!function.TryParseArguments(doc, out var arguments))
                 {
-                    _messageManager.AddToolMessage(toolCall.Id, "ERROR");
+                    _state.AddToolMessage(toolCall.Id, "ERROR");
                     continue;
                 }
 
@@ -241,17 +213,17 @@ public class ConversationService : IDisposable
                     Result = result
                 });
 
-                _messageManager.AddToolMessage(toolCall.Id, result);
+                _state.AddToolMessage(toolCall.Id, result);
             }
 
-            completion = await CompleteChatAsync(_messageManager.ChatMessages);
-            _messageManager.AddAssistantMessage(completion.Value);
+            completion = await CompleteChatAsync(_state);
+            _state.AddAssistantMessage(completion.Value);
         }
 
         return (completion, invokedFunctions);
     }
 
-    private Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages) => _chatClient.CompleteChatAsync(messages, _options);
+    private Task<ClientResult<ChatCompletion>> CompleteChatAsync(ConversationState state) => _chatClient.CompleteChatAsync(state.ChatMessages, _options);
 
     private bool ShouldBeLazy(ChatCompletion completionValue)
     {
@@ -268,7 +240,7 @@ public class ConversationService : IDisposable
         }
 
         // 4回以上同じ方にお願いすると怠ける
-        if (_patienceCount > 2)
+        if (_state.PatienceCount > 3)
         {
             return true;
         }
@@ -278,7 +250,7 @@ public class ConversationService : IDisposable
         return lazy;
     }
 
-    private async Task SpeakCompletionAsync(ClientResult<ChatCompletion> completion)
+    private async Task SpeakCompletionAsync(ClientResult<ChatCompletion> completion, Kotonoha sister)
     {
         if (completion.Value.FinishReason != ChatFinishReason.Stop)
         {
@@ -287,7 +259,7 @@ public class ConversationService : IDisposable
         var message = completion.Value.Content[0].Text;
 
         var messageWithoutName = Regex.Replace(message, @"^(茜|葵):", string.Empty);
-        await _voiceClient.SpeakAsync(_messageManager.CurrentSister, messageWithoutName);
+        await _voiceClient.SpeakAsync(sister, messageWithoutName);
     }
 
     public void Dispose()

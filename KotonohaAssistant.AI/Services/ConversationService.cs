@@ -204,7 +204,7 @@ public class ConversationService
                     continue;
                 }
 
-                var result = function.Invoke(arguments);
+                var result = await function.Invoke(arguments);
                 invokedFunctions.Add(new ConversationFunction
                 {
                     Name = toolCall.FunctionName,

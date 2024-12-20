@@ -1,9 +1,13 @@
 using KotonohaAssistant.AI.Extensions;
+using Google.Apis.Calendar.v3;
 using System.Text.Json;
+using Google.Apis.Auth.OAuth2;
+using System.IO;
+using Google.Apis.Services;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CreateCalendarEvent : ToolFunction
+public class CreateCalendarEvent() : ToolFunction
 {
     public override string Description => """
 予定の作成を依頼されたときに呼び出されます。
@@ -63,7 +67,7 @@ public class CreateCalendarEvent : ToolFunction
         return true;
     }
 
-    public override string Invoke(IDictionary<string, object> arguments)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments)
     {
         Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
 

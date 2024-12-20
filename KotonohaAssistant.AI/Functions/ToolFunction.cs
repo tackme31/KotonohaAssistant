@@ -11,7 +11,7 @@ public abstract class ToolFunction
 
     public abstract bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments);
 
-    public abstract string Invoke(IDictionary<string, object> arguments);
+    public abstract Task<string> Invoke(IDictionary<string, object> arguments);
 
     public ChatTool CreateChatTool()
     {

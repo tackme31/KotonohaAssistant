@@ -51,7 +51,7 @@ public class CallMaster : ToolFunction
         return true;
     }
 
-    public override string Invoke(IDictionary<string, object> arguments)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments)
     {
         Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
 

@@ -1,9 +1,12 @@
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Calendar.v3;
+using Google.Apis.Services;
 using KotonohaAssistant.AI.Extensions;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class GetCalendarEvent : ToolFunction
+public class GetCalendarEvent() : ToolFunction
 {
     public override string Description => """
 指定された日の予定をGoogleカレンダーから取得します。予定を尋ねられたときに呼び出されます。
@@ -39,7 +42,7 @@ public class GetCalendarEvent : ToolFunction
         return true;
     }
 
-    public override string Invoke(IDictionary<string, object> arguments)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments)
     {
         Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
 

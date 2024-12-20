@@ -11,5 +11,18 @@
         "Action": "Start"
       }
     ]
+  },
+  {
+    "Name": "Blazor App",
+    "Projects": [
+      {
+        "Path": "KotonohaAssistant.VoiceServer\\KotonohaAssistant.VoiceServer.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "KotonohaAssistant.App\\KotonohaAssistant.App.csproj",
+        "Action": "Start"
+      }
+    ]
   }
 ]

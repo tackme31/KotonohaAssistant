@@ -38,6 +38,8 @@ public class ConversationService
         // 生成時の参考のためにあらかじめ会話を入れておく
         _state.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
         _state.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
+        _state.AddAssistantMessage("葵: これから一緒に過ごすことになるけど、気軽に声をかけてね。");
+        _state.AddAssistantMessage("茜: せやな！これからいっぱい思い出作っていこな。");
         _state.AddUserMessage("私: うん。よろしくね。");
 
         _chatClient = new ChatClient(modelName, chatApiKey);

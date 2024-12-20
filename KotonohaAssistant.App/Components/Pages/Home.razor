@@ -55,7 +55,7 @@
                     Kotonoha.Aoi => "lightblue",
                     _ => "lightgray"
                 };
-                var justifyContent = message.Talking is null ? "flex-end" : "flex-start";
+                var justifyContent = message.Talking is null ? "flex-start" : "flex-end";
 
                 <div style="display: flex; justify-content: @justifyContent;">
                     <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 10px; background-color: @color;">
@@ -67,7 +67,7 @@
 
         @if (_isYourTurn)
         {
-            <div style="display: flex; justify-content: flex-end;">
+            <div style="display: flex; justify-content: flex-start;">
                 <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 10px; background-color: lightgray;">
                     <p>
                         &gt;&nbsp;@(_talkingText)

@@ -35,7 +35,7 @@
             {
                 var arguments = string.Join(", ", function.Arguments.Select(a => $"{a.Key}={a.Value}") ?? []);
 
-                <div style="background: #f5f5f5; color: #adadad; padding: 5px 20px 5px; margin: 5px 0px">
+                <div style="background: whitesmoke; color: #adadad; padding: 5px 20px 5px; margin: 5px 0px">
                     <details>
                         <summary>
                             @(function.Name)(@(arguments))
@@ -80,6 +80,15 @@
                 </div>
             </div>
         }
+
+        @if(_isThinking)
+        {
+            <div style="display: flex; justify-content: flex-end;">
+                <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 20px 0px 20px 20px; background-color: whitesmoke;">
+                    <p>thinking...</p>
+                </div>
+            </div>
+        }
     </div>
 </div>
 
@@ -98,6 +107,11 @@
     /// 入力中のメッセージ
     /// </summary>
     private string _talkingText = "";
+
+    /// <summary>
+    /// 生成待ちフラグ
+    /// </summary>
+    private bool _isThinking = false;
 
     /// <summary>
     /// 会話履歴
@@ -240,6 +254,8 @@
 
         await this.SpeechRecognition.StopAsync();
 
+        _isThinking = true;
+        this.StateHasChanged();
         await foreach (var result in _conversationService.TalkingWithKotonohaSisters(message))
         {
             // 関数呼び出しがあった場合は個別に表示
@@ -253,14 +269,19 @@
 
             _messages.Add((result.Message, result.Sister, null));
 
+            _isThinking = false;
             this.StateHasChanged();
 
             // 読み上げ
             await _voiceClient.SpeakAsync(result.Sister, result.Message);
+
+            _isThinking = true;
+            this.StateHasChanged();
         }
 
         await this.SpeechRecognition.StartAsync();
 
+        _isThinking = false;
         _isYourTurn = true;
         _talkingText = "";
         this.StateHasChanged();

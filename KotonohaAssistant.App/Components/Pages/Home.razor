@@ -12,8 +12,7 @@
 
 <PageTitle>Kotonoha Assistant</PageTitle>
 
-<h1>Kotonoha Assistant</h1>
-<div style="display: flex; gap: 30px">
+<div style="display: flex; justify-content: space-between; gap: 30px">
     <div style="width: 30%">
         <h2>ステータス</h2>
         <div>
@@ -30,36 +29,37 @@
     </div>
     <div style="width: 50%">
         <h2>会話履歴</h2>
-        @foreach (var message in _messages)
+        @foreach (var (text, talking, function) in _messages)
         {
-            if (message.Function is not null)
+            if (function is not null)
             {
-                var arguments = string.Join(", ", message.Function.Arguments.Select(a => $"{a.Key}={a.Value}") ?? []);
+                var arguments = string.Join(", ", function.Arguments.Select(a => $"{a.Key}={a.Value}") ?? []);
 
                 <div style="background: #f5f5f5; color: #adadad; padding: 5px 20px 5px; margin: 5px 0px">
                     <details>
                         <summary>
-                            @(message.Function.Name)(@(arguments))
+                            @(function.Name)(@(arguments))
                         </summary>
                         <p style="white-space: pre-line">
-                            @(message.Function.Result)
+                            @(function.Result)
                         </p>
                     </details>
                 </div>
             }
             else
             {
-                var color = message.Talking switch
+                var color = talking switch
                 {
                     Kotonoha.Akane => "pink",
                     Kotonoha.Aoi => "lightblue",
                     _ => "lightgray"
                 };
-                var justifyContent = message.Talking is null ? "flex-start" : "flex-end";
+                var justifyContent = talking is null ? "flex-start" : "flex-end";
+                var borderRadius = talking is null ? "0px 20px 20px 20px" : "20px 0px 20px 20px";
 
                 <div style="display: flex; justify-content: @justifyContent;">
-                    <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 10px; background-color: @color;">
-                        <p>@(message.Text)</p>
+                    <div style="margin: 7px 0px; padding: 0px 20px; border-radius: @borderRadius; background-color: @color;">
+                        <p>@(text)</p>
                     </div>
                 </div>
             }
@@ -68,9 +68,10 @@
         @if (_isYourTurn)
         {
             <div style="display: flex; justify-content: flex-start;">
-                <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 10px; background-color: lightgray;">
+                <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 0px 20px 20px 20px; background-color: lightgray;">
                     <p>
-                        &gt;&nbsp;@(_talkingText)
+                        &gt;&nbsp;
+                        @(_talkingText)
                         @if (_isInConversation)
                         {
                             <span class="blinking-underscore">_</span>
@@ -83,13 +84,6 @@
 </div>
 
 @code {
-    class ChatMessageInfo
-    {
-        public string? Text { get; set; }
-        public Kotonoha? Talking { get; set; }
-        public ConversationFunction? Function { get; set; }
-    }
-
     /// <summary>
     /// 自分の番かどうか
     /// </summary>
@@ -108,14 +102,21 @@
     /// <summary>
     /// 会話履歴
     /// </summary>
-    private readonly List<ChatMessageInfo> _messages = new();
+    private readonly List<(string? text, Kotonoha? talking, ConversationFunction? function)> _messages = new();
 
     /// <summary>
     /// 会話終了タイムアウト用
     /// </summary>
     private CancellationTokenSource? _conversationTimer;
 
+    /// <summary>
+    /// 会話サービス
+    /// </summary>
     private ConversationService? _conversationService = null;
+
+    /// <summary>
+    /// 音声読み上げクライアント
+    /// </summary>
     private VoiceClient? _voiceClient = null;
 
     protected override void OnInitialized()
@@ -124,6 +125,7 @@
         this.SpeechRecognition.InterimResults = true;
         this.SpeechRecognition.Continuous = true;
         this.SpeechRecognition.Result += OnSpeechRecognized;
+        this.SpeechRecognition.End += OnSpeechEnded;
         _ = this.SpeechRecognition.StartAsync();
 
         var functions = new ToolFunction[]
@@ -151,17 +153,6 @@
             Settings.AkaneBehaviour,
             Settings.AoiBehaviour);
         _voiceClient = new VoiceClient();
-    }
-
-    private static bool ContainsWakeWord(string? text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-        {
-            return false;
-        }
-
-        var removed = Regex.Replace(text, @"[、。？?\s]", string.Empty);
-        return Settings.WakeWords.Any(word => removed.Contains(word));
     }
 
     private void OnSpeechRecognized(object? sender, SpeechRecognitionEventArgs args)
@@ -208,7 +199,7 @@
         // 会話中の入力はすべて送信する
         if (_isInConversation)
         {
-            _messages.Add(new ChatMessageInfo { Text = transcript });
+            _messages.Add((transcript, null, null));
 
             _ = SendMessage(transcript);
         }
@@ -218,6 +209,17 @@
             input = Regex.Replace(input, Settings.FuzzyMatchAkane.From, Settings.FuzzyMatchAkane.To);
             input = Regex.Replace(input, Settings.FuzzyMatchAoi.From, Settings.FuzzyMatchAoi.To);
             return input;
+        }
+
+        bool ContainsWakeWord(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return false;
+            }
+
+            var removed = Regex.Replace(text, @"[、。？?\s]", string.Empty);
+            return Settings.WakeWords.Any(word => removed.Contains(word));
         }
     }
 
@@ -241,16 +243,15 @@
         await foreach (var result in _conversationService.TalkingWithKotonohaSisters(message))
         {
             // 関数呼び出しがあった場合は個別に表示
-            if (result.Functions is not null and not [])
+            if (result.Functions is not null)
             {
-                _messages.AddRange(result.Functions.Select(f => new ChatMessageInfo { Function = f }));
+                foreach (var function in result.Functions)
+                {
+                    _messages.Add(((string?)null, (Kotonoha?)null, function));
+                }
             }
 
-            _messages.Add(new ChatMessageInfo
-                {
-                    Text = result.Message,
-                    Talking = result.Sister,
-                });
+            _messages.Add((result.Message, result.Sister, null));
 
             this.StateHasChanged();
 
@@ -264,7 +265,6 @@
         _talkingText = "";
         this.StateHasChanged();
 
-        // 5秒間入力を受け付ける
         StartConversationTimeout(Settings.CoversationTimeout);
     }
 
@@ -277,7 +277,6 @@
         _conversationTimer = new CancellationTokenSource();
         var token = _conversationTimer.Token;
 
-        // 5秒後に会話を終了
         Task.Delay(interval, token).ContinueWith(t =>
         {
             if (!token.IsCancellationRequested)
@@ -286,6 +285,22 @@
                 StateHasChanged();
             }
         }, TaskScheduler.FromCurrentSynchronizationContext());
+    }
+
+    private void OnSpeechEnded(object? sender, EventArgs args)
+    {
+        // 一定時間入力がないと音声認識が停止するのでそのたびに起動
+        if (!_isInConversation)
+        {
+            try
+            {
+                _ = this.SpeechRecognition.StartAsync();
+            }
+            catch (Exception)
+            {
+                // すでに起動済みの場合の例外は無視
+            }
+        }
     }
 
     /// <summary>
@@ -300,6 +315,7 @@
     public void Dispose()
     {
         this.SpeechRecognition.Result -= OnSpeechRecognized;
+        this.SpeechRecognition.End -= OnSpeechEnded;
         _voiceClient?.Dispose();
         _conversationTimer?.Cancel();
     }

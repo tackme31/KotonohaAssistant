@@ -41,7 +41,6 @@ public class GetWeather : ToolFunction
 
     public override async Task<string> Invoke(IDictionary<string, object> arguments)
     {
-        Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
         return """
 - 10時: 晴れ
 - 12時: 晴れ

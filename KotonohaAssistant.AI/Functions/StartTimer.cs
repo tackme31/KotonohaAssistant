@@ -45,7 +45,6 @@ public class StartTimer : ToolFunction
 
     public override async Task<string> Invoke(IDictionary<string, object> arguments)
     {
-        Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
         return "ok";
     }
 }

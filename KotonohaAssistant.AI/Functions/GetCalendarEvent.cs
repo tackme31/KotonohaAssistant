@@ -45,8 +45,6 @@ public class GetCalendarEvent(ICalendarEventService calendarEventService) : Tool
 
     public override async Task<string> Invoke(IDictionary<string, object> arguments)
     {
-        Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
-
         try
         {
             var date = (DateTime)arguments["date"];

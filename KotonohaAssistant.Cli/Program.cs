@@ -51,6 +51,16 @@ try
                 _ => string.Empty
             };
 
+            if (result.Functions is not null)
+            {
+                foreach (var function in result.Functions)
+                {
+                    Console.WriteLine($"[FUNCTION CALLING]: {function.Name}({string.Join(", ", function.Arguments.Select(arg => $"{arg.Key}={arg.Value}"))})");
+                    Console.WriteLine($"[FUNCTION RETURNS]: {function.Result}");
+
+                }
+            }
+
             Console.Write(name);
             Console.WriteLine(result.Message);
 

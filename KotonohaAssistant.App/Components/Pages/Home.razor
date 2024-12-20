@@ -16,7 +16,7 @@
     <div style="width: 30%">
         <h2>ステータス</h2>
         <div>
-            <p>Is your turn: <b>@(_isYourTurn ? "YES" : "NO")</b></p>
+            <p>Is my turn: <b>@(_isMyTurn ? "YES" : "NO")</b></p>
             <p>Is in conversation: <b>@(_isInConversation ? "YES" : "NO")</b></p>
         </div>
         <h2>ウェイクワード</h2>
@@ -65,7 +65,7 @@
             }
         }
 
-        @if (_isYourTurn)
+        @if (_isMyTurn)
         {
             <div style="display: flex; justify-content: flex-start;">
                 <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 0px 20px 20px 20px; background-color: lightgray;">
@@ -96,7 +96,7 @@
     /// <summary>
     /// 自分の番かどうか
     /// </summary>
-    private bool _isYourTurn = true;
+    private bool _isMyTurn = true;
 
     /// <summary>
     /// 会話中かどうか
@@ -172,7 +172,7 @@
     private void OnSpeechRecognized(object? sender, SpeechRecognitionEventArgs args)
     {
         // 琴葉姉妹の会話中は受け付けない
-        if (!_isYourTurn)
+        if (!_isMyTurn)
         {
             return;
         }
@@ -249,7 +249,7 @@
             return;
         }
 
-        _isYourTurn = false;
+        _isMyTurn = false;
         this.StateHasChanged();
 
         await this.SpeechRecognition.StopAsync();
@@ -282,7 +282,7 @@
         await this.SpeechRecognition.StartAsync();
 
         _isThinking = false;
-        _isYourTurn = true;
+        _isMyTurn = true;
         _talkingText = "";
         this.StateHasChanged();
 

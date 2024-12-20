@@ -66,17 +66,19 @@ public class ConversationService
         }
 
         // 姉妹切り替え
-        if (_state.CurrentSister == Kotonoha.Aoi &&
-            (input.Contains("茜") || input.Contains("あかねちゃん")))
+        var nextSister = GuessTargetSister(input);
+        switch (nextSister)
         {
-            _state.CurrentSister = Kotonoha.Akane;
-            _state.AddHint(Hint.SwitchSisterTo(Kotonoha.Akane));
-        }
-        if (_state.CurrentSister == Kotonoha.Akane &&
-            (input.Contains("葵") || input.Contains("あおいちゃん")))
-        {
-            _state.CurrentSister = Kotonoha.Aoi;
-            _state.AddHint(Hint.SwitchSisterTo(Kotonoha.Aoi));
+            case Kotonoha.Akane when _state.CurrentSister == Kotonoha.Aoi:
+                _state.CurrentSister = Kotonoha.Akane;
+                _state.AddHint(Hint.SwitchSisterTo(Kotonoha.Akane));
+                break;
+            case Kotonoha.Aoi when _state.CurrentSister == Kotonoha.Akane:
+                _state.CurrentSister = Kotonoha.Aoi;
+                _state.AddHint(Hint.SwitchSisterTo(Kotonoha.Aoi));
+                break;
+            default:
+                break;
         }
 
         // 返信を生成
@@ -223,6 +225,38 @@ public class ConversationService
     }
 
     private Task<ClientResult<ChatCompletion>> CompleteChatAsync(ConversationState state) => _chatClient.CompleteChatAsync(state.ChatMessages, _options);
+
+    /// <summary>
+    /// 会話対象の姉妹を取得します。
+    /// 両方含まれていた場合、最初にヒットした方を返します。
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    private Kotonoha? GuessTargetSister(string input)
+    {
+        var namePairs = new (string search, Kotonoha sister)[]
+        {
+            ("茜", Kotonoha.Akane),
+            ("あかねちゃん", Kotonoha.Akane),
+            ("葵ちゃん", Kotonoha.Aoi),
+            ("あおいちゃん", Kotonoha.Aoi)
+        };
+
+        var firstIndex = int.MaxValue;
+        Kotonoha? result = null;
+
+        foreach (var (search, sister) in namePairs)
+        {
+            var index = input.IndexOf(search);
+            if (index != -1 && index < firstIndex)
+            {
+                firstIndex = index;
+                result = sister;
+            }
+        }
+
+        return result;
+    }
 
     private bool ShouldBeLazy(ChatCompletion completionValue)
     {

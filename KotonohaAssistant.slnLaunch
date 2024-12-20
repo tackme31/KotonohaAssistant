@@ -1,0 +1,15 @@
+[
+  {
+    "Name": "CLI App",
+    "Projects": [
+      {
+        "Path": "KotonohaAssistant.VoiceServer\\KotonohaAssistant.VoiceServer.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "KotonohaAssistant.Cli\\KotonohaAssistant.Cli.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

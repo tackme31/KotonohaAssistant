@@ -1,13 +1,14 @@
-using Google.Apis.Auth.OAuth2;
-using Google.Apis.Calendar.v3;
-using Google.Apis.Services;
 using KotonohaAssistant.AI.Extensions;
+using KotonohaAssistant.AI.Services;
+using System.Text;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class GetCalendarEvent() : ToolFunction
+public class GetCalendarEvent(ICalendarEventService calendarEventService) : ToolFunction
 {
+    private readonly ICalendarEventService _calendarEventService = calendarEventService;
+
     public override string Description => """
 指定された日の予定をGoogleカレンダーから取得します。予定を尋ねられたときに呼び出されます。
 
@@ -46,10 +47,65 @@ public class GetCalendarEvent() : ToolFunction
     {
         Console.WriteLine($"  => {GetType().Name}({string.Join(", ", arguments.Select((p) => $"{p.Key}={p.Value}"))})");
 
-        return """
-[終日] 原神アップデート日
-[15:00 - 16:00] 通院
-[18:00 - 20:00] Amazon荷物受け取り
-""";
+        try
+        {
+            var date = (DateTime)arguments["date"];
+            var events = await _calendarEventService.GetEventsAsync(date);
+            var sb = new StringBuilder();
+            sb.AppendLine($"## {date:M月d日}の予定");
+            if (!events.Any())
+            {
+                return $"予定はありません。";
+            }
+
+            foreach (var eventItem in events)
+            {
+                var start = eventItem.Start.DateTimeDateTimeOffset;
+                var end = eventItem.End.DateTimeDateTimeOffset;
+                if (start is null || end is null)
+                {
+                    sb.AppendLine($"- {eventItem.Summary}");
+                    continue;
+                }
+
+                if (!IsToday(start.Value) && !IsToday(end.Value))
+                {
+                    sb.AppendLine($"- {eventItem.Summary}");
+                    continue;
+                }
+
+                if (IsToday(start.Value) && !IsToday(end.Value))
+                {
+                    sb.AppendLine($"- [{start:HH:mm}から] {eventItem.Summary}");
+                    continue;
+                }
+
+                if (!IsToday(start.Value) && IsToday(end.Value))
+                {
+                    sb.AppendLine($"- [{end:HH:mm}まで] {eventItem.Summary}");
+                    continue;
+                }
+
+                if (start == end)
+                {
+                    sb.AppendLine($"- [{end:HH:mm}] {eventItem.Summary}");
+                    continue;
+                }
+
+                sb.AppendLine($"- [{start:HH:mm}から{end:HH:mm}まで] {eventItem.Summary}");
+            }
+
+            return sb.ToString(); ;
+        }
+        catch (Exception)
+        {
+            return "予定が取得できませんでした";
+        }
+
+        static bool IsToday(DateTimeOffset datetime)
+        {
+            return datetime.Month == DateTime.Today.Month
+                && datetime.Day == DateTime.Today.Day;
+        }
     }
 }

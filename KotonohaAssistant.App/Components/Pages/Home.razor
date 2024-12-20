@@ -8,6 +8,7 @@
 @using KotonohaAssistant.Core.Utils
 @using Toolbelt.Blazor.SpeechRecognition
 @inject SpeechRecognition SpeechRecognition
+@inject ICalendarEventService CalendarEventService
 
 <PageTitle>Kotonoha Assistant</PageTitle>
 
@@ -125,12 +126,27 @@
         this.SpeechRecognition.Result += OnSpeechRecognized;
         _ = this.SpeechRecognition.StartAsync();
 
+        var functions = new ToolFunction[]
+        {
+            new CallMaster(),
+            new StartTimer(),
+            new CreateCalendarEvent(),
+            new GetCalendarEvent(CalendarEventService),
+            new GetWeather(),
+            new TurnOnHeater(),
+            new ForgetMemory(),
+        };
+        var excludeFunctionNamesFromLazyMode = new[]
+        {
+            nameof(StartTimer),
+            nameof(ForgetMemory),
+        };
         var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
         _conversationService = new ConversationService(
             apiKey,
             Settings.ModelName,
-            Settings.Functions,
-            Settings.ExcludeFunctionNamesFromLazyMode,
+            functions,
+            excludeFunctionNamesFromLazyMode,
             defaultSister: Kotonoha.Akane,
             Settings.AkaneBehaviour,
             Settings.AoiBehaviour);

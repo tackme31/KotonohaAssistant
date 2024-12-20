@@ -9,17 +9,21 @@ DotNetEnv.Env.TraversePath().Load();
 var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 var modelName = "gpt-4o-mini";
 
-List<ToolFunction> functions =
-[
+var calendarEventService = new CalendarEventService(
+    Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? string.Empty,
+    Environment.GetEnvironmentVariable("CALENDAR_ID") ?? string.Empty);
+
+// 利用可能な関数
+var functions = new ToolFunction[]
+{
     new CallMaster(),
     new StartTimer(),
     new CreateCalendarEvent(),
-    new GetCalendarEvent(),
+    new GetCalendarEvent(calendarEventService),
     new GetWeather(),
     new TurnOnHeater(),
     new ForgetMemory(),
-];
-
+};
 // 怠け癖の対象外の関数
 List<string> excludeFunctionNamesFromLazyMode =
 [

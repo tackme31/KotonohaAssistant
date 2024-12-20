@@ -46,27 +46,6 @@ public class Settings
     public static readonly string? AoiBehaviour = Behaviour.Default;
 
     /// <summary>
-    /// 利用可能なツール関数リスト
-    /// </summary>
-    public static readonly List<ToolFunction> Functions = [
-        new CallMaster(),
-        new StartTimer(),
-        new CreateCalendarEvent(),
-        new GetCalendarEvent(),
-        new GetWeather(),
-        new TurnOnHeater(),
-        new ForgetMemory(),
-    ];
-
-    /// <summary>
-    /// 怠けモードで除外される関数名
-    /// </summary>
-    public static readonly List<string> ExcludeFunctionNamesFromLazyMode = [
-        nameof(StartTimer),
-        nameof(ForgetMemory),
-    ];
-
-    /// <summary>
     /// 使用するモデル名
     /// </summary>
     public static readonly string ModelName = "gpt-4o-mini";

@@ -5,7 +5,8 @@
 - [A.I. VOICE 琴葉 茜・葵](https://aivoice.jp/product/kotonoha/)
   - **A.I VOICE2は不可です。**
 - Open AI APIのAPIキー
-- Visual Studio 2022
+- .NET Framework 4.8.1 SDK
+- .NET 8.0 SDK
 
 ## Setup
 WIP

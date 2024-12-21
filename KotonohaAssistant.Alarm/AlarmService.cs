@@ -6,7 +6,7 @@ namespace KotonohaAssistant.Alarm;
 
 internal class AlarmService : IDisposable
 {
-    private static readonly TimeSpan TimerInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan TimerInterval = TimeSpan.FromSeconds(60);
 
     private readonly VoiceClient _voiceClient;
     private readonly System.Timers.Timer _timer;

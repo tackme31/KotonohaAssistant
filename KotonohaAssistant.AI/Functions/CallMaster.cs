@@ -1,9 +1,11 @@
 using KotonohaAssistant.AI.Extensions;
+using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.Alarm;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CallMaster : ToolFunction
+public class CallMaster(IAlarmRepository alarmRepository, IChatCompletionRepository chatCompletionRepository) : ToolFunction
 {
     public override string Description => """
 この関数は、指定された時間に呼びかけたり知らせたりする依頼を受けた場合に呼び出されます。
@@ -36,6 +38,9 @@ public class CallMaster : ToolFunction
 }
 """;
 
+    private readonly IAlarmRepository _alarmRepository = alarmRepository;
+    private readonly IChatCompletionRepository _chatCompletionRepository = chatCompletionRepository;
+
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
         arguments = new Dictionary<string, object>();
@@ -53,6 +58,25 @@ public class CallMaster : ToolFunction
 
     public override async Task<string> Invoke(IDictionary<string, object> arguments)
     {
+        // TODO: メッセージ生成
+
+        var time = (TimeSpan)arguments["time"];
+        var setting = new AlarmSetting
+        {
+            TimeInSeconds = time.TotalSeconds,
+            Sister = Core.Kotonoha.Aoi,
+            Message = "マスター、朝だよ。早く起きないと遅刻するよ。"
+        };
+
+        try
+        {
+            await _alarmRepository.InsertAlarmSetting(setting);
+        }
+        catch(Exception)
+        {
+            // TODO: ログ出力
+        }
+
         return "SUCCESS";
     }
 }

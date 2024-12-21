@@ -9,6 +9,8 @@ public interface IAlarmRepository
     Task<List<AlarmSetting>> GetAlarmSettingsAsync(TimeSpan from, TimeSpan to);
 
     Task DeleteAlarmSettingsAsync(IEnumerable<long> ids);
+
+    Task InsertAlarmSetting(AlarmSetting setting);
 }
 
 public class AlarmRepository(string dbPath) : IAlarmRepository

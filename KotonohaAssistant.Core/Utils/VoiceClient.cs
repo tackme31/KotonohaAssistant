@@ -36,12 +36,12 @@ public class VoiceClient : IDisposable
 
     public async Task SpeakAsync(Kotonoha sister, string message)
     {
+        await ConnectToServerAsync();
+
         if (_writer is null || _reader is null)
         {
             return;
         }
-
-        await ConnectToServerAsync();
 
         try
         {
@@ -50,8 +50,8 @@ public class VoiceClient : IDisposable
                 SisterType = sister,
                 Message = message,
             };
-            var serialized = JsonConvert.SerializeObject("SPEAK:" + request, Formatting.None);
-            await _writer.WriteLineAsync(serialized);
+            var serialized = JsonConvert.SerializeObject(request, Formatting.None);
+            await _writer.WriteLineAsync("SPEAK:" + serialized);
 
             await _reader.ReadLineAsync();
         }
@@ -63,12 +63,12 @@ public class VoiceClient : IDisposable
 
     public async Task StopAsync()
     {
+        await ConnectToServerAsync();
+
         if (_writer is null || _reader is null)
         {
             return;
         }
-
-        await ConnectToServerAsync();
 
         try
         {

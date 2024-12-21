@@ -1,6 +1,6 @@
-﻿using System;
+﻿using KotonohaAssistant.Core;
 
-namespace KotonohaAssistant.Core.Models;
+namespace KotonohaAssistant.Alarm;
 
 public class AlarmSetting
 {

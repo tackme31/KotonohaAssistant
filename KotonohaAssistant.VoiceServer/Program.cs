@@ -7,6 +7,7 @@ using System.IO.Pipes;
 using System.Text.Json;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core;
+using System.Text.RegularExpressions;
 
 namespace KotonohaAssistant.VoiceServer
 {
@@ -48,21 +49,14 @@ namespace KotonohaAssistant.VoiceServer
                             {
                                 Console.WriteLine($"Data received: {line}");
 
-                                var request = ParseSpeakRequest(line);
-                                if (request != null)
-                                {
-                                    await SpeakAsync(request.SisterType, request.Message);
-                                    writer.WriteLine("OK");
-                                }
-                                else
-                                {
-                                    writer.WriteLine("ERROR");
-                                }
+                                var (command, payload) = ParseRequest(line);
+                                await RunCommand(command, payload);
 
+                                writer.WriteLine("OK");
                             }
                         }
                     }
-                    catch (IOException ex)
+                    catch (IOException)
                     {
                         // 接続エラー処理
                         // streamのdisposeのタイミングの関係か必ず発生するので一旦無視
@@ -81,6 +75,26 @@ namespace KotonohaAssistant.VoiceServer
                         Console.WriteLine("Client disconnected. Ready for new connection.");
                     }
                 }
+            }
+
+            (string command, string payload) ParseRequest(string input)
+            {
+                var m = Regex.Match(input, @"^(?<command>[^:]+):?(?<payload>.*)$");
+                return (m.Groups["command"].Value, m.Groups["payload"].Value);
+            }
+        }
+
+        private static async Task RunCommand(string command, string payload)
+        {
+            switch (command)
+            {
+                case "SPEAK":
+                    var request = JsonSerializer.Deserialize<SpeakRequest>(payload);
+                    await SpeakAsync(request.SisterType, request.Message);
+                    break;
+                case "STOP":
+                    await StopAsync();
+                    break;
             }
         }
 
@@ -150,10 +164,30 @@ namespace KotonohaAssistant.VoiceServer
 
                 await WaitForStatusAsync(HostStatus.Idle);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e.Message);
-                throw;
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        public static async Task StopAsync()
+        {
+            EnsureEditorConnected();
+
+            if (_ttsControl.Status == HostStatus.Idle)
+            {
+                return;
+            }
+
+            try
+            {
+                _ttsControl.Stop();
+
+                await WaitForStatusAsync(HostStatus.Idle);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
         }
 
@@ -172,20 +206,5 @@ namespace KotonohaAssistant.VoiceServer
                 await Task.Delay(_waitCheckInterval);
             }
         }
-
-        public static SpeakRequest ParseSpeakRequest(string line)
-        {
-            try
-            {
-                var request = JsonSerializer.Deserialize<SpeakRequest>(line);
-                return request;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"An error occurred when parsing request: {ex.Message}");
-                return null;
-            }
-        }
-
     }
 }

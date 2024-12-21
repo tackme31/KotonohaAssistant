@@ -40,7 +40,6 @@ internal class AlarmService : IDisposable
 CREATE TABLE IF NOT EXISTS AlarmSetting (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     TimeInSeconds INTEGER NOT NULL,
-    Repeat INTEGER NOT NULL,
     Sister INTEGER NOT NULL,
     Message TEXT NOT NULL
 );";
@@ -57,13 +56,12 @@ CREATE TABLE IF NOT EXISTS AlarmSetting (
         var setting = new AlarmSetting
         {
             TimeInSeconds = (DateTime.Now.TimeOfDay + TimerInterval).TotalSeconds,
-            Repeat = false,
             Sister = Core.Kotonoha.Aoi,
             Message = "マスター、朝だよ。早く起きないと遅刻するよ。",
         };
         var sql = @"
-INSERT INTO AlarmSetting (TimeInSeconds, Repeat, Sister, Message)
-VALUES (@TimeInSeconds, @Repeat, @Sister, @Message)
+INSERT INTO AlarmSetting (TimeInSeconds, Sister, Message)
+VALUES (@TimeInSeconds, @Sister, @Message)
 ";
         try
         {
@@ -86,10 +84,11 @@ VALUES (@TimeInSeconds, @Repeat, @Sister, @Message)
             Console.WriteLine("アラーム設定がありません");
         }
 
+        // アラーム削除
+        await DeleteAlarmSettingsAsync(settings.Select(s => s.Id));
+
         try
         {
-            // TODO: アラームの無効化（リピートじゃない場合）
-
             foreach (var setting in settings)
             {
                 if (string.IsNullOrEmpty(setting.Message))
@@ -132,7 +131,22 @@ WHERE @From < TimeInSeconds
             Console.WriteLine(ex.Message);
             return [];
         }
+    }
 
+    private async Task DeleteAlarmSettingsAsync(IEnumerable<long> ids)
+    {
+        var sql = "DELETE FROM AlarmSetting WHERE Id IN @Ids";
+        try
+        {
+            using var connection = Connection;
+            connection.Open();
+
+            _ = connection.Execute(sql, new { Ids = ids });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
     }
 
     public void Dispose()

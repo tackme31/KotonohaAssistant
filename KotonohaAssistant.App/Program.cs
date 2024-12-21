@@ -1,4 +1,4 @@
-using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.App;
 using KotonohaAssistant.App.Components;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 
@@ -13,11 +13,7 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddSpeechRecognition();
 
-
-builder.Services.AddSingleton<ICalendarEventService>(
-    new CalendarEventService(
-        Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? string.Empty,
-        Environment.GetEnvironmentVariable("CALENDAR_ID") ?? string.Empty));
+builder.Services.AddConversationService();
 
 var app = builder.Build();
 

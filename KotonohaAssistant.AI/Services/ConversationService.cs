@@ -4,7 +4,6 @@ using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core;
-using Microsoft.VisualBasic;
 using OpenAI.Chat;
 using System.ClientModel;
 using System.Text.Json;
@@ -15,10 +14,8 @@ namespace KotonohaAssistant.AI.Services;
 public class ConversationService
 {
     private readonly ConversationState _state;
-    private readonly ChatClient _chatClient;
     private readonly IDictionary<string, ToolFunction> _functions;
     private readonly IList<string> _excludeFunctionNamesFromLazyMode;
-    private readonly ChatCompletionOptions _options;
     private readonly Random _r = new();
 
     /// <summary>
@@ -26,12 +23,14 @@ public class ConversationService
     /// </summary>
     private ChatMessage? _lastSavedMessage;
 
-    private ChatMessageRepositoriy _repository;
+    private IChatMessageRepositoriy _chatMessageRepositoriy;
+    private IChatCompletionRepository _chatCompletionRepository;
+
     private long? _currentConversationId = null;
 
     public ConversationService(
-        string chatApiKey,
-        string modelName,
+        IChatMessageRepositoriy chatMessageRepositoriy,
+        IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
         IList<string> excludeFunctionNamesFromLazyMode,
         Kotonoha defaultSister = Kotonoha.Akane,
@@ -45,28 +44,14 @@ public class ConversationService
             AoiBehaviour = aoiBehaviour
         };
 
-        _chatClient = new ChatClient(modelName, chatApiKey);
+
         _functions = availableFunctions.ToDictionary(f => f.GetType().Name);
         _excludeFunctionNamesFromLazyMode = excludeFunctionNamesFromLazyMode;
-        _options = new ChatCompletionOptions();
-        foreach (var function in availableFunctions)
-        {
-            _options.Tools.Add(function.CreateChatTool());
-        }
-
         _state.PatienceCount = 0;
         _state.LastToolCallSister = 0;
 
-
-        ////////////
-        var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
-        var dbPath = Path.Combine(appDirectory, "app.db");
-        if (!Directory.Exists(appDirectory))
-        {
-            Directory.CreateDirectory(appDirectory);
-        }
-
-        _repository = new ChatMessageRepositoriy(dbPath);
+        _chatMessageRepositoriy = chatMessageRepositoriy;
+        _chatCompletionRepository = chatCompletionRepository;
     }
 
     public IEnumerable<string> GetAllMessageTexts()
@@ -94,8 +79,6 @@ public class ConversationService
     /// <returns></returns>
     private async Task<long> CreateNewConversationAsync()
     {
-        await _repository.InitializeDatabaseAsync();
-
         // 生成時の参考のためにあらかじめ会話を入れておく
         _state.ChatMessages.Clear();
         _state.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
@@ -106,7 +89,7 @@ public class ConversationService
 
         _lastSavedMessage = null;
 
-        return await _repository.CreateNewConversationAsync();
+        return await _chatMessageRepositoriy.CreateNewConversationIdAsync();
     }
 
     /// <summary>
@@ -115,9 +98,7 @@ public class ConversationService
     /// <returns></returns>
     public async Task LoadLatestConversation()
     {
-        await _repository.InitializeDatabaseAsync();
-
-        var conversationId = await _repository.GetLatestConversationIdAsync();
+        var conversationId = await _chatMessageRepositoriy.GetLatestConversationIdAsync();
         // 会話履歴が存在しない場合
         if (conversationId < 0)
         {
@@ -125,7 +106,7 @@ public class ConversationService
             return;
         }
 
-        var messages = await _repository.GetAllChatMessagesAsync(conversationId);
+        var messages = await _chatMessageRepositoriy.GetAllChatMessagesAsync(conversationId);
 
         _currentConversationId = conversationId;
         _state.LoadMessages(messages);
@@ -158,7 +139,7 @@ public class ConversationService
             ? _state.ChatMessages
             : _state.ChatMessages.SkipWhile(message => message != _lastSavedMessage).Skip(1);
 
-        await _repository.AddChatMessageAsync(unsavedMessages, _currentConversationId.Value);
+        await _chatMessageRepositoriy.InsertChatMessagesAsync(unsavedMessages, _currentConversationId.Value);
 
         _lastSavedMessage = _state.ChatMessages.Last();
     }
@@ -168,7 +149,7 @@ public class ConversationService
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
-    public async IAsyncEnumerable<ConversationResult> TalkingWithKotonohaSisters(string input)
+    public async IAsyncEnumerable<ConversationResult> TalkWithKotonohaSisters(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
@@ -198,7 +179,7 @@ public class ConversationService
 
         // 返信を生成
         _state.AddUserMessage($"私: {input}");
-        var completion = await CompleteChatAsync(_state);
+        var completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
 
         // 忍耐値の処理
         if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
@@ -222,7 +203,7 @@ public class ConversationService
             BeginLazyMode();
 
             // 再度返信を生成
-            completion = await CompleteChatAsync(_state);
+            completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
 
             // それでも関数呼び出しされることがあるのでチェック
             if (completion.Value.FinishReason != ChatFinishReason.Stop)
@@ -246,7 +227,7 @@ public class ConversationService
                 // 姉妹を切り替えて、再度呼び出し
                 _state.CurrentSister = _state.CurrentSister.Switch();
                 _state.AddHint(Hint.SwitchSisterTo(_state.CurrentSister));
-                completion = await CompleteChatAsync(_state);
+                completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
 
                 // 怠けると姉妹が入れ替わるのでカウンターをリセット
                 _state.PatienceCount = 1;
@@ -340,14 +321,12 @@ public class ConversationService
                 _state.AddToolMessage(toolCall.Id, result);
             }
 
-            completion = await CompleteChatAsync(_state);
+            completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
             _state.AddAssistantMessage(completion.Value);
         }
 
         return (completion, invokedFunctions);
     }
-
-    private Task<ClientResult<ChatCompletion>> CompleteChatAsync(ConversationState state) => _chatClient.CompleteChatAsync(state.ChatMessagesWithSystemMessage, _options);
 
     /// <summary>
     /// 会話対象の姉妹を取得します。

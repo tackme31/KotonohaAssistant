@@ -1,5 +1,4 @@
-﻿using KotonohaAssistant.AI.Functions;
-using KotonohaAssistant.AI.Prompts;
+﻿using KotonohaAssistant.AI.Prompts;
 
 namespace KotonohaAssistant.App;
 

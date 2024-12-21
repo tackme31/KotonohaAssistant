@@ -1,15 +1,15 @@
 ﻿using KotonohaAssistant.AI.Functions;
+using KotonohaAssistant.AI.Prompts;
+using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
+using OpenAI.Chat;
 
 // load .env
 DotNetEnv.Env.TraversePath().Load();
 
-var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
-var modelName = "gpt-4o-mini";
-
-var calendarEventService = new CalendarEventService(
+var calendarEventRepository = new CalendarEventRepository(
     Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? string.Empty,
     Environment.GetEnvironmentVariable("CALENDAR_ID") ?? string.Empty);
 
@@ -19,7 +19,7 @@ var functions = new ToolFunction[]
     new CallMaster(),
     new StartTimer(),
     new CreateCalendarEvent(),
-    new GetCalendarEvent(calendarEventService),
+    new GetCalendarEvent(calendarEventRepository),
     new GetWeather(),
     new TurnOnHeater(),
     new ForgetMemory(),
@@ -31,8 +31,34 @@ List<string> excludeFunctionNamesFromLazyMode =
     nameof(ForgetMemory)
 ];
 
-using var voiceClient = new VoiceClient();
-var service = new ConversationService(apiKey, modelName, functions, excludeFunctionNamesFromLazyMode);
+// DBの保存先
+var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
+var dbPath = Path.Combine(appDirectory, "app.cli.db");
+if (!Directory.Exists(appDirectory))
+{
+    Directory.CreateDirectory(appDirectory);
+}
+
+var chatMessageRepository = new ChatMessageRepositoriy(dbPath);
+
+var options = new ChatCompletionOptions();
+foreach (var function in functions)
+{
+    options.Tools.Add(function.CreateChatTool());
+}
+
+var chatCompletionRepository = new ChatCompletionRepository(
+    modelName: "gpt-4o-mini",
+    Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? string.Empty,
+    options);
+
+var service = new ConversationService(
+    chatMessageRepository,
+    chatCompletionRepository,
+    functions,
+    excludeFunctionNamesFromLazyMode,
+    akaneBehaviour: Behaviour.Default,
+    aoiBehaviour: Behaviour.Default);
 
 await service.LoadLatestConversation();
 
@@ -43,13 +69,15 @@ foreach (var text in service.GetAllMessageTexts())
 
 try
 {
+    using var voiceClient = new VoiceClient();
+
     while (true)
     {
         Console.Write("私: ");
         var stdin = Console.ReadLine();
         var input = "私: " + stdin;
 
-        await foreach (var result in service.TalkingWithKotonohaSisters(input))
+        await foreach (var result in service.TalkWithKotonohaSisters(input))
         {
             var name = result.Sister switch
             {

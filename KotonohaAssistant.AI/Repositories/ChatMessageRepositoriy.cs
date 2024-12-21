@@ -3,18 +3,25 @@ using Dapper;
 using Microsoft.Data.Sqlite;
 using System.Data;
 using System.Text.Json;
-using OpenAI.Assistants;
 
 namespace KotonohaAssistant.AI.Repositories;
 
-public class ChatMessageRepositoriy(string dbPath)
+public interface IChatMessageRepositoriy
+{
+    Task<long> GetLatestConversationIdAsync();
+    Task<int> CreateNewConversationIdAsync();
+    Task<IEnumerable<ChatMessage>> GetAllChatMessagesAsync(long conversationId);
+    Task InsertChatMessagesAsync(IEnumerable<ChatMessage> chatMessages, long conversationId);
+}
+
+public class ChatMessageRepositoriy(string dbPath) : IChatMessageRepositoriy
 {
     private bool _isInitialized = false;
     private readonly string _connectionString = $"Data Source={dbPath}";
 
     private IDbConnection Connection => new SqliteConnection(_connectionString);
 
-    public async Task InitializeDatabaseAsync()
+    private async Task InitializeDatabaseAsync()
     {
         if (_isInitialized)
         {
@@ -49,6 +56,8 @@ CREATE TABLE IF NOT EXISTS Conversation (
 
     public async Task<long> GetLatestConversationIdAsync()
     {
+        await InitializeDatabaseAsync();
+
         var sql = "SELECT * FROM Conversation ORDER BY CreatedAt DESC LIMIT 1;";
         try
         {
@@ -65,8 +74,10 @@ CREATE TABLE IF NOT EXISTS Conversation (
         }
     }
 
-    public async Task<int> CreateNewConversationAsync()
+    public async Task<int> CreateNewConversationIdAsync()
     {
+        await InitializeDatabaseAsync();
+
         var sql = "INSERT INTO Conversation DEFAULT VALUES; SELECT last_insert_rowid();";
         try
         {
@@ -85,6 +96,8 @@ CREATE TABLE IF NOT EXISTS Conversation (
 
     public async Task<IEnumerable<ChatMessage>> GetAllChatMessagesAsync(long conversationId)
     {
+        await InitializeDatabaseAsync();
+
         var sql = "SELECT * FROM Message WHERE ConversationId = @Id";
         try
         {
@@ -125,8 +138,10 @@ CREATE TABLE IF NOT EXISTS Conversation (
         }
     }
 
-    public async Task AddChatMessageAsync(IEnumerable<ChatMessage> chatMessages, long conversationId)
+    public async Task InsertChatMessagesAsync(IEnumerable<ChatMessage> chatMessages, long conversationId)
     {
+        await InitializeDatabaseAsync();
+
         if (!chatMessages.Any())
         {
             return; // 空のリストなら何もしない
@@ -184,12 +199,12 @@ CREATE TABLE IF NOT EXISTS Conversation (
         }
     }
 
-    public static string ConvertBinaryDataToString(BinaryData data)
+    private static string ConvertBinaryDataToString(BinaryData data)
     {
         return Convert.ToBase64String(data.ToArray());
     }
 
-    public static BinaryData ConvertStringToBinaryData(string base64String)
+    private static BinaryData ConvertStringToBinaryData(string base64String)
     {
         byte[] byteArray = Convert.FromBase64String(base64String);
         return new BinaryData(byteArray);

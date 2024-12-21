@@ -8,7 +8,7 @@
 @using KotonohaAssistant.Core.Utils
 @using Toolbelt.Blazor.SpeechRecognition
 @inject SpeechRecognition SpeechRecognition
-@inject ICalendarEventService CalendarEventService
+@inject ConversationService ConversationService
 @inject IJSRuntime JS
 
 <PageTitle>Kotonoha Assistant</PageTitle>
@@ -127,11 +127,6 @@
     private CancellationTokenSource? _conversationTimer;
 
     /// <summary>
-    /// 会話サービス
-    /// </summary>
-    private ConversationService? _conversationService = null;
-
-    /// <summary>
     /// 音声読み上げクライアント
     /// </summary>
     private VoiceClient? _voiceClient = null;
@@ -145,34 +140,10 @@
         this.SpeechRecognition.End += OnSpeechEnded;
         _ = this.SpeechRecognition.StartAsync();
 
-        var functions = new ToolFunction[]
-        {
-            new CallMaster(),
-            new StartTimer(),
-            new CreateCalendarEvent(),
-            new GetCalendarEvent(CalendarEventService),
-            new GetWeather(),
-            new TurnOnHeater(),
-            new ForgetMemory(),
-        };
-        var excludeFunctionNamesFromLazyMode = new[]
-        {
-            nameof(StartTimer),
-            nameof(ForgetMemory),
-        };
-        var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? "";
-        _conversationService = new ConversationService(
-            apiKey,
-            Settings.ModelName,
-            functions,
-            excludeFunctionNamesFromLazyMode,
-            defaultSister: Kotonoha.Akane,
-            Settings.AkaneBehaviour,
-            Settings.AoiBehaviour);
         _voiceClient = new VoiceClient();
 
-        await _conversationService.LoadLatestConversation();
-        foreach (var message in _conversationService.GetAllMessageTexts())
+        await ConversationService.LoadLatestConversation();
+        foreach (var message in ConversationService.GetAllMessageTexts())
         {
             if (message.StartsWith('私'))
             {
@@ -270,7 +241,7 @@
     /// <returns></returns>
     private async Task SendMessage(string message)
     {
-        if (_conversationService is null || _voiceClient is null)
+        if (ConversationService is null || _voiceClient is null)
         {
             return;
         }
@@ -283,7 +254,7 @@
         ScrollToEnd();
 
         var forgotten = false;
-        await foreach (var result in _conversationService.TalkingWithKotonohaSisters(message))
+        await foreach (var result in ConversationService.TalkWithKotonohaSisters(message))
         {
             // 関数呼び出しがあった場合は個別に表示
             if (result.Functions is not null)

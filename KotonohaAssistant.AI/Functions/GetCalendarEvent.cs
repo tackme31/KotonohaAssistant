@@ -1,13 +1,13 @@
 using KotonohaAssistant.AI.Extensions;
-using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.AI.Repositories;
 using System.Text;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class GetCalendarEvent(ICalendarEventService calendarEventService) : ToolFunction
+public class GetCalendarEvent(ICalendarEventRepository calendarEventRepository) : ToolFunction
 {
-    private readonly ICalendarEventService _calendarEventService = calendarEventService;
+    private readonly ICalendarEventRepository _calendarEventService = calendarEventRepository;
 
     public override string Description => """
 指定された日の予定をGoogleカレンダーから取得します。予定を尋ねられたときに呼び出されます。

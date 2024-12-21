@@ -3,14 +3,14 @@ using Google.Apis.Calendar.v3.Data;
 using Google.Apis.Calendar.v3;
 using Google.Apis.Services;
 
-namespace KotonohaAssistant.AI.Services;
+namespace KotonohaAssistant.AI.Repositories;
 
-public interface ICalendarEventService
+public interface ICalendarEventRepository
 {
     Task<IList<Event>> GetEventsAsync(DateTime date);
 }
 
-public class CalendarEventService : ICalendarEventService
+public class CalendarEventRepository : ICalendarEventRepository
 {
     private readonly string _calendarId;
     private readonly CalendarService _calendarService;
@@ -19,7 +19,7 @@ public class CalendarEventService : ICalendarEventService
         CalendarService.Scope.Calendar
     };
 
-    public CalendarEventService(string credentialsFilePath, string calendarId = "primary")
+    public CalendarEventRepository(string credentialsFilePath, string calendarId = "primary")
     {
         _calendarId = calendarId;
 
@@ -41,7 +41,7 @@ public class CalendarEventService : ICalendarEventService
 
         var request = _calendarService.Events.List(_calendarId);
         request.TimeMinDateTimeOffset = new DateTimeOffset(start, TimeZoneInfo.Local.GetUtcOffset(start));
-        request.TimeMaxDateTimeOffset = new DateTimeOffset(end, TimeZoneInfo.Local.GetUtcOffset(end)); 
+        request.TimeMaxDateTimeOffset = new DateTimeOffset(end, TimeZoneInfo.Local.GetUtcOffset(end));
         request.ShowDeleted = false;
         request.SingleEvents = true;
         request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;

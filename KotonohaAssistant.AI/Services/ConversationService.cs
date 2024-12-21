@@ -236,28 +236,20 @@ public class ConversationService
     /// <returns></returns>
     private Kotonoha? GuessTargetSister(string input)
     {
-        var namePairs = new (string search, Kotonoha sister)[]
+        var namePairs = new (string search, Kotonoha? sister)[]
         {
-            ("茜", Kotonoha.Akane),
+            ("茜ちゃん", Kotonoha.Akane),
             ("あかねちゃん", Kotonoha.Akane),
             ("葵ちゃん", Kotonoha.Aoi),
             ("あおいちゃん", Kotonoha.Aoi)
         };
 
-        var firstIndex = int.MaxValue;
-        Kotonoha? result = null;
-
-        foreach (var (search, sister) in namePairs)
-        {
-            var index = input.IndexOf(search);
-            if (index != -1 && index < firstIndex)
-            {
-                firstIndex = index;
-                result = sister;
-            }
-        }
-
-        return result;
+        return namePairs
+            .Select(name => (name.sister, index: input.IndexOf(name.search)))
+            .Where(r => r.index >= 0)
+            .OrderBy(r => r.index)
+            .Select(r => r.sister)
+            .FirstOrDefault();
     }
 
     private bool ShouldBeLazy(ChatCompletion completionValue)

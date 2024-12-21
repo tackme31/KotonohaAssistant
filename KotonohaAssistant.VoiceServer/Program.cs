@@ -31,7 +31,7 @@ namespace KotonohaAssistant.VoiceServer
             while (true) // クライアントの接続を待ち続ける
             {
                 // パイプサーバーを作成
-                using (var pipeServer = new NamedPipeServerStream(Const.VoiceEditorPipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None))
+                using (var pipeServer = new NamedPipeServerStream(Const.VoiceEditorPipeName, PipeDirection.InOut, 10, PipeTransmissionMode.Byte, PipeOptions.None))
                 {
                     Console.WriteLine("Waiting for client connection...");
 

@@ -1,8 +1,10 @@
 ﻿using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
+using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core;
+using Microsoft.VisualBasic;
 using OpenAI.Chat;
 using System.ClientModel;
 using System.Text.Json;
@@ -18,6 +20,14 @@ public class ConversationService
     private readonly IList<string> _excludeFunctionNamesFromLazyMode;
     private readonly ChatCompletionOptions _options;
     private readonly Random _r = new();
+
+    /// <summary>
+    /// 最後に保存したメッセージ
+    /// </summary>
+    private ChatMessage? _lastSavedMessage;
+
+    private ChatMessageRepositoriy _repository;
+    private long? _currentConversationId = null;
 
     public ConversationService(
         string chatApiKey,
@@ -35,13 +45,6 @@ public class ConversationService
             AoiBehaviour = aoiBehaviour
         };
 
-        // 生成時の参考のためにあらかじめ会話を入れておく
-        _state.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
-        _state.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
-        _state.AddAssistantMessage("葵: これから一緒に過ごすことになるけど、気軽に声をかけてね。");
-        _state.AddAssistantMessage("茜: せやな！これからいっぱい思い出作っていこな。");
-        _state.AddUserMessage("私: うん。よろしくね。");
-
         _chatClient = new ChatClient(modelName, chatApiKey);
         _functions = availableFunctions.ToDictionary(f => f.GetType().Name);
         _excludeFunctionNamesFromLazyMode = excludeFunctionNamesFromLazyMode;
@@ -53,6 +56,108 @@ public class ConversationService
 
         _state.PatienceCount = 0;
         _state.LastToolCallSister = 0;
+
+
+        ////////////
+        var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
+        var dbPath = Path.Combine(appDirectory, "app.db");
+        if (!Directory.Exists(appDirectory))
+        {
+            Directory.CreateDirectory(appDirectory);
+        }
+
+        _repository = new ChatMessageRepositoriy(dbPath);
+    }
+
+    public IEnumerable<string> GetAllMessageTexts()
+    {
+        foreach (var message in _state.ChatMessages)
+        {
+            if (message is UserChatMessage user &&
+                user.Content.Any() &&
+                user.Content[0].Text.StartsWith("私:"))
+            {
+                yield return user.Content[0].Text;
+            }
+
+            if (message is AssistantChatMessage assistant &&
+                assistant.Content.Any())
+            {
+                yield return assistant.Content[0].Text;
+            }
+        }
+    }
+
+    /// <summary>
+    /// 新しい会話を開始します
+    /// </summary>
+    /// <returns></returns>
+    private async Task<long> CreateNewConversationAsync()
+    {
+        await _repository.InitializeDatabaseAsync();
+
+        // 生成時の参考のためにあらかじめ会話を入れておく
+        _state.ChatMessages.Clear();
+        _state.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
+        _state.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
+        _state.AddAssistantMessage("葵: これから一緒に過ごすことになるけど、気軽に声をかけてね。");
+        _state.AddAssistantMessage("茜: せやな！これからいっぱい思い出作っていこな。");
+        _state.AddUserMessage("私: うん。よろしくね。");
+
+        _lastSavedMessage = null;
+
+        return await _repository.CreateNewConversationAsync();
+    }
+
+    /// <summary>
+    /// 直近の会話を読み込みます
+    /// </summary>
+    /// <returns></returns>
+    public async Task LoadLatestConversation()
+    {
+        await _repository.InitializeDatabaseAsync();
+
+        var conversationId = await _repository.GetLatestConversationIdAsync();
+        // 会話履歴が存在しない場合
+        if (conversationId < 0)
+        {
+            _currentConversationId = await CreateNewConversationAsync();
+            return;
+        }
+
+        var messages = await _repository.GetAllChatMessagesAsync(conversationId);
+
+        _currentConversationId = conversationId;
+        _state.LoadMessages(messages);
+        _lastSavedMessage = messages.LastOrDefault();
+
+        if (_lastSavedMessage is null)
+        {
+            return;
+        }
+
+        var lastText = _lastSavedMessage.Content.FirstOrDefault()?.Text ?? "";
+        if (lastText.StartsWith("茜"))
+        {
+            _state.CurrentSister = Kotonoha.Akane;
+        }
+        if (lastText.StartsWith("葵"))
+        {
+            _state.CurrentSister = Kotonoha.Aoi;
+        }
+    }
+
+    private async Task SaveState()
+    {
+        _currentConversationId ??= await CreateNewConversationAsync();
+
+        var unsavedMessages = _lastSavedMessage is null
+            ? _state.ChatMessages
+            : _state.ChatMessages.SkipWhile(message => message != _lastSavedMessage).Skip(1);
+
+        await _repository.AddChatMessageAsync(unsavedMessages, _currentConversationId.Value);
+
+        _lastSavedMessage = _state.ChatMessages.Last();
     }
 
     /// <summary>
@@ -65,6 +170,11 @@ public class ConversationService
         if (string.IsNullOrWhiteSpace(input))
         {
             yield break;
+        }
+
+        if (_currentConversationId is null)
+        {
+            _currentConversationId = await CreateNewConversationAsync();
         }
 
         // 姉妹切り替え
@@ -154,6 +264,8 @@ public class ConversationService
             Functions = functions
         }; ;
 
+        await SaveState();
+
         void BeginLazyMode()
         {
             switch (_state.CurrentSister)
@@ -179,9 +291,9 @@ public class ConversationService
                     break;
             }
         }
-
-        static string TrimSisterName(string input) => Regex.Replace(input, @"^(茜|葵):\s+", string.Empty);
     }
+
+    private static string TrimSisterName(string input) => Regex.Replace(input, @"^(茜|葵):\s+", string.Empty);
 
     /// <summary>
     /// Function callingで呼び出された関数の実行を行います
@@ -226,7 +338,7 @@ public class ConversationService
         return (completion, invokedFunctions);
     }
 
-    private Task<ClientResult<ChatCompletion>> CompleteChatAsync(ConversationState state) => _chatClient.CompleteChatAsync(state.ChatMessages, _options);
+    private Task<ClientResult<ChatCompletion>> CompleteChatAsync(ConversationState state) => _chatClient.CompleteChatAsync(state.ChatMessagesWithSystemMessage, _options);
 
     /// <summary>
     /// 会話対象の姉妹を取得します。

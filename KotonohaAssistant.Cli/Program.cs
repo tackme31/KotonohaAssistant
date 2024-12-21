@@ -34,6 +34,13 @@ List<string> excludeFunctionNamesFromLazyMode =
 using var voiceClient = new VoiceClient();
 var service = new ConversationService(apiKey, modelName, functions, excludeFunctionNamesFromLazyMode);
 
+await service.LoadLatestConversation();
+
+foreach (var text in service.GetAllMessageTexts())
+{
+    Console.WriteLine(text);
+}
+
 try
 {
     while (true)

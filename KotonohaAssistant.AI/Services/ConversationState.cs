@@ -1,17 +1,11 @@
 ﻿using OpenAI.Chat;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.AI.Prompts;
-using KotonohaAssistant.AI.Extensions;
 
 namespace KotonohaAssistant.AI.Utils;
 
 class ConversationState()
 {
-    /// <summary>
-    /// システム以外のメッセージ一覧
-    /// </summary>
-    private readonly List<ChatMessage> _chatMessages = [];
-
     /// <summary>
     /// 茜の追加の振る舞い
     /// </summary>
@@ -40,42 +34,52 @@ class ConversationState()
     /// <summary>
     /// システム付きのメッセージ一覧
     /// </summary>
-    public IEnumerable<ChatMessage> ChatMessages
+    public IEnumerable<ChatMessage> ChatMessagesWithSystemMessage
     {
         get
         {
             var now = DateTime.Now;
             return CurrentSister switch
             {
-                Kotonoha.Akane => _chatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane(now, AkaneBehaviour))),
-                Kotonoha.Aoi => _chatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi(now, AoiBehaviour))),
+                Kotonoha.Akane => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane(now, AkaneBehaviour))),
+                Kotonoha.Aoi => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi(now, AoiBehaviour))),
                 _ => throw new NotSupportedException()
             };
         }
     }
 
+    /// <summary>
+    /// システム以外のメッセージ一覧
+    /// </summary>
+    public List<ChatMessage> ChatMessages { get; set; } = [];
+
+    public void LoadMessages(IEnumerable<ChatMessage> chatMessages)
+    {
+        ChatMessages = chatMessages.ToList();
+    }
+
     public void AddAssistantMessage(string message)
     {
-        _chatMessages.Add(new AssistantChatMessage(message));
+        ChatMessages.Add(new AssistantChatMessage(message));
     }
 
     public void AddAssistantMessage(ChatCompletion completion)
     {
-        _chatMessages.Add(new AssistantChatMessage(completion));
+        ChatMessages.Add(new AssistantChatMessage(completion));
     }
 
     public void AddUserMessage(string message)
     {
-        _chatMessages.Add(new UserChatMessage(message));
+        ChatMessages.Add(new UserChatMessage(message));
     }
 
     public void AddHint(string hint)
     {
-        _chatMessages.Add(new UserChatMessage($"[Hint]: {hint}"));
+        ChatMessages.Add(new UserChatMessage($"[Hint]: {hint}"));
     }
 
     public void AddToolMessage(string id, string result)
     {
-        _chatMessages.Add(new ToolChatMessage(id, result));
+        ChatMessages.Add(new ToolChatMessage(id, result));
     }
 }

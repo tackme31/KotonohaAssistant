@@ -29,6 +29,9 @@ public class ForgetMemory : ToolFunction
 }
 """;
 
+    public static readonly string SuccessMessage = "削除に成功しました";
+    public static readonly string FailureMessage = "削除に失敗しました";
+
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
         arguments = new Dictionary<string, object>();
@@ -36,15 +39,15 @@ public class ForgetMemory : ToolFunction
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments)
+    public override Task<string> Invoke(IDictionary<string, object> arguments)
     {
         // 1/10の確率で失敗する。頑張ってもっかい説得してね。
         var r = new Random();
         if (r.NextDouble() < 1d / 10d)
         {
-            return "削除に失敗しました";
+            return Task.FromResult(FailureMessage);
         }
 
-        return "削除に成功しました";
+        return Task.FromResult(SuccessMessage);
     }
 }

@@ -136,7 +136,7 @@
     /// </summary>
     private VoiceClient? _voiceClient = null;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         this.SpeechRecognition.Lang = "ja-JP";
         this.SpeechRecognition.InterimResults = true;
@@ -170,6 +170,29 @@
             Settings.AkaneBehaviour,
             Settings.AoiBehaviour);
         _voiceClient = new VoiceClient();
+
+        await _conversationService.LoadLatestConversation();
+        foreach (var message in _conversationService.GetAllMessageTexts())
+        {
+            if (message.StartsWith('私'))
+            {
+                var trimed = message.Replace("私: ", string.Empty);
+                _messages.Add((trimed, null, null));
+            }
+            if (message.StartsWith('茜'))
+            {
+                var trimed = message.Replace("茜: ", string.Empty);
+                _messages.Add((trimed, Kotonoha.Akane, null));
+            }
+            if (message.StartsWith('葵'))
+            {
+                var trimed = message.Replace("葵: ", string.Empty);
+                _messages.Add((trimed, Kotonoha.Aoi, null));
+            }
+        }
+
+        this.StateHasChanged();
+        ScrollToEnd();
     }
 
     private void OnSpeechRecognized(object? sender, SpeechRecognitionEventArgs args)
@@ -259,6 +282,7 @@
 
         ScrollToEnd();
 
+        var forgotten = false;
         await foreach (var result in _conversationService.TalkingWithKotonohaSisters(message))
         {
             // 関数呼び出しがあった場合は個別に表示
@@ -267,6 +291,11 @@
                 foreach (var function in result.Functions)
                 {
                     _messages.Add(((string?)null, (Kotonoha?)null, function));
+                }
+
+                if (result.Functions.Any(f => f.Name == nameof(ForgetMemory) && f.Result == ForgetMemory.SuccessMessage))
+                {
+                    forgotten = true;
                 }
             }
 
@@ -291,6 +320,10 @@
         _isThinking = false;
         _isMyTurn = true;
         _talkingText = "";
+        if (forgotten)
+        {
+            _messages.Clear();
+        }
         this.StateHasChanged();
 
         ScrollToEnd();

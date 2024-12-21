@@ -12,3 +12,11 @@
 .blinking-underscore {
     animation: blink 1.2s infinite steps(1);
 }
+
+#conversationContainer {
+    overflow: scroll; /* スクロール可能 */
+}
+
+    #conversationContainer::-webkit-scrollbar {
+        display: none; /* スクロールバーを非表示 */
+    }

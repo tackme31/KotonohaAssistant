@@ -30,7 +30,7 @@
     </div>
     <div style="width: 50%;">
         <h2>会話履歴</h2>
-        <div id="conversationContainer" style="height: 760px; overflow-y: scroll;">
+        <div id="conversationContainer" style="height: 760px;">
             @foreach (var (text, talking, function) in _messages)
             {
                 if (function is not null)

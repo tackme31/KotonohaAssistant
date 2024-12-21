@@ -358,3 +358,6 @@ build/tools/
 
 # lib
 /lib/*.dll
+
+# DB
+/db/app.db

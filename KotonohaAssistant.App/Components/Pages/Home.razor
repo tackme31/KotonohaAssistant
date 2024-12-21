@@ -9,6 +9,7 @@
 @using Toolbelt.Blazor.SpeechRecognition
 @inject SpeechRecognition SpeechRecognition
 @inject ICalendarEventService CalendarEventService
+@inject IJSRuntime JS
 
 <PageTitle>Kotonoha Assistant</PageTitle>
 
@@ -27,68 +28,70 @@
             <p>「あおいちゃん、いる？」</p>
         </div>
     </div>
-    <div style="width: 50%">
+    <div style="width: 50%;">
         <h2>会話履歴</h2>
-        @foreach (var (text, talking, function) in _messages)
-        {
-            if (function is not null)
+        <div id="conversationContainer" style="height: 760px; overflow-y: scroll;">
+            @foreach (var (text, talking, function) in _messages)
             {
-                var arguments = string.Join(", ", function.Arguments.Select(a => $"{a.Key}={a.Value}") ?? []);
-
-                <div style="background: whitesmoke; color: #adadad; padding: 5px 20px 5px; margin: 5px 0px">
-                    <details>
-                        <summary>
-                            @(function.Name)(@(arguments))
-                        </summary>
-                        <p style="white-space: pre-line">
-                            @(function.Result)
-                        </p>
-                    </details>
-                </div>
-            }
-            else
-            {
-                var color = talking switch
+                if (function is not null)
                 {
-                    Kotonoha.Akane => "pink",
-                    Kotonoha.Aoi => "lightblue",
-                    _ => "lightgray"
-                };
-                var justifyContent = talking is null ? "flex-start" : "flex-end";
-                var borderRadius = talking is null ? "0px 20px 20px 20px" : "20px 0px 20px 20px";
+                    var arguments = string.Join(", ", function.Arguments.Select(a => $"{a.Key}={a.Value}") ?? []);
 
-                <div style="display: flex; justify-content: @justifyContent;">
-                    <div style="margin: 7px 0px; padding: 0px 20px; border-radius: @borderRadius; background-color: @color;">
-                        <p>@(text)</p>
+                    <div style="background: whitesmoke; color: #adadad; padding: 5px 20px 5px; margin: 5px 0px">
+                        <details>
+                            <summary>
+                                @(function.Name)(@(arguments))
+                            </summary>
+                            <p style="white-space: pre-line">
+                                @(function.Result)
+                            </p>
+                        </details>
+                    </div>
+                }
+                else
+                {
+                    var color = talking switch
+                    {
+                        Kotonoha.Akane => "pink",
+                        Kotonoha.Aoi => "lightblue",
+                        _ => "lightgray"
+                    };
+                    var justifyContent = talking is null ? "flex-start" : "flex-end";
+                    var borderRadius = talking is null ? "0px 20px 20px 20px" : "20px 0px 20px 20px";
+
+                    <div style="display: flex; justify-content: @justifyContent;">
+                        <div style="margin: 7px 0px; padding: 0px 20px; border-radius: @borderRadius; background-color: @color;">
+                            <p>@(text)</p>
+                        </div>
+                    </div>
+                }
+            }
+
+            @if (_isMyTurn)
+            {
+                <div style="display: flex; justify-content: flex-start;">
+                    <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 0px 20px 20px 20px; background-color: lightgray;">
+                        <p>
+                            &gt;&nbsp;
+                            @(_talkingText)
+                            @if (_isInConversation)
+                            {
+                                <span class="blinking-underscore">_</span>
+                            }
+                        </p>
                     </div>
                 </div>
             }
-        }
 
-        @if (_isMyTurn)
-        {
-            <div style="display: flex; justify-content: flex-start;">
-                <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 0px 20px 20px 20px; background-color: lightgray;">
-                    <p>
-                        &gt;&nbsp;
-                        @(_talkingText)
-                        @if (_isInConversation)
-                        {
-                            <span class="blinking-underscore">_</span>
-                        }
-                    </p>
+            @if (_isThinking)
+            {
+                <div style="display: flex; justify-content: flex-end;">
+                    <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 20px 0px 20px 20px; background-color: whitesmoke;">
+                        <p>thinking...</p>
+                    </div>
                 </div>
-            </div>
-        }
-
-        @if(_isThinking)
-        {
-            <div style="display: flex; justify-content: flex-end;">
-                <div style="margin: 7px 0px; padding: 0px 20px; border-radius: 20px 0px 20px 20px; background-color: whitesmoke;">
-                    <p>thinking...</p>
-                </div>
-            </div>
-        }
+            }
+        </div>
     </div>
 </div>
 
@@ -250,12 +253,12 @@
         }
 
         _isMyTurn = false;
-        this.StateHasChanged();
-
-        await this.SpeechRecognition.StopAsync();
-
         _isThinking = true;
         this.StateHasChanged();
+        await this.SpeechRecognition.StopAsync();
+
+        ScrollToEnd();
+
         await foreach (var result in _conversationService.TalkingWithKotonohaSisters(message))
         {
             // 関数呼び出しがあった場合は個別に表示
@@ -272,11 +275,15 @@
             _isThinking = false;
             this.StateHasChanged();
 
+            ScrollToEnd();
+
             // 読み上げ
             await _voiceClient.SpeakAsync(result.Sister, result.Message);
 
             _isThinking = true;
             this.StateHasChanged();
+
+            ScrollToEnd();
         }
 
         await this.SpeechRecognition.StartAsync();
@@ -286,6 +293,7 @@
         _talkingText = "";
         this.StateHasChanged();
 
+        ScrollToEnd();
         StartConversationTimeout(Settings.CoversationTimeout);
     }
 
@@ -339,5 +347,10 @@
         this.SpeechRecognition.End -= OnSpeechEnded;
         _voiceClient?.Dispose();
         _conversationTimer?.Cancel();
+    }
+
+    private void ScrollToEnd()
+    {
+        _ = JS.InvokeVoidAsync("scrollToEnd", new object[] { "conversationContainer" });
     }
 }

@@ -52,6 +52,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(service);
     }
 
+    public static void AddAlarmService(this IServiceCollection services)
+    {
+        var repository = new AlarmRepository(AlarmDBPath);
+        var service = new AlarmService(repository);
+        service.Start();
+        services.AddSingleton(service);
+    }
+
     private static IChatMessageRepositoriy CreateChatMessageRepository()
     {
         if (!Directory.Exists(AppFolder))

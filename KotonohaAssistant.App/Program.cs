@@ -14,6 +14,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddSpeechRecognition();
 
 builder.Services.AddConversationService();
+builder.Services.AddAlarmService();
 
 var app = builder.Build();
 

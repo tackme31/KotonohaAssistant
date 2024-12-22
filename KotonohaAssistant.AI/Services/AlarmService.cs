@@ -28,7 +28,10 @@ public class AlarmService : IDisposable
 
     public void Start()
     {
-        _timer.Start();
+        if (!_timer.Enabled)
+        {
+            _timer.Start();
+        }
     }
 
     private async Task OnTimeElapsed(object? sender, ElapsedEventArgs args)

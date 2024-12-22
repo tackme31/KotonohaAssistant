@@ -2,7 +2,6 @@
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
-using KotonohaAssistant.Alarm;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;

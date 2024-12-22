@@ -1,5 +1,6 @@
+using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Utils;
-using KotonohaAssistant.Alarm;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;

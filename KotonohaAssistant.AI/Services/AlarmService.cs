@@ -1,8 +1,8 @@
-﻿using KotonohaAssistant.Core.Utils;
+﻿using KotonohaAssistant.AI.Repositories;
 using NAudio.Wave;
 using System.Timers;
 
-namespace KotonohaAssistant.Alarm;
+namespace KotonohaAssistant.AI.Services;
 
 public class AlarmService : IDisposable
 {

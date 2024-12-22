@@ -15,7 +15,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\KotonohaAssistant.Alarm\KotonohaAssistant.Alarm.csproj" />
     <ProjectReference Include="..\KotonohaAssistant.Core\KotonohaAssistant.Core.csproj" />
   </ItemGroup>
 

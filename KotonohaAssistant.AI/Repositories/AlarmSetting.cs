@@ -1,6 +1,6 @@
 ﻿using KotonohaAssistant.Core;
 
-namespace KotonohaAssistant.Alarm;
+namespace KotonohaAssistant.AI.Repositories;
 
 public class AlarmSetting
 {

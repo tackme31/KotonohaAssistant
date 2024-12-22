@@ -84,7 +84,13 @@ public class CallMaster(IAlarmRepository alarmRepository, IChatCompletionReposit
             }
         }
 
-        messages.Insert(0, new SystemChatMessage(Prompts.Alarm.CreateAlarmMessageAkane(DateTime.Now)));
+        var systemMessage = state.CurrentSister switch
+        {
+            Core.Kotonoha.Akane => Prompts.Alarm.CreateAlarmMessageAkane(DateTime.Now),
+            Core.Kotonoha.Aoi => Prompts.Alarm.CreateAlarmMessageAoi(DateTime.Now),
+            _ => Prompts.Alarm.CreateAlarmMessageAkane(DateTime.Now),
+        };
+        messages.Insert(0, new SystemChatMessage(systemMessage));
         messages.Add(new UserChatMessage(Prompts.Alarm.HintMessage));
 
         var voiceText = string.Empty;

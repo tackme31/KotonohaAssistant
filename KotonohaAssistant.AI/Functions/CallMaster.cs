@@ -60,7 +60,7 @@ public class CallMaster(IAlarmRepository alarmRepository, IChatCompletionReposit
 
     public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
-        // 直近の2回のやり取りを取得する
+        /*// 直近の2回のやり取りを取得する
         var messages = new List<ChatMessage>();
         var maxRefCount = 10;
         var refCount = 0;
@@ -114,14 +114,14 @@ public class CallMaster(IAlarmRepository alarmRepository, IChatCompletionReposit
         if (string.IsNullOrWhiteSpace(voiceText))
         {
             return "FAILED";
-        }
+        }*/
 
         var time = (TimeSpan)arguments["time"];
         var setting = new AlarmSetting
         {
             TimeInSeconds = time.TotalSeconds,
             Sister = state.CurrentSister,
-            Message = voiceText
+            Message = "NO SOUND"
         };
 
         try

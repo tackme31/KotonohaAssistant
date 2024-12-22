@@ -59,7 +59,7 @@ var service = new ConversationService(
     akaneBehaviour: Behaviour.Default,
     aoiBehaviour: Behaviour.Default);
 
-await service.LoadLatestConversation();
+//await service.LoadLatestConversation();
 
 foreach (var text in service.GetAllMessageTexts())
 {

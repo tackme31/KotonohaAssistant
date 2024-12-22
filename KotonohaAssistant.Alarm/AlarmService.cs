@@ -7,8 +7,9 @@ namespace KotonohaAssistant.Alarm;
 public class AlarmService : IDisposable
 {
     public static readonly TimeSpan TimerInterval = TimeSpan.FromSeconds(30);
+    public static readonly TimeSpan SoundInterval = TimeSpan.FromSeconds(2);
 
-    private readonly VoiceClient _voiceClient;
+    //private readonly VoiceClient _voiceClient;
     private readonly System.Timers.Timer _timer;
     private readonly ElapsedEventHandler _onTimeElapsed;
     private readonly IAlarmRepository _alarmRepository;
@@ -16,7 +17,7 @@ public class AlarmService : IDisposable
 
     public AlarmService(IAlarmRepository alarmRepository)
     {
-        _voiceClient = new VoiceClient();
+        //_voiceClient = new VoiceClient();
         _alarmRepository = alarmRepository;
 
         _timer = new System.Timers.Timer(TimerInterval);
@@ -52,25 +53,23 @@ public class AlarmService : IDisposable
 
             while (DateTime.Now - startTime < TimerInterval)
             {
-                // アラームの設定がある限り再生し続ける
-                var settings = await _alarmRepository.GetAlarmSettingsAsync(startTime.TimeOfDay - TimerInterval, startTime.TimeOfDay);
-                if (settings is [])
+                await PlayAlarmSoundAsync();
+
+                if (!(await HasAlarmSetting(startTime.TimeOfDay - TimerInterval, startTime.TimeOfDay)))
                 {
                     break;
                 }
 
-                foreach (var setting in settings)
+                /*var message = targetSettings[0].Message;
+                if (!string.IsNullOrWhiteSpace(message))
                 {
-                    if (string.IsNullOrEmpty(setting.Message))
-                    {
-                        continue;
-                    }
-
-                    // TODO: アラームっぽい音を流す
-                    await PlayAlarmSoundAsync();
-
-                    await _voiceClient.SpeakAsync(setting.Sister, setting.Message);
+                    await _voiceClient.SpeakAsync(targetSettings[0].Sister, message);
                 }
+
+                if (!(await HasAlarmSetting(startTime.TimeOfDay - TimerInterval, startTime.TimeOfDay)))
+                {
+                    break;
+                }*/
             }
 
             _calling = false;
@@ -80,6 +79,12 @@ public class AlarmService : IDisposable
         catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
+        }
+
+        async Task<bool> HasAlarmSetting(TimeSpan from, TimeSpan to)
+        {
+            var settings = await _alarmRepository.GetAlarmSettingsAsync(from, to);
+            return settings is not [];
         }
     }
 
@@ -92,7 +97,7 @@ public class AlarmService : IDisposable
         outputDevice.Init(audioFile);
         outputDevice.Play();
 
-        await Task.Delay(3000);
+        await Task.Delay(SoundInterval);
 
         outputDevice.Stop();
     }

@@ -39,6 +39,9 @@ public class StopAlarm(IAlarmRepository alarmRepository) : ToolFunction
             var targetSettings = await _alarmRepository.GetAlarmSettingsAsync(start, end.TimeOfDay);
             await _alarmRepository.DeleteAlarmSettingsAsync(targetSettings.Select(s => s.Id));
 
+            // アラームが確実に止まるまで待機
+            await Task.Delay(AlarmService.SoundInterval);
+
             return "OK";
         }
         catch (Exception)

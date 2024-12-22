@@ -90,7 +90,7 @@ public class AlarmService : IDisposable
 
     static async Task PlayAlarmSoundAsync()
     {
-        var path = @"D:\Windows\Programs\csharp\KotonohaAssistant\KotonohaAssistant.Alarm\assets\Clock-Alarm02-1(Loop).mp3";
+        var path = @"D:\Windows\Programs\csharp\KotonohaAssistant\assets\Clock-Alarm02-1(Loop).mp3";
         using var audioFile = new AudioFileReader(path);
         using var outputDevice = new WaveOutEvent();
 
@@ -107,6 +107,5 @@ public class AlarmService : IDisposable
         _timer.Elapsed -= _onTimeElapsed;
 
         _timer.Dispose();
-        _voiceClient.Dispose();
     }
 }

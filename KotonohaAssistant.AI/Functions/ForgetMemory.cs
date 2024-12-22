@@ -1,5 +1,4 @@
 using KotonohaAssistant.AI.Utils;
-using System;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;

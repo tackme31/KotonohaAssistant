@@ -1,4 +1,3 @@
-using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Utils;
 using System.Text.Json;

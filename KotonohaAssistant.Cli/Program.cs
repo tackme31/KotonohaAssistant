@@ -25,11 +25,13 @@ if (!Directory.Exists(appDirectory))
 }
 
 // 利用可能な関数
+var timerRepository = new TimerRepository();
 var functions = new List<ToolFunction>
 {
     new CallMaster(new AlarmRepository(alarmDBPath), new ChatCompletionRepository(modelName, openAiApiKey)),
     new StopAlarm(new AlarmRepository(alarmDBPath)),
-    new StartTimer(),
+    new StartTimer(timerRepository),
+    new StopTimer(timerRepository),
     new CreateCalendarEvent(),
     new GetCalendarEvent(new CalendarEventRepository(googleApiKey, calendarId)),
     new GetWeather(),
@@ -40,6 +42,7 @@ var functions = new List<ToolFunction>
 List<string> excludeFunctionNamesFromLazyMode =
 [
     nameof(StartTimer),
+    nameof(StopTimer),
     nameof(ForgetMemory)
 ];
 

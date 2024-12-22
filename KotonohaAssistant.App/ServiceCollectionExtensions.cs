@@ -20,11 +20,13 @@ public static class ServiceCollectionExtensions
 
     public static void AddConversationService(this IServiceCollection services)
     {
+        var timerRepository = new TimerRepository();
         // 利用する関数一覧
         var functions = new ToolFunction[]
         {
             new CallMaster(new AlarmRepository(AlarmDBPath), new ChatCompletionRepository(Settings.ModelName, OpenAIApiKey)),
-            new StartTimer(),
+            new StartTimer(timerRepository),
+            new StopTimer(timerRepository),
             new CreateCalendarEvent(),
             new GetCalendarEvent(new CalendarEventRepository(GoogleApiKey, CalendarId)),
             new GetWeather(),
@@ -35,6 +37,7 @@ public static class ServiceCollectionExtensions
         var excludeFunctionNamesFromLazyMode = new[]
         {
             nameof(StartTimer),
+            nameof(StopTimer),
             nameof(ForgetMemory),
         };
         var chatMessageRepository = CreateChatMessageRepository();

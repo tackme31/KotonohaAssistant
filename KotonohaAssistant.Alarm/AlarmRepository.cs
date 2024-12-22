@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Microsoft.Data.Sqlite;
 using System.Data;
+using System.Dynamic;
 
 namespace KotonohaAssistant.Alarm;
 

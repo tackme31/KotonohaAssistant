@@ -28,6 +28,7 @@ if (!Directory.Exists(appDirectory))
 var functions = new List<ToolFunction>
 {
     new CallMaster(new AlarmRepository(alarmDBPath), new ChatCompletionRepository(modelName, openAiApiKey)),
+    new StopAlarm(new AlarmRepository(alarmDBPath)),
     new StartTimer(),
     new CreateCalendarEvent(),
     new GetCalendarEvent(new CalendarEventRepository(googleApiKey, calendarId)),

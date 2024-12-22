@@ -253,7 +253,7 @@ public class ConversationService
         // 記憶削除時は新しい会話にする
         if (functions.Any(f => f.Name == nameof(ForgetMemory) && f.Result == ForgetMemory.SuccessMessage))
         {
-            _currentConversationId ??= await CreateNewConversationAsync();
+            _currentConversationId = await CreateNewConversationAsync();
         }
 
         await SaveState();

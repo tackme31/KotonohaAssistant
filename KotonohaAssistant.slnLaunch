@@ -9,6 +9,10 @@
       {
         "Path": "KotonohaAssistant.Cli\\KotonohaAssistant.Cli.csproj",
         "Action": "Start"
+      },
+      {
+        "Path": "KotonohaAssistant.Alarm\\KotonohaAssistant.Alarm.csproj",
+        "Action": "Start"
       }
     ]
   },
@@ -21,6 +25,10 @@
       },
       {
         "Path": "KotonohaAssistant.App\\KotonohaAssistant.App.csproj",
+        "Action": "Start"
+      },
+      {
+        "Path": "KotonohaAssistant.Alarm\\KotonohaAssistant.Alarm.csproj",
         "Action": "Start"
       }
     ]

@@ -36,7 +36,7 @@ public class VoiceClient : IDisposable
 
     public async Task SpeakAsync(Kotonoha sister, string message)
     {
-        await ConnectToServerAsync(); // 非同期でサーバーに接続
+        await ConnectToServerAsync();
 
         if (_writer is null || _reader is null)
         {
@@ -51,10 +51,29 @@ public class VoiceClient : IDisposable
                 Message = message,
             };
             var serialized = JsonConvert.SerializeObject(request, Formatting.None);
-            // サーバーにリクエストを送信
-            await _writer.WriteLineAsync(serialized);
+            await _writer.WriteLineAsync("SPEAK:" + serialized);
 
-            // サーバーからの応答を受け取る
+            await _reader.ReadLineAsync();
+        }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException("An error occurred while communicating with the server.", ex);
+        }
+    }
+
+    public async Task StopAsync()
+    {
+        await ConnectToServerAsync();
+
+        if (_writer is null || _reader is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _writer.WriteLineAsync("STOP");
+
             await _reader.ReadLineAsync();
         }
         catch (IOException ex)

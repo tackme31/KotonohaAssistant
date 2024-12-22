@@ -31,7 +31,7 @@ public class Settings
     /// <summary>
     /// ウェイクワードの曖昧一致（茜）
     /// </summary>
-    public static readonly (string From, string To) FuzzyMatchAkane = (@"^(ねあかねちゃん|ね赤ちゃん|ねえ赤ちゃん|ねねちゃん)", "ねえ、あかねちゃん");
+    public static readonly (string From, string To) FuzzyMatchAkane = (@"^(ねあかねちゃん|ね赤ちゃん|ね、赤ちゃん|ねえ赤ちゃん|ねえ、赤ちゃん|ねねちゃん)", "ねえ、あかねちゃん");
 
     /// <summary>
     /// ウェイクワードの曖昧一致（葵）

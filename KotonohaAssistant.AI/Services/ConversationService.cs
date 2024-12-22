@@ -28,6 +28,8 @@ public class ConversationService
 
     private long? _currentConversationId = null;
 
+    public IReadOnlyConversationState State => _state;
+
     public ConversationService(
         IChatMessageRepositoriy chatMessageRepositoriy,
         IChatCompletionRepository chatCompletionRepository,
@@ -80,7 +82,7 @@ public class ConversationService
     private async Task<long> CreateNewConversationAsync()
     {
         // 生成時の参考のためにあらかじめ会話を入れておく
-        _state.ChatMessages.Clear();
+        _state.ClearChatMessages();
         _state.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
         _state.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
         _state.AddAssistantMessage("葵: これから一緒に過ごすことになるけど、気軽に声をかけてね。");
@@ -310,7 +312,7 @@ public class ConversationService
                     continue;
                 }
 
-                var result = await function.Invoke(arguments);
+                var result = await function.Invoke(arguments, _state);
                 invokedFunctions.Add(new ConversationFunction
                 {
                     Name = toolCall.FunctionName,

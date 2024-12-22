@@ -4,6 +4,7 @@ using System.Text.Json;
 using Google.Apis.Auth.OAuth2;
 using System.IO;
 using Google.Apis.Services;
+using KotonohaAssistant.AI.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
@@ -67,7 +68,7 @@ public class CreateCalendarEvent() : ToolFunction
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         return "ok";
     }

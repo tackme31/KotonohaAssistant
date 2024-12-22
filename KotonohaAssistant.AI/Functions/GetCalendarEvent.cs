@@ -1,5 +1,6 @@
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.AI.Utils;
 using System.Text;
 using System.Text.Json;
 
@@ -43,7 +44,7 @@ public class GetCalendarEvent(ICalendarEventRepository calendarEventRepository) 
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         try
         {

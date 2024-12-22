@@ -7,6 +7,8 @@ using System.IO.Pipes;
 using System.Text.Json;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core;
+using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace KotonohaAssistant.VoiceServer
 {
@@ -28,59 +30,75 @@ namespace KotonohaAssistant.VoiceServer
 
             Console.WriteLine("Named Pipe Server is starting...");
 
+            var tasks = new List<Task>();
+
             while (true) // クライアントの接続を待ち続ける
             {
                 // パイプサーバーを作成
-                using (var pipeServer = new NamedPipeServerStream(Const.VoiceEditorPipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None))
+                var pipeServer = new NamedPipeServerStream(Const.VoiceEditorPipeName, PipeDirection.InOut, 10, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+
+                Console.WriteLine("Waiting for client connection...");
+
+                try
                 {
-                    Console.WriteLine("Waiting for client connection...");
+                    await pipeServer.WaitForConnectionAsync();
+                    Console.WriteLine("Client connected.");
 
-                    try
+                    // 新しい接続を処理するタスクを開始
+                    var clientTask = HandleClientAsync(pipeServer);
+                    tasks.Add(clientTask);  // タスクをリストに追加
+
+                    // 接続されたクライアントを処理するタスクを非同期で実行
+                    async Task HandleClientAsync(NamedPipeServerStream ps)
                     {
-                        await pipeServer.WaitForConnectionAsync();
-                        Console.WriteLine("Client connected.");
-
-                        using (var reader = new StreamReader(pipeServer))
-                        using (var writer = new StreamWriter(pipeServer) { AutoFlush = true })
+                        using (var reader = new StreamReader(ps))
+                        using (var writer = new StreamWriter(ps) { AutoFlush = true })
                         {
                             string line;
-                            while ((line = reader.ReadLine()) != null)
+                            while ((line = await reader.ReadLineAsync()) != null)
                             {
                                 Console.WriteLine($"Data received: {line}");
 
-                                var request = ParseSpeakRequest(line);
-                                if (request != null)
-                                {
-                                    await SpeakAsync(request.SisterType, request.Message);
-                                    writer.WriteLine("OK");
-                                }
-                                else
-                                {
-                                    writer.WriteLine("ERROR");
-                                }
+                                var (command, payload) = ParseRequest(line);
+                                await RunCommand(command, payload);
 
+                                await writer.WriteLineAsync("OK");
                             }
                         }
-                    }
-                    catch (IOException ex)
-                    {
-                        // 接続エラー処理
-                        // streamのdisposeのタイミングの関係か必ず発生するので一旦無視
-                        //Console.WriteLine($"IOException: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Exception: {ex.Message}");
-                    }
-                    finally
-                    {
-                        if (pipeServer.IsConnected)
-                        {
-                            pipeServer.Disconnect();
-                        }
-                        Console.WriteLine("Client disconnected. Ready for new connection.");
+
+                        // クライアントが切断された後に行う処理
+                        Console.WriteLine("Client disconnected.");
+                        ps.Disconnect(); // 接続を切断
                     }
                 }
+                catch (IOException)
+                {
+                    // 接続エラー処理
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception: {ex.Message}");
+                }
+            }
+
+            (string command, string payload) ParseRequest(string input)
+            {
+                var m = Regex.Match(input, @"^(?<command>[^:]+):?(?<payload>.*)$");
+                return (m.Groups["command"].Value, m.Groups["payload"].Value);
+            }
+        }
+
+        private static async Task RunCommand(string command, string payload)
+        {
+            switch (command)
+            {
+                case "SPEAK":
+                    var request = JsonSerializer.Deserialize<SpeakRequest>(payload);
+                    await SpeakAsync(request.SisterType, request.Message);
+                    break;
+                case "STOP":
+                    await StopAsync();
+                    break;
             }
         }
 
@@ -150,10 +168,30 @@ namespace KotonohaAssistant.VoiceServer
 
                 await WaitForStatusAsync(HostStatus.Idle);
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e.Message);
-                throw;
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        public static async Task StopAsync()
+        {
+            EnsureEditorConnected();
+
+            if (_ttsControl.Status == HostStatus.Idle)
+            {
+                return;
+            }
+
+            try
+            {
+                _ttsControl.Stop();
+
+                await WaitForStatusAsync(HostStatus.Idle);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
             }
         }
 
@@ -172,20 +210,5 @@ namespace KotonohaAssistant.VoiceServer
                 await Task.Delay(_waitCheckInterval);
             }
         }
-
-        public static SpeakRequest ParseSpeakRequest(string line)
-        {
-            try
-            {
-                var request = JsonSerializer.Deserialize<SpeakRequest>(line);
-                return request;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"An error occurred when parsing request: {ex.Message}");
-                return null;
-            }
-        }
-
     }
 }

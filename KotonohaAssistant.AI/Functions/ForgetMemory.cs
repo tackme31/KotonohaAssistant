@@ -1,3 +1,4 @@
+using KotonohaAssistant.AI.Utils;
 using System;
 using System.Text.Json;
 
@@ -39,7 +40,7 @@ public class ForgetMemory : ToolFunction
         return true;
     }
 
-    public override Task<string> Invoke(IDictionary<string, object> arguments)
+    public override Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         // 1/10の確率で失敗する。頑張ってもっかい説得してね。
         var r = new Random();

@@ -8,6 +8,7 @@ using System.Text.Json;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
 
 namespace KotonohaAssistant.VoiceServer
 {
@@ -29,51 +30,54 @@ namespace KotonohaAssistant.VoiceServer
 
             Console.WriteLine("Named Pipe Server is starting...");
 
+            var tasks = new List<Task>();
+
             while (true) // クライアントの接続を待ち続ける
             {
                 // パイプサーバーを作成
-                using (var pipeServer = new NamedPipeServerStream(Const.VoiceEditorPipeName, PipeDirection.InOut, 10, PipeTransmissionMode.Byte, PipeOptions.None))
+                var pipeServer = new NamedPipeServerStream(Const.VoiceEditorPipeName, PipeDirection.InOut, 10, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+
+                Console.WriteLine("Waiting for client connection...");
+
+                try
                 {
-                    Console.WriteLine("Waiting for client connection...");
+                    await pipeServer.WaitForConnectionAsync();
+                    Console.WriteLine("Client connected.");
 
-                    try
+                    // 新しい接続を処理するタスクを開始
+                    var clientTask = HandleClientAsync(pipeServer);
+                    tasks.Add(clientTask);  // タスクをリストに追加
+
+                    // 接続されたクライアントを処理するタスクを非同期で実行
+                    async Task HandleClientAsync(NamedPipeServerStream ps)
                     {
-                        await pipeServer.WaitForConnectionAsync();
-                        Console.WriteLine("Client connected.");
-
-                        using (var reader = new StreamReader(pipeServer))
-                        using (var writer = new StreamWriter(pipeServer) { AutoFlush = true })
+                        using (var reader = new StreamReader(ps))
+                        using (var writer = new StreamWriter(ps) { AutoFlush = true })
                         {
                             string line;
-                            while ((line = reader.ReadLine()) != null)
+                            while ((line = await reader.ReadLineAsync()) != null)
                             {
                                 Console.WriteLine($"Data received: {line}");
 
                                 var (command, payload) = ParseRequest(line);
                                 await RunCommand(command, payload);
 
-                                writer.WriteLine("OK");
+                                await writer.WriteLineAsync("OK");
                             }
                         }
+
+                        // クライアントが切断された後に行う処理
+                        Console.WriteLine("Client disconnected.");
+                        ps.Disconnect(); // 接続を切断
                     }
-                    catch (IOException)
-                    {
-                        // 接続エラー処理
-                        // streamのdisposeのタイミングの関係か必ず発生するので一旦無視
-                        //Console.WriteLine($"IOException: {ex.Message}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Exception: {ex.Message}");
-                    }
-                    finally
-                    {
-                        if (pipeServer.IsConnected)
-                        {
-                            pipeServer.Disconnect();
-                        }
-                        Console.WriteLine("Client disconnected. Ready for new connection.");
-                    }
+                }
+                catch (IOException)
+                {
+                    // 接続エラー処理
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception: {ex.Message}");
                 }
             }
 

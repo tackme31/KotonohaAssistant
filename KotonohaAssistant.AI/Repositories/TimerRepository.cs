@@ -9,6 +9,9 @@ public interface ITimerRepository
     void StopAllTimers();
 }
 
+/// <summary>
+/// TODO: RepositoryではないのでTimerMaangerとかにリネーム
+/// </summary>
 public class TimerRepository : ITimerRepository
 {
     /// <summary>

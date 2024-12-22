@@ -2,6 +2,7 @@
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.Alarm;
 using OpenAI.Chat;
 
 namespace KotonohaAssistant.App;
@@ -10,20 +11,22 @@ public static class ServiceCollectionExtensions
 {
     private static readonly string AppName = "Kotonoha Assistant";
     private static readonly string AppFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
+    private static readonly string DBPath = Path.Combine(AppFolder, "app.db");
+    private static readonly string AlarmDBPath = Path.Combine(AppFolder, "alarm.db");
+
+    private static string OpenAIApiKey => GetEnvVar("OPENAI_API_KEY");
+    private static string GoogleApiKey => GetEnvVar("GOOGLE_API_KEY");
+    private static string CalendarId => GetEnvVar("CALENDAR_ID");
 
     public static void AddConversationService(this IServiceCollection services)
     {
-        var calendarEventRepository = new CalendarEventRepository(
-            GetEnvVar("GOOGLE_API_KEY"),
-            GetEnvVar("CALENDAR_ID"));
-
         // 利用する関数一覧
         var functions = new ToolFunction[]
         {
-            new CallMaster(),
+            new CallMaster(new AlarmRepository(AlarmDBPath), new ChatCompletionRepository(Settings.ModelName, OpenAIApiKey)),
             new StartTimer(),
             new CreateCalendarEvent(),
-            new GetCalendarEvent(calendarEventRepository),
+            new GetCalendarEvent(new CalendarEventRepository(GoogleApiKey, CalendarId)),
             new GetWeather(),
             new TurnOnHeater(),
             new ForgetMemory(),
@@ -49,13 +52,12 @@ public static class ServiceCollectionExtensions
 
     private static IChatMessageRepositoriy CreateChatMessageRepository()
     {
-        var dbPath = Path.Combine(AppFolder, "app.db");
         if (!Directory.Exists(AppFolder))
         {
             Directory.CreateDirectory(AppFolder);
         }
 
-        return new ChatMessageRepositoriy(dbPath);
+        return new ChatMessageRepositoriy(DBPath);
     }
 
     private static IChatCompletionRepository CreateChatCompletionRepository(IEnumerable<ToolFunction> functions)
@@ -68,7 +70,7 @@ public static class ServiceCollectionExtensions
         }
         return new ChatCompletionRepository(
             Settings.ModelName,
-            GetEnvVar("OPENAI_API_KEY"),
+            OpenAIApiKey,
             options);
     }
 

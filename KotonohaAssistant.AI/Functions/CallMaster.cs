@@ -65,7 +65,7 @@ public class CallMaster(IAlarmRepository alarmRepository, IChatCompletionReposit
         var setting = new AlarmSetting
         {
             TimeInSeconds = time.TotalSeconds,
-            Sister = Core.Kotonoha.Aoi,
+            Sister = state.CurrentSister,
             Message = "マスター、朝だよ。早く起きないと遅刻するよ。"
         };
 

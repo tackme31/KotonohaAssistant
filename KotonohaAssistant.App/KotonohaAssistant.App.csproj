@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KotonohaAssistant.AI\KotonohaAssistant.AI.csproj" />
+    <ProjectReference Include="..\KotonohaAssistant.Alarm\KotonohaAssistant.Alarm.csproj" />
     <ProjectReference Include="..\KotonohaAssistant.Core\KotonohaAssistant.Core.csproj" />
   </ItemGroup>
 

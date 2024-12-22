@@ -8,9 +8,9 @@ public interface IChatCompletionRepository
     Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages);
 }
 
-public class ChatCompletionRepository(string modelName, string apiKey, ChatCompletionOptions options) : IChatCompletionRepository
+public class ChatCompletionRepository(string modelName, string apiKey, ChatCompletionOptions? options = null) : IChatCompletionRepository
 {
-    private readonly ChatCompletionOptions _options = options;
+    private readonly ChatCompletionOptions? _options = options;
     private readonly ChatClient _client = new(modelName, apiKey);
 
     public async Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages)

@@ -2,6 +2,7 @@
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.Alarm;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
@@ -9,17 +10,27 @@ using OpenAI.Chat;
 // load .env
 DotNetEnv.Env.TraversePath().Load();
 
-var calendarEventRepository = new CalendarEventRepository(
-    Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? string.Empty,
-    Environment.GetEnvironmentVariable("CALENDAR_ID") ?? string.Empty);
+var modelName = "gpt-4o-mini";
+var openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw new Exception("");
+var googleApiKey = Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? throw new Exception("");
+var calendarId = Environment.GetEnvironmentVariable("CALENDAR_ID") ?? throw new Exception("");
+var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
+var dbPath = Path.Combine(appDirectory, "app.cli.db");
+var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
+
+// DBの保存先
+if (!Directory.Exists(appDirectory))
+{
+    Directory.CreateDirectory(appDirectory);
+}
 
 // 利用可能な関数
-var functions = new ToolFunction[]
+var functions = new List<ToolFunction>
 {
-    new CallMaster(),
+    new CallMaster(new AlarmRepository(alarmDBPath), new ChatCompletionRepository(modelName, openAiApiKey)),
     new StartTimer(),
     new CreateCalendarEvent(),
-    new GetCalendarEvent(calendarEventRepository),
+    new GetCalendarEvent(new CalendarEventRepository(googleApiKey, calendarId)),
     new GetWeather(),
     new TurnOnHeater(),
     new ForgetMemory(),
@@ -31,26 +42,13 @@ List<string> excludeFunctionNamesFromLazyMode =
     nameof(ForgetMemory)
 ];
 
-// DBの保存先
-var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
-var dbPath = Path.Combine(appDirectory, "app.cli.db");
-if (!Directory.Exists(appDirectory))
-{
-    Directory.CreateDirectory(appDirectory);
-}
-
 var chatMessageRepository = new ChatMessageRepositoriy(dbPath);
-
-var options = new ChatCompletionOptions();
-foreach (var function in functions)
+var options = new ChatCompletionOptions
 {
-    options.Tools.Add(function.CreateChatTool());
-}
-
-var chatCompletionRepository = new ChatCompletionRepository(
-    modelName: "gpt-4o-mini",
-    Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? string.Empty,
-    options);
+    AllowParallelToolCalls = true
+};
+functions.ForEach(f => options.Tools.Add(f.CreateChatTool()));
+var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey, options);
 
 var service = new ConversationService(
     chatMessageRepository,

@@ -1,5 +1,6 @@
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Alarm;
 using System.Text.Json;
 
@@ -56,7 +57,7 @@ public class CallMaster(IAlarmRepository alarmRepository, IChatCompletionReposit
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         // TODO: メッセージ生成
 

@@ -1,4 +1,5 @@
 using KotonohaAssistant.AI.Extensions;
+using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 
@@ -37,7 +38,7 @@ public class StopAlarm : ToolFunction
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         using var client = new VoiceClient();
 

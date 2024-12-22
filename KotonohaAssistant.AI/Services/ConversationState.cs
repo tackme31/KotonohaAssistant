@@ -4,7 +4,24 @@ using KotonohaAssistant.AI.Prompts;
 
 namespace KotonohaAssistant.AI.Utils;
 
-class ConversationState()
+public interface IReadOnlyConversationState
+{
+    public string? AkaneBehaviour { get; }
+
+    public string? AoiBehaviour { get; }
+
+    public int PatienceCount { get; }
+
+    public Kotonoha LastToolCallSister { get; }
+
+    public Kotonoha CurrentSister { get; }
+
+    public IEnumerable<ChatMessage> ChatMessagesWithSystemMessage { get; }
+
+    public IEnumerable<ChatMessage> ChatMessages { get; }
+}
+
+public class ConversationState() : IReadOnlyConversationState
 {
     /// <summary>
     /// 茜の追加の振る舞い
@@ -49,37 +66,47 @@ class ConversationState()
     }
 
     /// <summary>
+    /// システムメッセージ以外のメッセージ一覧
+    /// </summary>
+    private List<ChatMessage> _chatMessages = [];
+
+    /// <summary>
     /// システム以外のメッセージ一覧
     /// </summary>
-    public List<ChatMessage> ChatMessages { get; set; } = [];
+    public IEnumerable<ChatMessage> ChatMessages => _chatMessages;
+
+    public void ClearChatMessages()
+    {
+        _chatMessages.Clear();
+    }
 
     public void LoadMessages(IEnumerable<ChatMessage> chatMessages)
     {
-        ChatMessages = chatMessages.ToList();
+        _chatMessages = chatMessages.ToList();
     }
 
     public void AddAssistantMessage(string message)
     {
-        ChatMessages.Add(new AssistantChatMessage(message));
+        _chatMessages.Add(new AssistantChatMessage(message));
     }
 
     public void AddAssistantMessage(ChatCompletion completion)
     {
-        ChatMessages.Add(new AssistantChatMessage(completion));
+        _chatMessages.Add(new AssistantChatMessage(completion));
     }
 
     public void AddUserMessage(string message)
     {
-        ChatMessages.Add(new UserChatMessage(message));
+        _chatMessages.Add(new UserChatMessage(message));
     }
 
     public void AddHint(string hint)
     {
-        ChatMessages.Add(new UserChatMessage($"[Hint]: {hint}"));
+        _chatMessages.Add(new UserChatMessage($"[Hint]: {hint}"));
     }
 
     public void AddToolMessage(string id, string result)
     {
-        ChatMessages.Add(new ToolChatMessage(id, result));
+        _chatMessages.Add(new ToolChatMessage(id, result));
     }
 }

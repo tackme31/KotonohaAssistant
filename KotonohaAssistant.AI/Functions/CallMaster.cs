@@ -1,13 +1,11 @@
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Utils;
-using KotonohaAssistant.Alarm;
-using OpenAI.Chat;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CallMaster(IAlarmRepository alarmRepository, IChatCompletionRepository chatCompletionRepository) : ToolFunction
+public class CallMaster(IAlarmRepository alarmRepository) : ToolFunction
 {
     public override string Description => """
 この関数は、指定された時間に呼びかけたり知らせたりする依頼を受けた場合に呼び出されます。
@@ -24,104 +22,70 @@ public class CallMaster(IAlarmRepository alarmRepository, IChatCompletionReposit
 - 起こしてほしい: 時間になったら起こす、という返事
 - 呼んでほしい: 時間になったら呼ぶ、という返事
 - その他: 時間になったら知らせる、という返事
+
+さらに「時間が来たときに呼ぶセリフ」をmessageForCallingWhenTheTimeComesに渡してください。
+直前の会話から、以下の中からいくつか選んで「マスター、～」のようなセリフを作ってください。
+
+- 呼ぶ目的が過去の会話から推測できない場合: 時間になった、のようなシンプルなメッセージ。
+- 予定リマインドの場合: 予定の時間になった旨のメッセージ。
+- 起床の場合: マスターを起こすようなセリフ。もし起床後に予定があるなら、そのことも含めてください。
+
+目的が不明な場合は、シンプルに時間になった旨のメッセージにしてください。
+
 """;
 
     public override string Parameters => """
 {
     "type": "object",
     "properties": {
-        "time": {
+        "timeToCall": {
             "type": "string",
             "description": "設定時間。フォーマットはHH:mm"
+        },
+        "messageForCallingWhenTheTimeComes": {
+            "type": "string",
+            "description": "時間が来て「呼ぶ」ときに言うメッセージ。"
         }
     },
-    "required": [ "time" ],
+    "required": [ "timeToCall", "messageForCallingWhenTheTimeComes" ],
     "additionalProperties": false
 }
 """;
 
     private readonly IAlarmRepository _alarmRepository = alarmRepository;
-    private readonly IChatCompletionRepository _chatCompletionRepository = chatCompletionRepository;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
         arguments = new Dictionary<string, object>();
 
-        var time = doc.RootElement.GetTimeSpanProperty("time");
+        var time = doc.RootElement.GetTimeSpanProperty("timeToCall");
         if (time is null)
         {
             return false;
         }
 
-        arguments["time"] = time;
+        arguments["timeToCall"] = time;
+
+        var messageForCallingWhenTheTimeComes = doc.RootElement.GetStringProperty("messageForCallingWhenTheTimeComes");
+        if (messageForCallingWhenTheTimeComes is null)
+        {
+            return false;
+        }
+
+        arguments["messageForCallingWhenTheTimeComes"] = messageForCallingWhenTheTimeComes;
 
         return true;
     }
 
     public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
-        /*// 直近の2回のやり取りを取得する
-        var messages = new List<ChatMessage>();
-        var maxRefCount = 10;
-        var refCount = 0;
-        foreach (var message in state.ChatMessages.Reverse().SkipWhile(m => m is not UserChatMessage))
-        {
-            messages.Insert(0, message);
-
-            if (message is not UserChatMessage user || user.Content is [])
-            {
-                continue;
-            }
-
-            if (user.Content[0].Text.StartsWith("私:"))
-            {
-                refCount++;
-            }
-
-            if (refCount >= maxRefCount)
-            {
-                break;
-            }
-        }
-
-        var systemMessage = state.CurrentSister switch
-        {
-            Core.Kotonoha.Akane => Prompts.Alarm.CreateAlarmMessageAkane(DateTime.Now),
-            Core.Kotonoha.Aoi => Prompts.Alarm.CreateAlarmMessageAoi(DateTime.Now),
-            _ => Prompts.Alarm.CreateAlarmMessageAkane(DateTime.Now),
-        };
-        messages.Insert(0, new SystemChatMessage(systemMessage));
-        messages.Add(new UserChatMessage(Prompts.Alarm.HintMessage));
-
-        var voiceText = string.Empty;
-        try
-        {
-            var result = await _chatCompletionRepository.CompleteChatAsync(messages);
-            if (!result.Value.Content.Any())
-            {
-                throw new Exception("");
-            }
-
-            var completion = result.Value.Content[0].Text;
-
-            voiceText = completion.Replace("ボイステキスト: ", string.Empty);
-        }
-        catch(Exception)
-        {
-            // TODO: ログ出力
-        }
-
-        if (string.IsNullOrWhiteSpace(voiceText))
-        {
-            return "FAILED";
-        }*/
-
-        var time = (TimeSpan)arguments["time"];
+        var time = (TimeSpan)arguments["timeToCall"];
+        var message = (string)arguments["messageForCallingWhenTheTimeComes"];
         var setting = new AlarmSetting
         {
             TimeInSeconds = time.TotalSeconds,
             Sister = state.CurrentSister,
-            Message = "NO SOUND"
+            Message = message
         };
 
         try

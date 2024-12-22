@@ -27,14 +27,13 @@ if (!Directory.Exists(appDirectory))
 var timerRepository = new TimerRepository();
 var functions = new List<ToolFunction>
 {
-    new CallMaster(new AlarmRepository(alarmDBPath), new ChatCompletionRepository(modelName, openAiApiKey)),
+    new CallMaster(new AlarmRepository(alarmDBPath)),
     new StopAlarm(new AlarmRepository(alarmDBPath)),
     new StartTimer(timerRepository),
     new StopTimer(timerRepository),
     new CreateCalendarEvent(),
     new GetCalendarEvent(new CalendarEventRepository(googleApiKey, calendarId)),
     new GetWeather(),
-    new TurnOnHeater(),
     new ForgetMemory(),
 };
 // 怠け癖の対象外の関数
@@ -61,7 +60,8 @@ var service = new ConversationService(
     akaneBehaviour: Behaviour.Default,
     aoiBehaviour: Behaviour.Default);
 
-//await service.LoadLatestConversation();
+var alarmService = new AlarmService(new AlarmRepository(alarmDBPath));
+alarmService.Start();
 
 foreach (var text in service.GetAllMessageTexts())
 {

@@ -2,7 +2,6 @@
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
-using KotonohaAssistant.Alarm;
 using OpenAI.Chat;
 
 namespace KotonohaAssistant.App;
@@ -24,7 +23,7 @@ public static class ServiceCollectionExtensions
         // 利用する関数一覧
         var functions = new ToolFunction[]
         {
-            new CallMaster(new AlarmRepository(AlarmDBPath), new ChatCompletionRepository(Settings.ModelName, OpenAIApiKey)),
+            new CallMaster(new AlarmRepository(AlarmDBPath)),
             new StartTimer(timerRepository),
             new StopTimer(timerRepository),
             new CreateCalendarEvent(),

@@ -12,8 +12,7 @@ public class StopTimer(ITimerRepository timerRepository) : ToolFunction
 
 呼び出される例: 「タイマー停止」「タイマー止めて」
 
-停止後、タイマーを止めた旨のセリフを一言いってください。
-「お疲れ様」のようなセリフは不要です。
+**重要**: 「タイマーを停止したこと」以外は発言しないでください。
 """;
 
     public override string Parameters => """

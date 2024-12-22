@@ -9,13 +9,12 @@ public class StartTimer(ITimerRepository timerRepository) : ToolFunction
 {
     public override string Description => """
 タイマーの設定を依頼されたときに呼び出されます。
-タイマーの設定に成功した場合はokを返し、失敗した場合はngを返します。
 
 呼び出される例: 「タイマー3分」「90秒数えて」
 
 秒数が不明な場合は呼び出さず、聞き返してください。
 
-返信は、短く、一言でお願いします。
+**重要**: 「タイマーを開始したこと」以外は発言しないでください。
 """;
 
     public override string Parameters => """
@@ -53,6 +52,6 @@ public class StartTimer(ITimerRepository timerRepository) : ToolFunction
     {
         var seconds = (int)arguments["seconds"];
         _timerRepository.SetTimer(seconds);
-        return "ok";
+        return "タイマーを開始しました。";
     }
 }

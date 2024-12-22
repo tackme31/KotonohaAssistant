@@ -1,4 +1,5 @@
 ﻿using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.Core.Utils;
 using NAudio.Wave;
 using System.Timers;
 
@@ -7,9 +8,9 @@ namespace KotonohaAssistant.AI.Services;
 public class AlarmService : IDisposable
 {
     public static readonly TimeSpan TimerInterval = TimeSpan.FromSeconds(30);
-    public static readonly TimeSpan SoundInterval = TimeSpan.FromSeconds(2);
+    public static readonly TimeSpan SoundInterval = TimeSpan.FromSeconds(3);
 
-    //private readonly VoiceClient _voiceClient;
+    private readonly VoiceClient _voiceClient;
     private readonly System.Timers.Timer _timer;
     private readonly ElapsedEventHandler _onTimeElapsed;
     private readonly IAlarmRepository _alarmRepository;
@@ -17,7 +18,7 @@ public class AlarmService : IDisposable
 
     public AlarmService(IAlarmRepository alarmRepository)
     {
-        //_voiceClient = new VoiceClient();
+        _voiceClient = new VoiceClient();
         _alarmRepository = alarmRepository;
 
         _timer = new System.Timers.Timer(TimerInterval);
@@ -35,7 +36,6 @@ public class AlarmService : IDisposable
         // 他のアラームが鳴り続けている場合はスキップする
         if (_calling)
         {
-            Console.WriteLine("Skip: 他のアラームを再生中です。");
             return;
         }
 
@@ -45,7 +45,6 @@ public class AlarmService : IDisposable
             var targetSettings = await _alarmRepository.GetAlarmSettingsAsync(startTime.TimeOfDay - TimerInterval, startTime.TimeOfDay);
             if (targetSettings is [])
             {
-                Console.WriteLine("Skip: アラーム設定がありません。");
                 return;
             }
 
@@ -60,7 +59,7 @@ public class AlarmService : IDisposable
                     break;
                 }
 
-                /*var message = targetSettings[0].Message;
+                var message = targetSettings[0].Message;
                 if (!string.IsNullOrWhiteSpace(message))
                 {
                     await _voiceClient.SpeakAsync(targetSettings[0].Sister, message);
@@ -69,7 +68,7 @@ public class AlarmService : IDisposable
                 if (!(await HasAlarmSetting(startTime.TimeOfDay - TimerInterval, startTime.TimeOfDay)))
                 {
                     break;
-                }*/
+                }
             }
 
             _calling = false;

@@ -12,6 +12,8 @@ public class StopAlarm(IAlarmRepository alarmRepository) : ToolFunction
 アラームの停止を依頼されたときに呼び出されます。
 
 呼び出される例: 「アラームを止めてくれない？」
+
+**重要**: 「アラームを停止したこと」以外は発言しないでください。
 """;
 
     public override string Parameters => """
@@ -43,11 +45,11 @@ public class StopAlarm(IAlarmRepository alarmRepository) : ToolFunction
             // アラームが確実に止まるまで待機
             await Task.Delay(AlarmService.SoundInterval);
 
-            return "OK";
+            return "アラームを停止しました";
         }
         catch (Exception)
         {
-            return "ERROR";
+            return "アラームの停止に失敗しました";
         }
     }
 }

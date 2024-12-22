@@ -1,9 +1,5 @@
 using KotonohaAssistant.AI.Extensions;
-using Google.Apis.Calendar.v3;
 using System.Text.Json;
-using Google.Apis.Auth.OAuth2;
-using System.IO;
-using Google.Apis.Services;
 using KotonohaAssistant.AI.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
@@ -11,12 +7,21 @@ namespace KotonohaAssistant.AI.Functions;
 public class CreateCalendarEvent() : ToolFunction
 {
     public override string Description => """
-予定の作成を依頼されたときに呼び出されます。
-予定の作成に成功した場合はokを返し、失敗した場合はngを返します。
+この関数は、予定の作成を依頼されたときに呼び出されます。依頼された内容に基づいて予定を作成し、以下の動作を行います。
 
-呼び出される例:「明日の15時に買い物の予定作って」「金曜日に通院の予定入れといて」
+## 呼び出される例
 
-タイトル、日時が不明な場合は、呼び出さず、聞き返してください。
+- 「明日の15時に買い物の予定作って」
+- 「金曜日に通院の予定入れといて」
+
+## 注意点
+
+1. **必要情報の確認:**  
+   - タイトルと日時が不明な場合は、呼び出さず、マスターに聞き返してください。
+
+2. **日時フォーマット:**  
+   - 日にちは`yyyy/MM/dd`形式。
+   - 時間は`HH:mm`形式。不明な場合は`null`を設定してください。
 """;
 
     public override string Parameters => """
@@ -70,6 +75,6 @@ public class CreateCalendarEvent() : ToolFunction
 
     public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
-        return "ok";
+        return "予定を作成しました。";
     }
 }

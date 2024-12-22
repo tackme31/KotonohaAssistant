@@ -8,12 +8,17 @@ namespace KotonohaAssistant.AI.Functions;
 public class StopAlarm(IAlarmRepository alarmRepository) : ToolFunction
 {
     public override string Description => """
-再生中のアラームを停止します。
-アラームの停止を依頼されたときに呼び出されます。
+この関数は、再生中のアラームを停止するために呼び出されます。アラーム停止の依頼があった際に実行されます。
 
-呼び出される例: 「アラームを止めてくれない？」
+## 呼び出される例
 
-**重要**: 「アラームを停止したこと」以外は発言しないでください。
+- 「アラーム停止」
+- 「アラームを止めてくれない？」
+
+## 注意点
+
+1. **発言制限:**  
+   アラームを停止したこと以外は発言しないでください。
 """;
 
     public override string Parameters => """

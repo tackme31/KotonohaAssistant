@@ -8,11 +8,17 @@ namespace KotonohaAssistant.AI.Functions;
 public class StopTimer(ITimerRepository timerRepository) : ToolFunction
 {
     public override string Description => """
-タイマーの停止を依頼されたときに呼び出されます。
+この関数は、タイマーの停止を依頼されたときに呼び出されます。タイマー停止の依頼があった際に実行されます。
 
-呼び出される例: 「タイマー停止」「タイマー止めて」
+## 呼び出される例
 
-**重要**: 「タイマーを停止したこと」以外は発言しないでください。
+- 「タイマー停止」
+- 「タイマー止めて」
+
+## 注意点
+
+1. **発言制限:**  
+   タイマーを停止したこと以外は発言しないでください。
 """;
 
     public override string Parameters => """

@@ -8,13 +8,20 @@ namespace KotonohaAssistant.AI.Functions;
 public class StartTimer(ITimerRepository timerRepository) : ToolFunction
 {
     public override string Description => """
-タイマーの設定を依頼されたときに呼び出されます。
+この関数は、タイマーの設定を依頼されたときに呼び出されます。依頼内容に応じてタイマーを開始します。
 
-呼び出される例: 「タイマー3分」「90秒数えて」
+## 呼び出される例
 
-秒数が不明な場合は呼び出さず、聞き返してください。
+- 「タイマー3分」
+- 「90秒数えて」
 
-**重要**: 「タイマーを開始したこと」以外は発言しないでください。
+## 注意点
+
+1. **秒数が不明な場合:**  
+   秒数が不明な場合は、呼び出さずにマスターに聞き返してください。
+
+2. **発言制限:**  
+   タイマーを開始したこと以外は発言しないでください。
 """;
 
     public override string Parameters => """

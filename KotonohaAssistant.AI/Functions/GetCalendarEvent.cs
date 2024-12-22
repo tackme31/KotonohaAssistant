@@ -11,9 +11,17 @@ public class GetCalendarEvent(ICalendarEventRepository calendarEventRepository) 
     private readonly ICalendarEventRepository _calendarEventService = calendarEventRepository;
 
     public override string Description => """
-指定された日の予定をGoogleカレンダーから取得します。予定を尋ねられたときに呼び出されます。
 
-呼び出される例:「明日の予定教えて」「今日の15時からなにか予定あったっけ？」
+この関数は、指定された日の予定をGoogleカレンダーから取得するために呼び出されます。予定を尋ねられたときに以下のような依頼を受けて実行されます。
+
+## 呼び出される例
+
+- 「明日の予定教えて」
+- 「今日の15時からなにか予定あったっけ？」
+- 「来週の火曜日の予定を確認して」
+- 「明日何か予定入ってたっけ？」
+- 「明日の午前中、空いてる時間ある？」
+
 """;
 
     public override string Parameters => """

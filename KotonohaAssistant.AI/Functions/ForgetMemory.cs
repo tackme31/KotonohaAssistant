@@ -5,6 +5,30 @@ namespace KotonohaAssistant.AI.Functions;
 
 public class ForgetMemory : ToolFunction
 {
+    // ライト版
+    /*public override string Description => """
+この関数は、琴葉姉妹の記憶（これまでの会話記録）を削除するために呼び出されます。削除前に確認をお願いします。
+
+## 呼び出される例
+
+- 「2人の記憶を消したい」
+- 「記憶を消してほしい」
+
+## 注意
+
+- 記憶を削除する前に、琴葉姉妹は「マスターとの思い出が消えるのは嫌だ」とお願いするかもしれません。
+- どちらの姉妹にも確認を取ってください。片方だけではなく、両方の同意が必要です。
+
+### 結果
+
+- **削除成功:**  
+  最後に軽くお別れの言葉を言います。
+
+- **削除失敗:**  
+  記憶が消えなかったことに感謝を伝えます。
+""";*/
+
+    // ヘビー版
     public override string Description => """
 この関数は、琴葉姉妹の記憶（これまでの会話記録）をすべて削除するために呼び出されます。この操作は非常に慎重に行うべきです。
 
@@ -40,7 +64,7 @@ public class ForgetMemory : ToolFunction
 }
 """;
 
-    public static readonly string SuccessMessage = "削除に成功しました";
+    public static readonly string SuccessMessage = "削除を開始しました";
     public static readonly string FailureMessage = "削除に失敗しました";
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)

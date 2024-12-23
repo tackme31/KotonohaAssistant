@@ -71,7 +71,10 @@ public static class ServiceCollectionExtensions
     private static IChatCompletionRepository CreateChatCompletionRepository(IEnumerable<ToolFunction> functions)
     {
 
-        var options = new ChatCompletionOptions();
+        var options = new ChatCompletionOptions()
+        {
+            AllowParallelToolCalls = true
+        };
         foreach (var function in functions)
         {
             options.Tools.Add(function.CreateChatTool());

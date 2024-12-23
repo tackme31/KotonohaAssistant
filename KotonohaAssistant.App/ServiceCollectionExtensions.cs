@@ -52,6 +52,7 @@ public static class ServiceCollectionExtensions
             aoiBehaviour: Behaviour.Default);
 
         services.AddSingleton(service);
+        services.AddSingleton<IAlarmService>(alarmService);
 
         // アラームをスタート
         alarmService.Start();

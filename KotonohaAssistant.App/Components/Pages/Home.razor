@@ -9,6 +9,7 @@
 @using Toolbelt.Blazor.SpeechRecognition
 @inject SpeechRecognition SpeechRecognition
 @inject ConversationService ConversationService
+@inject IAlarmService AlarmService
 @inject IJSRuntime JS
 
 <PageTitle>Kotonoha Assistant</PageTitle>
@@ -250,6 +251,9 @@
         _isThinking = true;
         this.StateHasChanged();
         await this.SpeechRecognition.StopAsync();
+        
+        // アラーム停止
+        AlarmService.StopAlarm();
 
         ScrollToEnd();
 

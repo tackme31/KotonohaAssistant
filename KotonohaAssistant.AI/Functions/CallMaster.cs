@@ -1,11 +1,12 @@
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CallMaster(IAlarmRepository alarmRepository) : ToolFunction
+public class CallMaster(IAlarmService service) : ToolFunction
 {
     public override string Description => """
 この関数は、指定された時間に「呼びかける」または「知らせる」依頼を受けた場合に呼び出されます。以下のような指示に対応します。
@@ -59,7 +60,7 @@ public class CallMaster(IAlarmRepository alarmRepository) : ToolFunction
 }
 """;
 
-    private readonly IAlarmRepository _alarmRepository = alarmRepository;
+    private readonly IAlarmService _alarmService = service;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
@@ -97,11 +98,11 @@ public class CallMaster(IAlarmRepository alarmRepository) : ToolFunction
 
         try
         {
-            await _alarmRepository.InsertAlarmSetting(setting);
+            await _alarmService.SetAlarm(setting);
         }
         catch(Exception)
         {
-            // TODO: ログ出力
+            return "FAILED";
         }
 
         return "SUCCESS";

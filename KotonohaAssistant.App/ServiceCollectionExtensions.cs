@@ -19,13 +19,15 @@ public static class ServiceCollectionExtensions
 
     public static void AddConversationService(this IServiceCollection services)
     {
-        var timerRepository = new TimerRepository();
+        var alarmService = new AlarmService(new AlarmRepository(AlarmDBPath));
+        var timerService = new TimerService();
         // 利用する関数一覧
         var functions = new ToolFunction[]
         {
-            new CallMaster(new AlarmRepository(AlarmDBPath)),
-            new StartTimer(timerRepository),
-            new StopTimer(timerRepository),
+            new CallMaster(alarmService),
+            new StopAlarm(alarmService),
+            new StartTimer(timerService),
+            new StopTimer(timerService),
             new CreateCalendarEvent(),
             new GetCalendarEvent(new CalendarEventRepository(GoogleApiKey, CalendarId)),
             new GetWeather(),
@@ -50,14 +52,9 @@ public static class ServiceCollectionExtensions
             aoiBehaviour: Behaviour.Default);
 
         services.AddSingleton(service);
-    }
 
-    public static void AddAlarmService(this IServiceCollection services)
-    {
-        var repository = new AlarmRepository(AlarmDBPath);
-        var service = new AlarmService(repository);
-        service.Start();
-        services.AddSingleton(service);
+        // アラームをスタート
+        alarmService.Start();
     }
 
     private static IChatMessageRepositoriy CreateChatMessageRepository()

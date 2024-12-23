@@ -24,13 +24,14 @@ if (!Directory.Exists(appDirectory))
 }
 
 // 利用可能な関数
-var timerRepository = new TimerRepository();
+var timerService = new TimerService();
+var alarmService = new AlarmService(new AlarmRepository(alarmDBPath));
 var functions = new List<ToolFunction>
 {
-    new CallMaster(new AlarmRepository(alarmDBPath)),
-    new StopAlarm(new AlarmRepository(alarmDBPath)),
-    new StartTimer(timerRepository),
-    new StopTimer(timerRepository),
+    new CallMaster(alarmService),
+    new StopAlarm(alarmService),
+    new StartTimer(timerService),
+    new StopTimer(timerService),
     new CreateCalendarEvent(),
     new GetCalendarEvent(new CalendarEventRepository(googleApiKey, calendarId)),
     new GetWeather(),
@@ -60,7 +61,6 @@ var service = new ConversationService(
     akaneBehaviour: Behaviour.Default,
     aoiBehaviour: Behaviour.Default);
 
-var alarmService = new AlarmService(new AlarmRepository(alarmDBPath));
 alarmService.Start();
 
 foreach (var text in service.GetAllMessageTexts())

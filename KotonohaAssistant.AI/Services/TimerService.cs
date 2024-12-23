@@ -1,18 +1,15 @@
 ﻿using NAudio.Wave;
 
-namespace KotonohaAssistant.AI.Repositories;
+namespace KotonohaAssistant.AI.Services;
 
-public interface ITimerRepository
+public interface ITimerService
 {
     void SetTimer(int seconds);
 
     void StopAllTimers();
 }
 
-/// <summary>
-/// TODO: RepositoryではないのでTimerMaangerとかにリネーム
-/// </summary>
-public class TimerRepository : ITimerRepository
+public class TimerService : ITimerService
 {
     /// <summary>
     /// タスクとキャンセルトークンを格納するリスト

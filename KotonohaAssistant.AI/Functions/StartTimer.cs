@@ -1,11 +1,11 @@
 using KotonohaAssistant.AI.Extensions;
-using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StartTimer(ITimerRepository timerRepository) : ToolFunction
+public class StartTimer(ITimerService timerRepository) : ToolFunction
 {
     public override string Description => """
 この関数は、タイマーの設定を依頼されたときに呼び出されます。依頼内容に応じてタイマーを開始します。
@@ -38,7 +38,7 @@ public class StartTimer(ITimerRepository timerRepository) : ToolFunction
 }
 """;
 
-    private readonly ITimerRepository _timerRepository = timerRepository;
+    private readonly ITimerService _timerRepository = timerRepository;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {

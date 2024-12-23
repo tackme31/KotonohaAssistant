@@ -1,10 +1,10 @@
-using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopTimer(ITimerRepository timerRepository) : ToolFunction
+public class StopTimer(ITimerService timerRepository) : ToolFunction
 {
     public override string Description => """
 この関数は、タイマーの停止を依頼されたときに呼び出されます。タイマー停止の依頼があった際に実行されます。
@@ -29,7 +29,7 @@ public class StopTimer(ITimerRepository timerRepository) : ToolFunction
 }
 """;
 
-    private readonly ITimerRepository _timerRepository = timerRepository;
+    private readonly ITimerService _timerRepository = timerRepository;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {

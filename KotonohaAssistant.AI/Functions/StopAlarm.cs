@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopAlarm(IAlarmRepository alarmRepository) : ToolFunction
+public class StopAlarm(IAlarmService service) : ToolFunction
 {
     public override string Description => """
 この関数は、再生中のアラームを停止するために呼び出されます。アラーム停止の依頼があった際に実行されます。
@@ -30,7 +30,7 @@ public class StopAlarm(IAlarmRepository alarmRepository) : ToolFunction
 }
 """;
 
-    private readonly IAlarmRepository _alarmRepository = alarmRepository;
+    private readonly IAlarmService _alarmService = service;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
@@ -38,23 +38,17 @@ public class StopAlarm(IAlarmRepository alarmRepository) : ToolFunction
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         try
         {
-            var end = DateTime.Now;
-            var start = end.TimeOfDay - AlarmService.TimerInterval * 2;
-            var targetSettings = await _alarmRepository.GetAlarmSettingsAsync(start, end.TimeOfDay);
-            await _alarmRepository.DeleteAlarmSettingsAsync(targetSettings.Select(s => s.Id));
+            _alarmService.StopAlarm();
 
-            // アラームが確実に止まるまで待機
-            await Task.Delay(AlarmService.SoundInterval);
-
-            return "アラームを停止しました";
+            return Task.FromResult("アラームを停止しました");
         }
         catch (Exception)
         {
-            return "アラームの停止に失敗しました";
+            return Task.FromResult("アラームの停止に失敗しました");
         }
     }
 }

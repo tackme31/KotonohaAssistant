@@ -26,14 +26,15 @@ if (!Directory.Exists(appDirectory))
 // 利用可能な関数
 var timerService = new TimerService();
 var alarmService = new AlarmService(new AlarmRepository(alarmDBPath));
+var calendarRepository = new CalendarEventRepository(googleApiKey, calendarId);
 var functions = new List<ToolFunction>
 {
     new CallMaster(alarmService),
     new StopAlarm(alarmService),
     new StartTimer(timerService),
     new StopTimer(timerService),
-    new CreateCalendarEvent(),
-    new GetCalendarEvent(new CalendarEventRepository(googleApiKey, calendarId)),
+    new CreateCalendarEvent(calendarRepository),
+    new GetCalendarEvent(calendarRepository),
     new GetWeather(),
     new ForgetMemory(),
 };

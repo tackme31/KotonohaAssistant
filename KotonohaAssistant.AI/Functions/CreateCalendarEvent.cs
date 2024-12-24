@@ -1,10 +1,11 @@
 using KotonohaAssistant.AI.Extensions;
 using System.Text.Json;
 using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.AI.Repositories;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CreateCalendarEvent() : ToolFunction
+public class CreateCalendarEvent(ICalendarEventRepository calendarEventRepository) : ToolFunction
 {
     public override string Description => """
 この関数は、予定の作成を依頼されたときに呼び出されます。依頼された内容に基づいて予定を作成し、以下の動作を行います。
@@ -46,6 +47,8 @@ public class CreateCalendarEvent() : ToolFunction
 }
 """;
 
+    private readonly ICalendarEventRepository _calendarEventRepository = calendarEventRepository;
+
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
         arguments = new Dictionary<string, object>();
@@ -75,6 +78,20 @@ public class CreateCalendarEvent() : ToolFunction
 
     public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
-        return "予定を作成しました。";
+        var title = (string)arguments["title"];
+        var date = (DateTime)arguments["date"];
+        var time = arguments.ContainsKey("time") ? (TimeSpan?)arguments["time"] : default(TimeSpan?);
+
+        try
+        {
+            _ = await _calendarEventRepository.CreateEventAsync(title, date, time);
+
+            return "予定を作成しました。";
+        }
+        catch(Exception ex)
+        {
+            return "予定の作成に失敗しました。";
+        }
+
     }
 }

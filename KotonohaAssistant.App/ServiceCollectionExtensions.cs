@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
     {
         var alarmService = new AlarmService(new AlarmRepository(AlarmDBPath));
         var timerService = new TimerService();
+        var calendarRepository = new CalendarEventRepository(GoogleApiKey, CalendarId);
         // 利用する関数一覧
         var functions = new ToolFunction[]
         {
@@ -28,8 +29,8 @@ public static class ServiceCollectionExtensions
             new StopAlarm(alarmService),
             new StartTimer(timerService),
             new StopTimer(timerService),
-            new CreateCalendarEvent(),
-            new GetCalendarEvent(new CalendarEventRepository(GoogleApiKey, CalendarId)),
+            new CreateCalendarEvent(calendarRepository),
+            new GetCalendarEvent(calendarRepository),
             new GetWeather(),
             new TurnOnHeater(),
             new ForgetMemory(),

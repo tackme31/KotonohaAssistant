@@ -8,6 +8,7 @@ namespace KotonohaAssistant.AI.Repositories;
 public interface ICalendarEventRepository
 {
     Task<IList<Event>> GetEventsAsync(DateTime date);
+    Task<Event> CreateEventAsync(string title, DateTime date, TimeSpan? time = null);
 }
 
 public class CalendarEventRepository : ICalendarEventRepository
@@ -48,5 +49,41 @@ public class CalendarEventRepository : ICalendarEventRepository
 
         var result = await request.ExecuteAsync();
         return result.Items;
+    }
+
+    public async Task<Event> CreateEventAsync(string title, DateTime date, TimeSpan? time = null)
+    {
+        var start = time is null
+            ? new EventDateTime
+            {
+                Date = date.ToString("yyyy-MM-dd")
+            }
+            : new EventDateTime
+            {
+                DateTimeDateTimeOffset = date.Date + time.Value,
+                //TimeZone = TimeZoneInfo.Local.Id
+            };
+        var end = time is null
+            ? new EventDateTime
+            {
+                Date = date.AddDays(1).ToString("yyyy-MM-dd")
+            }
+            : new EventDateTime
+            {
+                DateTimeDateTimeOffset = date.Date + time.Value,
+                //TimeZone = TimeZoneInfo.Local.Id
+            };
+        // 新しいイベントを作成
+        var newEvent = new Event
+        {
+            Summary = title,
+            Start = start,
+            End = end,
+        };
+
+        // Googleカレンダーにイベントを挿入
+        var request = _calendarService.Events.Insert(newEvent, _calendarId);
+        var createdEvent = await request.ExecuteAsync();
+        return createdEvent;
     }
 }

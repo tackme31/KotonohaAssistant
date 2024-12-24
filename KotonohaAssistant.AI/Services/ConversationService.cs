@@ -17,6 +17,8 @@ public class ConversationService
     private readonly IDictionary<string, ToolFunction> _functions;
     private readonly Random _r = new();
 
+    private readonly ChatCompletionOptions _options;
+
     /// <summary>
     /// 最後に保存したメッセージ
     /// </summary>
@@ -44,6 +46,14 @@ public class ConversationService
             AoiBehaviour = aoiBehaviour
         };
 
+        _options = new ChatCompletionOptions
+        {
+            AllowParallelToolCalls = true,
+        };
+        foreach (var func in availableFunctions)
+        {
+            _options.Tools.Add(func.CreateChatTool());
+        }
 
         _functions = availableFunctions.ToDictionary(f => f.GetType().Name);
         _state.PatienceCount = 0;
@@ -178,7 +188,7 @@ public class ConversationService
 
         // 返信を生成
         _state.AddUserMessage($"私: {input}");
-        var completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
+        var completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
 
         // 忍耐値の処理
         if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
@@ -202,7 +212,7 @@ public class ConversationService
             BeginLazyMode();
 
             // 再度返信を生成
-            completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
+            completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
 
             // それでも関数呼び出しされることがあるのでチェック
             if (completion.Value.FinishReason != ChatFinishReason.Stop)
@@ -226,7 +236,7 @@ public class ConversationService
                 // 姉妹を切り替えて、再度呼び出し
                 _state.CurrentSister = _state.CurrentSister.Switch();
                 _state.AddHint(Hint.SwitchSisterTo(_state.CurrentSister));
-                completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
+                completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
 
                 // 怠けると姉妹が入れ替わるのでカウンターをリセット
                 _state.PatienceCount = 1;
@@ -320,7 +330,7 @@ public class ConversationService
                 _state.AddToolMessage(toolCall.Id, result);
             }
 
-            completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
+            completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
             _state.AddAssistantMessage(completion.Value);
         }
 

@@ -42,12 +42,7 @@ var functions = new List<ToolFunction>
 };
 
 var chatMessageRepository = new ChatMessageRepositoriy(dbPath);
-var options = new ChatCompletionOptions
-{
-    AllowParallelToolCalls = true
-};
-functions.ForEach(f => options.Tools.Add(f.CreateChatTool()));
-var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey, options);
+var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
 
 var service = new ConversationService(
     chatMessageRepository,

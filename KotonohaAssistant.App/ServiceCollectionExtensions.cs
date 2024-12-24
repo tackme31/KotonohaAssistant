@@ -2,7 +2,6 @@
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
-using OpenAI.Chat;
 
 namespace KotonohaAssistant.App;
 
@@ -29,26 +28,18 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICalendarEventRepository>(new CalendarEventRepository(GoogleApiKey, CalendarId));
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
         services.AddSingleton<IChatMessageRepositoriy>(new ChatMessageRepositoriy(DBPath));
+        services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(Settings.ModelName, OpenAIApiKey));
         services.AddSingleton<IAlarmService, AlarmService>();
         services.AddSingleton<ITimerService, TimerService>();
-        services.AddSingleton<IAlarmService>(sl =>
+
+        services.AddSingleton(sp =>
         {
-            var alarmRepository = sl.GetService<IAlarmRepository>();
-            var alarmService = new AlarmService(alarmRepository);
-
-            // アラームをスタート
-            alarmService.Start();
-
-            return alarmService;
-        });
-
-        services.AddSingleton(sl =>
-        {
-            var calendarRepository = sl.GetService<ICalendarEventRepository>();
-            var weatherRepository = sl.GetService<IWeatherRepository>();
-            var chatMessageRepository = sl.GetService<IChatMessageRepositoriy>();
-            var alarmService = sl.GetService<IAlarmService>();
-            var timerService = sl.GetService<ITimerService>();
+            var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
+            var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
+            var chatMessageRepository = sp.GetRequiredService<IChatMessageRepositoriy>();
+            var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
+            var alarmService = sp.GetRequiredService<IAlarmService>();
+            var timerService = sp.GetRequiredService<ITimerService>();
 
             // 利用する関数一覧
             var functions = new ToolFunction[]
@@ -62,20 +53,6 @@ public static class ServiceCollectionExtensions
                 new GetWeather(weatherRepository),
                 new ForgetMemory(),
             };
-
-            var options = new ChatCompletionOptions()
-            {
-                AllowParallelToolCalls = true
-            };
-            foreach (var function in functions)
-            {
-                options.Tools.Add(function.CreateChatTool());
-            }
-
-            var chatCompletionRepository = new ChatCompletionRepository(
-                Settings.ModelName,
-                OpenAIApiKey,
-                options);
 
             return  new ConversationService(
                 chatMessageRepository,

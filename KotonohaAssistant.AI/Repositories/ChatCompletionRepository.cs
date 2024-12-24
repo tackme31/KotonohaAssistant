@@ -5,16 +5,15 @@ namespace KotonohaAssistant.AI.Repositories;
 
 public interface IChatCompletionRepository
 {
-    Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages);
+    Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages, ChatCompletionOptions? options = null);
 }
 
-public class ChatCompletionRepository(string modelName, string apiKey, ChatCompletionOptions? options = null) : IChatCompletionRepository
+public class ChatCompletionRepository(string modelName, string apiKey) : IChatCompletionRepository
 {
-    private readonly ChatCompletionOptions? _options = options;
     private readonly ChatClient _client = new(modelName, apiKey);
 
-    public async Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages)
+    public async Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages, ChatCompletionOptions? options = null)
     {
-        return await _client.CompleteChatAsync(messages, _options);
+        return await _client.CompleteChatAsync(messages, options);
     }
 }

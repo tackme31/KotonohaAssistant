@@ -60,7 +60,6 @@ public static class ServiceCollectionExtensions
                 new CreateCalendarEvent(calendarRepository),
                 new GetCalendarEvent(calendarRepository),
                 new GetWeather(weatherRepository),
-                new TurnOnHeater(),
                 new ForgetMemory(),
             };
             // 怠け癖の対象外の関数一覧

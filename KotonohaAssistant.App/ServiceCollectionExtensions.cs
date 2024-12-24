@@ -16,74 +16,83 @@ public static class ServiceCollectionExtensions
     private static string OpenAIApiKey => GetEnvVar("OPENAI_API_KEY");
     private static string GoogleApiKey => GetEnvVar("GOOGLE_API_KEY");
     private static string CalendarId => GetEnvVar("CALENDAR_ID");
+    private static string OwmApiKey => GetEnvVar("OWM_API_KEY");
 
     public static void AddConversationService(this IServiceCollection services)
-    {
-        var alarmService = new AlarmService(new AlarmRepository(AlarmDBPath));
-        var timerService = new TimerService();
-        var calendarRepository = new CalendarEventRepository(GoogleApiKey, CalendarId);
-        // 利用する関数一覧
-        var functions = new ToolFunction[]
-        {
-            new CallMaster(alarmService),
-            new StopAlarm(alarmService),
-            new StartTimer(timerService),
-            new StopTimer(timerService),
-            new CreateCalendarEvent(calendarRepository),
-            new GetCalendarEvent(calendarRepository),
-            new GetWeather(),
-            new TurnOnHeater(),
-            new ForgetMemory(),
-        };
-        // 怠け癖の対象外の関数一覧
-        var excludeFunctionNamesFromLazyMode = new[]
-        {
-            nameof(StartTimer),
-            nameof(StopTimer),
-            nameof(ForgetMemory),
-        };
-        var chatMessageRepository = CreateChatMessageRepository();
-        var chatCompletionRepository = CreateChatCompletionRepository(functions);
-        var service = new ConversationService(
-            chatMessageRepository,
-            chatCompletionRepository,
-            functions,
-            excludeFunctionNamesFromLazyMode,
-            akaneBehaviour: Behaviour.Default,
-            aoiBehaviour: Behaviour.Default);
-
-        services.AddSingleton(service);
-        services.AddSingleton<IAlarmService>(alarmService);
-
-        // アラームをスタート
-        alarmService.Start();
-    }
-
-    private static IChatMessageRepositoriy CreateChatMessageRepository()
     {
         if (!Directory.Exists(AppFolder))
         {
             Directory.CreateDirectory(AppFolder);
         }
 
-        return new ChatMessageRepositoriy(DBPath);
-    }
-
-    private static IChatCompletionRepository CreateChatCompletionRepository(IEnumerable<ToolFunction> functions)
-    {
-
-        var options = new ChatCompletionOptions()
+        services.AddSingleton<IAlarmRepository>(new AlarmRepository(AlarmDBPath));
+        services.AddSingleton<ICalendarEventRepository>(new CalendarEventRepository(GoogleApiKey, CalendarId));
+        services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
+        services.AddSingleton<IChatMessageRepositoriy>(new ChatMessageRepositoriy(DBPath));
+        services.AddSingleton<IAlarmService, AlarmService>();
+        services.AddSingleton<ITimerService, TimerService>();
+        services.AddSingleton<IAlarmService>(sl =>
         {
-            AllowParallelToolCalls = true
-        };
-        foreach (var function in functions)
+            var alarmRepository = sl.GetService<IAlarmRepository>();
+            var alarmService = new AlarmService(alarmRepository);
+
+            // アラームをスタート
+            alarmService.Start();
+
+            return alarmService;
+        });
+
+        services.AddSingleton(sl =>
         {
-            options.Tools.Add(function.CreateChatTool());
-        }
-        return new ChatCompletionRepository(
-            Settings.ModelName,
-            OpenAIApiKey,
-            options);
+            var calendarRepository = sl.GetService<ICalendarEventRepository>();
+            var weatherRepository = sl.GetService<IWeatherRepository>();
+            var chatMessageRepository = sl.GetService<IChatMessageRepositoriy>();
+            var alarmService = sl.GetService<IAlarmService>();
+            var timerService = sl.GetService<ITimerService>();
+
+            // 利用する関数一覧
+            var functions = new ToolFunction[]
+            {
+                new CallMaster(alarmService),
+                new StopAlarm(alarmService),
+                new StartTimer(timerService),
+                new StopTimer(timerService),
+                new CreateCalendarEvent(calendarRepository),
+                new GetCalendarEvent(calendarRepository),
+                new GetWeather(weatherRepository),
+                new TurnOnHeater(),
+                new ForgetMemory(),
+            };
+            // 怠け癖の対象外の関数一覧
+            var excludeFunctionNamesFromLazyMode = new[]
+            {
+                nameof(StartTimer),
+                nameof(StopTimer),
+                nameof(ForgetMemory),
+            };
+
+            var options = new ChatCompletionOptions()
+            {
+                AllowParallelToolCalls = true
+            };
+            foreach (var function in functions)
+            {
+                options.Tools.Add(function.CreateChatTool());
+            }
+
+            var chatCompletionRepository = new ChatCompletionRepository(
+                Settings.ModelName,
+                OpenAIApiKey,
+                options);
+
+            return  new ConversationService(
+                chatMessageRepository,
+                chatCompletionRepository,
+                functions,
+                excludeFunctionNamesFromLazyMode,
+                akaneBehaviour: Behaviour.Default,
+                aoiBehaviour: Behaviour.Default);
+        });
     }
 
     private static string GetEnvVar(string name) => Environment.GetEnvironmentVariable(name) ?? throw new Exception($"環境変数'{name}'が見つかりません。");

@@ -13,6 +13,7 @@ var modelName = "gpt-4o-mini";
 var openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw new Exception("");
 var googleApiKey = Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? throw new Exception("");
 var calendarId = Environment.GetEnvironmentVariable("CALENDAR_ID") ?? throw new Exception("");
+var owmApiKey = Environment.GetEnvironmentVariable("OWM_API_KEY") ?? throw new Exception("");
 var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
 var dbPath = Path.Combine(appDirectory, "app.cli.db");
 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
@@ -27,6 +28,7 @@ if (!Directory.Exists(appDirectory))
 var timerService = new TimerService();
 var alarmService = new AlarmService(new AlarmRepository(alarmDBPath));
 var calendarRepository = new CalendarEventRepository(googleApiKey, calendarId);
+using var weatherRepository = new WeatherRepository(owmApiKey);
 var functions = new List<ToolFunction>
 {
     new CallMaster(alarmService),
@@ -35,7 +37,7 @@ var functions = new List<ToolFunction>
     new StopTimer(timerService),
     new CreateCalendarEvent(calendarRepository),
     new GetCalendarEvent(calendarRepository),
-    new GetWeather(),
+    new GetWeather(weatherRepository),
     new ForgetMemory(),
 };
 // 怠け癖の対象外の関数

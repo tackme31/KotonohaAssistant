@@ -40,13 +40,6 @@ var functions = new List<ToolFunction>
     new GetWeather(weatherRepository),
     new ForgetMemory(),
 };
-// 怠け癖の対象外の関数
-List<string> excludeFunctionNamesFromLazyMode =
-[
-    nameof(StartTimer),
-    nameof(StopTimer),
-    nameof(ForgetMemory)
-];
 
 var chatMessageRepository = new ChatMessageRepositoriy(dbPath);
 var options = new ChatCompletionOptions
@@ -60,7 +53,6 @@ var service = new ConversationService(
     chatMessageRepository,
     chatCompletionRepository,
     functions,
-    excludeFunctionNamesFromLazyMode,
     akaneBehaviour: Behaviour.Default,
     aoiBehaviour: Behaviour.Default);
 

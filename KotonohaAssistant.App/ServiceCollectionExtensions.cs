@@ -62,13 +62,6 @@ public static class ServiceCollectionExtensions
                 new GetWeather(weatherRepository),
                 new ForgetMemory(),
             };
-            // 怠け癖の対象外の関数一覧
-            var excludeFunctionNamesFromLazyMode = new[]
-            {
-                nameof(StartTimer),
-                nameof(StopTimer),
-                nameof(ForgetMemory),
-            };
 
             var options = new ChatCompletionOptions()
             {
@@ -88,7 +81,6 @@ public static class ServiceCollectionExtensions
                 chatMessageRepository,
                 chatCompletionRepository,
                 functions,
-                excludeFunctionNamesFromLazyMode,
                 akaneBehaviour: Behaviour.Default,
                 aoiBehaviour: Behaviour.Default);
         });

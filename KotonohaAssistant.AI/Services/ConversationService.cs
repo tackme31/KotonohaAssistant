@@ -15,7 +15,6 @@ public class ConversationService
 {
     private readonly ConversationState _state;
     private readonly IDictionary<string, ToolFunction> _functions;
-    private readonly IList<string> _excludeFunctionNamesFromLazyMode;
     private readonly Random _r = new();
 
     /// <summary>
@@ -34,7 +33,6 @@ public class ConversationService
         IChatMessageRepositoriy chatMessageRepositoriy,
         IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
-        IList<string> excludeFunctionNamesFromLazyMode,
         Kotonoha defaultSister = Kotonoha.Akane,
         string? akaneBehaviour = null,
         string? aoiBehaviour = null)
@@ -48,7 +46,6 @@ public class ConversationService
 
 
         _functions = availableFunctions.ToDictionary(f => f.GetType().Name);
-        _excludeFunctionNamesFromLazyMode = excludeFunctionNamesFromLazyMode;
         _state.PatienceCount = 0;
         _state.LastToolCallSister = 0;
 
@@ -362,8 +359,11 @@ public class ConversationService
             return false;
         }
 
-        // 怠け癖対象外の関数なら怠けない
-        if (completionValue.ToolCalls.Any(toolCall => _excludeFunctionNamesFromLazyMode.Contains(toolCall.FunctionName)))
+        // 怠け癖対象外の関数が含まれていたら怠けない
+        var targetFunctions = completionValue.ToolCalls
+            .Where(toolCall => _functions.ContainsKey(toolCall.FunctionName))
+            .Select(toolCall => _functions[toolCall.FunctionName]);
+        if (targetFunctions.Any(func => !func.CanBeLazy))
         {
             return false;
         }

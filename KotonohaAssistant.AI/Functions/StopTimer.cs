@@ -31,6 +31,8 @@ public class StopTimer(ITimerService timerRepository) : ToolFunction
 
     private readonly ITimerService _timerRepository = timerRepository;
 
+    public override bool CanBeLazy => false;
+
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
         arguments = new Dictionary<string, object>();

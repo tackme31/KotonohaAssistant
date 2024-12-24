@@ -64,6 +64,8 @@ public class ForgetMemory : ToolFunction
 }
 """;
 
+    public override bool CanBeLazy => false;
+
     public static readonly string SuccessMessage = "削除を開始しました";
     public static readonly string FailureMessage = "削除に失敗しました";
 

@@ -10,6 +10,11 @@ public abstract class ToolFunction
     public abstract string Description { get; }
     public abstract string Parameters { get; }
 
+    /// <summary>
+    /// ë”ÇØï»ëŒè€Ç©Ç«Ç§Ç©
+    /// </summary>
+    public virtual bool CanBeLazy { get; set; }
+
     public abstract bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments);
 
     public abstract Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state);

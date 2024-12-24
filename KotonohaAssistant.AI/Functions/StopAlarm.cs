@@ -32,6 +32,8 @@ public class StopAlarm(IAlarmService service) : ToolFunction
 
     private readonly IAlarmService _alarmService = service;
 
+    public override bool CanBeLazy => false;
+
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
         arguments = new Dictionary<string, object>();

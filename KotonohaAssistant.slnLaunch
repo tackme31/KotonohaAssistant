@@ -9,10 +9,6 @@
       {
         "Path": "KotonohaAssistant.Cli\\KotonohaAssistant.Cli.csproj",
         "Action": "Start"
-      },
-      {
-        "Path": "KotonohaAssistant.UI\\KotonohaAssistant.UI.csproj",
-        "Action": "Start"
       }
     ]
   },
@@ -25,10 +21,6 @@
       },
       {
         "Path": "KotonohaAssistant.App\\KotonohaAssistant.App.csproj",
-        "Action": "Start"
-      },
-      {
-        "Path": "KotonohaAssistant.UI\\KotonohaAssistant.UI.csproj",
         "Action": "Start"
       }
     ]

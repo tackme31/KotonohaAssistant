@@ -1,0 +1,24 @@
+﻿<Window x:Class="KotonohaAssistant.UI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:KotonohaAssistant.UI"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800">
+    <Grid>
+        <!-- 列の定義 (2列に分ける) -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <!-- 1列目: 横幅は均等に設定 -->
+            <ColumnDefinition Width="*" />
+            <!-- 2列目: 横幅は均等に設定 -->
+        </Grid.ColumnDefinitions>
+
+        <!-- 最初の画像 (左側) -->
+        <Image x:Name="Aoi" Grid.Column="0" Stretch="Uniform" />
+
+        <!-- 2番目の画像 (右側) -->
+        <Image x:Name="Akane" Grid.Column="1" Stretch="Uniform" />
+    </Grid>
+</Window>

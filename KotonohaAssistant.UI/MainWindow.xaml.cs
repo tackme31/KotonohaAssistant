@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -62,7 +61,14 @@ namespace KotonohaAssistant.UI
 
         private DispatcherTimer _timer;
 
+        /// <summary>
+        /// 茜の背景色
+        /// </summary>
         private static readonly Color AkaneColor = Color.FromArgb(255, 255, 240, 240);
+
+        /// <summary>
+        /// 葵の背景色
+        /// </summary>
         private static readonly Color AoiColor = Color.FromArgb(255, 240, 255, 255);
 
         public MainWindow()
@@ -78,40 +84,43 @@ namespace KotonohaAssistant.UI
             _timer.Start();
         }
 
-        // ウィンドウ名を列挙するメソッド
-        public static List<string> GetWindowTitles()
+        public static string FindWindowTitle(string targetTitle)
         {
-            List<string> titles = new List<string>();
+            string foundTitle = null;
 
-            // EnumWindows関数を使ってウィンドウを列挙
-            EnumWindows(delegate (IntPtr hWnd, IntPtr lParam)
+            EnumWindows((hWnd, lParam) =>
             {
-                // ウィンドウのタイトルの長さを取得
-                int length = GetWindowTextLength(hWnd);
+                var length = GetWindowTextLength(hWnd);
                 if (length > 0)
                 {
-                    // ウィンドウタイトルを取得
-                    StringBuilder windowTitle = new StringBuilder(length + 1);
+                    var windowTitle = new StringBuilder(length + 1);
                     GetWindowText(hWnd, windowTitle, windowTitle.Capacity);
 
-                    // タイトルをリストに追加
-                    titles.Add(windowTitle.ToString());
+                    var title = windowTitle.ToString();
+                    if (title.Contains(targetTitle))
+                    {
+                        foundTitle = title;
+                        return false; // 列挙を中断
+                    }
                 }
 
-                // 次のウィンドウを列挙
                 return true;
             }, IntPtr.Zero);
 
-            return titles;
+            return foundTitle;
         }
 
         private void UpdateCapture(object sender, EventArgs e)
         {
-            // 対象ウィンドウのタイトルを指定
-            string windowTitle = "A.I.VOICE Editor - (新規プロジェクト) *";
+            var aiEditor = FindWindowTitle("A.I.VOICE Editor");
+            if (aiEditor == null)
+            {
+                Console.WriteLine("ウィンドウが見つかりません。");
+                return;
+            }
 
             // ウィンドウハンドルを取得
-            IntPtr hWnd = FindWindow(null, windowTitle);
+            IntPtr hWnd = FindWindow(null, aiEditor);
             if (hWnd == IntPtr.Zero)
             {
                 Console.WriteLine("ウィンドウが見つかりません。");

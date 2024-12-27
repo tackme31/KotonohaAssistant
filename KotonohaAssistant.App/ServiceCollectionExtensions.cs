@@ -16,7 +16,8 @@ public static class ServiceCollectionExtensions
     private static string GoogleApiKey => GetEnvVar("GOOGLE_API_KEY");
     private static string CalendarId => GetEnvVar("CALENDAR_ID");
     private static string OwmApiKey => GetEnvVar("OWM_API_KEY");
-
+    private static double OwmLat => double.TryParse(GetEnvVar("OWM_LAT"), out var owmLat) ? owmLat : throw new FormatException($"無効な環境変数です: 'OWM_LAT'");
+    private static double OwmLon => double.TryParse(GetEnvVar("OWM_LON"), out var owmLon) ? owmLon : throw new FormatException($"無効な環境変数です: 'OWM_LON'");
     public static void AddConversationService(this IServiceCollection services)
     {
         if (!Directory.Exists(AppFolder))
@@ -50,7 +51,7 @@ public static class ServiceCollectionExtensions
                 new StopTimer(timerService),
                 new CreateCalendarEvent(calendarRepository),
                 new GetCalendarEvent(calendarRepository),
-                new GetWeather(weatherRepository),
+                new GetWeather(weatherRepository, (OwmLat, OwmLon)),
                 new ForgetMemory(),
             };
 

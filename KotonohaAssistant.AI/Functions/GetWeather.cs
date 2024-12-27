@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class GetWeather(IWeatherRepository weatherRepository) : ToolFunction
+public class GetWeather(IWeatherRepository weatherRepository, (double lat, double lon) location) : ToolFunction
 {
     public override string Description => """
 この関数は、指定された日の天気を取得するために呼び出されます。
@@ -35,6 +35,7 @@ public class GetWeather(IWeatherRepository weatherRepository) : ToolFunction
 """;
 
     private readonly IWeatherRepository _weatherRepository = weatherRepository;
+    private readonly (double lat, double lon) _location = location;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
@@ -53,7 +54,7 @@ public class GetWeather(IWeatherRepository weatherRepository) : ToolFunction
     public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         var date = (DateTime)arguments["date"];
-        var weathers = await _weatherRepository.GetWeather(date, (35.6506, 139.5406));
+        var weathers = await _weatherRepository.GetWeather(date, _location);
         if (weathers is null or [])
         {
             return "天気が取得できませんでした";

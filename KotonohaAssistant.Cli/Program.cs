@@ -14,6 +14,8 @@ var openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw
 var googleApiKey = Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? throw new Exception("");
 var calendarId = Environment.GetEnvironmentVariable("CALENDAR_ID") ?? throw new Exception("");
 var owmApiKey = Environment.GetEnvironmentVariable("OWM_API_KEY") ?? throw new Exception("");
+_ = double.TryParse(Environment.GetEnvironmentVariable("OWM_LAT"), out var owmLat) ? true : throw new Exception("");
+_ = double.TryParse(Environment.GetEnvironmentVariable("OWM_LON"), out var owmLon) ? true : throw new Exception("");
 var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
 var dbPath = Path.Combine(appDirectory, "app.cli.db");
 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
@@ -37,7 +39,7 @@ var functions = new List<ToolFunction>
     new StopTimer(timerService),
     new CreateCalendarEvent(calendarRepository),
     new GetCalendarEvent(calendarRepository),
-    new GetWeather(weatherRepository),
+    new GetWeather(weatherRepository, (owmLat, owmLon)),
     new ForgetMemory(),
 };
 

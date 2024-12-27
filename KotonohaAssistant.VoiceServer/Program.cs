@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 using AI.Talk.Editor.Api;
 using System.IO;
 using System.IO.Pipes;
-using System.Text.Json;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using CoreAudio;
+using Newtonsoft.Json;
 
 namespace KotonohaAssistant.VoiceServer
 {
@@ -127,7 +127,7 @@ namespace KotonohaAssistant.VoiceServer
             switch (command)
             {
                 case "SPEAK":
-                    var request = JsonSerializer.Deserialize<SpeakRequest>(payload);
+                    var request = JsonConvert.DeserializeObject<SpeakRequest>(payload);
                     await SpeakAsync(request.SisterType, request.Message);
                     break;
                 case "STOP":

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using Color = System.Drawing.Color;
 
 namespace KotonohaAssistant.UI
 {
@@ -110,59 +111,41 @@ namespace KotonohaAssistant.UI
             return foundTitle;
         }
 
+        private const int CaptureWidthOffset = 10;
+        private const int CaptureHeightOffset = 70;
+        private const int CaptureWidth = 190;
+        private const int CaptureHeight = 300;
+
         private void UpdateCapture(object sender, EventArgs e)
         {
-            var aiEditor = FindWindowTitle("A.I.VOICE Editor");
-            if (aiEditor == null)
+            if(!TryGetWindowData("A.I.VOICE Editor", out var windowData))
             {
-                Console.WriteLine("ウィンドウが見つかりません。");
                 return;
             }
 
-            // ウィンドウハンドルを取得
-            IntPtr hWnd = FindWindow(null, aiEditor);
-            if (hWnd == IntPtr.Zero)
+            using (var bitmap = new Bitmap(CaptureWidth, CaptureHeight))
             {
-                Console.WriteLine("ウィンドウが見つかりません。");
-                return;
-            }
-
-            // ウィンドウのRECTを取得
-            if (!GetWindowRect(hWnd, out RECT rect))
-            {
-                Console.WriteLine("ウィンドウ情報の取得に失敗しました。");
-                return;
-            }
-
-            // ウィンドウDCを取得
-            IntPtr hdcWindow = GetWindowDC(hWnd);
-            if (hdcWindow == IntPtr.Zero)
-            {
-                Console.WriteLine("ウィンドウDCの取得に失敗しました。");
-                return;
-            }
-
-            int widthOffset = 10;
-            int heightOffset = 70;
-            int width = 190;
-            int height = 300;
-
-            using (var bitmap = new Bitmap(width, height))
-            {
-                bool success = false;
-
-                using (Graphics g = Graphics.FromImage(bitmap))
+                var success = false;
+                using (var g = Graphics.FromImage(bitmap))
                 {
-                    IntPtr hdc = g.GetHdc();
-
-                    success = BitBlt(hdc, 0, 0, width, height, hdcWindow, rect.Width - width - widthOffset, heightOffset, (uint)TernaryRasterOperations.SRCCOPY);
+                    var hdc = g.GetHdc();
+                    // エディタ上のキャラクターが写ってる部分をキャプチャ
+                    success = BitBlt(
+                        hdc,
+                        xDest: 0,
+                        yDest: 0,
+                        width: CaptureWidth,
+                        height: CaptureHeight,
+                        windowData.hdcWindow,
+                        xSrc: windowData.rect.Width - CaptureWidth - CaptureWidthOffset,
+                        ySrc: CaptureHeightOffset,
+                        (uint)TernaryRasterOperations.SRCCOPY);
                 }
 
-                // WPF Imageコントロールに画像を表示
                 if (success)
                 {
-                    // (0, 0)の色でどちらが喋ってるか判断
-                    Color pixelColor = bitmap.GetPixel(0, 0);
+                    // 背景色でどちらが喋ってるか判断
+                    var pixelColor = bitmap.GetPixel(0, 0);
                     if (pixelColor == AkaneColor)
                     {
                         Akane.Source = ConvertBitmapToImageSource(bitmap);
@@ -174,24 +157,61 @@ namespace KotonohaAssistant.UI
                 }
             }
 
-            // ウィンドウDCを解放
-            ReleaseDC(hWnd, hdcWindow);
+            ReleaseDC(windowData.hWnd, windowData.hdcWindow);
+        }
+
+        private bool TryGetWindowData(string targetWindow, out (IntPtr hWnd, IntPtr hdcWindow, RECT rect) windowData)
+        {
+            windowData = default;
+
+            var aiEditor = FindWindowTitle(targetWindow);
+            if (aiEditor == null)
+            {
+                Console.WriteLine("ウィンドウが見つかりません。");
+                return false;
+            }
+
+            var hWnd = FindWindow(null, aiEditor);
+            if (hWnd == IntPtr.Zero)
+            {
+                Console.WriteLine("ウィンドウが見つかりません。");
+                return false;
+            }
+
+            if (!GetWindowRect(hWnd, out var rect))
+            {
+                Console.WriteLine("ウィンドウ情報の取得に失敗しました。");
+                return false;
+            }
+
+            var hdcWindow = GetWindowDC(hWnd);
+            if (hdcWindow == IntPtr.Zero)
+            {
+                Console.WriteLine("ウィンドウDCの取得に失敗しました。");
+                return false;
+            }
+
+            windowData = (hWnd, hdcWindow, rect);
+            return true;
         }
 
         private BitmapSource ConvertBitmapToImageSource(Bitmap bitmap)
         {
-            using (var memory = new MemoryStream())
-            {
-                bitmap.Save(memory, ImageFormat.Png);
-                memory.Position = 0;
+            var width = bitmap.Width;
+            var height = bitmap.Height;
+            var writeableBitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
+            var bitmapData = bitmap.LockBits(
+                new Rectangle(0, 0, width, height),
+                ImageLockMode.ReadOnly,
+                System.Drawing.Imaging.PixelFormat.Format32bppArgb);
 
-                var bitmapImage = new BitmapImage();
-                bitmapImage.BeginInit();
-                bitmapImage.StreamSource = memory;
-                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-                bitmapImage.EndInit();
-                return bitmapImage;
-            }
+            writeableBitmap.WritePixels(
+                new Int32Rect(0, 0, width, height),
+                bitmapData.Scan0,
+                bitmapData.Stride * height,
+                bitmapData.Stride);
+            bitmap.UnlockBits(bitmapData);
+            return writeableBitmap;
         }
     }
 }

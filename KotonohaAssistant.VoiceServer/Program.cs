@@ -43,11 +43,12 @@ namespace KotonohaAssistant.VoiceServer
 
             Console.WriteLine("Named Pipe Server is starting...");
 
+            // 同時接続を処理するため接続のたびにタスクとして管理する
             var tasks = new List<Task>();
 
-            while (true) // クライアントの接続を待ち続ける
+            // クライアントの接続を待ち続ける
+            while (true)
             {
-                // パイプサーバーを作成
                 var pipeServer = new NamedPipeServerStream(Const.VoiceEditorPipeName, PipeDirection.InOut, 10, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
 
                 Console.WriteLine("Waiting for client connection...");
@@ -59,38 +60,58 @@ namespace KotonohaAssistant.VoiceServer
 
                     // 新しい接続を処理するタスクを開始
                     var clientTask = HandleClientAsync(pipeServer);
-                    tasks.Add(clientTask);  // タスクをリストに追加
-
-                    // 接続されたクライアントを処理するタスクを非同期で実行
-                    async Task HandleClientAsync(NamedPipeServerStream ps)
-                    {
-                        using (var reader = new StreamReader(ps))
-                        using (var writer = new StreamWriter(ps) { AutoFlush = true })
-                        {
-                            string line;
-                            while ((line = await reader.ReadLineAsync()) != null)
-                            {
-                                Console.WriteLine($"Data received: {line}");
-
-                                var (command, payload) = ParseRequest(line);
-                                await RunCommand(command, payload);
-
-                                await writer.WriteLineAsync("OK");
-                            }
-                        }
-
-                        // クライアントが切断された後に行う処理
-                        Console.WriteLine("Client disconnected.");
-                        ps.Disconnect(); // 接続を切断
-                    }
+                    tasks.Add(clientTask);
                 }
                 catch (IOException)
                 {
                     // 接続エラー処理
+                    // reader/writerのdisposeの関係で毎回発生するため一旦無視する
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Exception: {ex.Message}");
+                }
+            }
+
+            async Task HandleClientAsync(NamedPipeServerStream ps)
+            {
+                using (var reader = new StreamReader(ps))
+                using (var writer = new StreamWriter(ps) { AutoFlush = true })
+                {
+                    string line;
+                    while ((line = await reader.ReadLineAsync()) != null)
+                    {
+                        Console.WriteLine($"Data received: {line}");
+
+                        var (command, payload) = ParseRequest(line);
+                        try
+                        {
+                            await RunCommand(command, payload);
+                            await writer.WriteLineAsync("OK");
+                        }
+                        catch(Exception ex)
+                        {
+                            await writer.WriteLineAsync("ERROR: " + ex.Message);
+                        }
+                    }
+                }
+
+                // クライアントが切断された後に行う処理
+                Console.WriteLine("Client disconnected.");
+                ps.Disconnect(); // 接続を切断
+            }
+
+            async Task RunCommand(string command, string payload)
+            {
+                switch (command)
+                {
+                    case "SPEAK":
+                        var request = JsonConvert.DeserializeObject<SpeakRequest>(payload);
+                        await SpeakAsync(request.SisterType, request.Message);
+                        break;
+                    case "STOP":
+                        await StopAsync();
+                        break;
                 }
             }
 
@@ -120,20 +141,6 @@ namespace KotonohaAssistant.VoiceServer
             var aoiDevice = endpoints.FirstOrDefault(ep => ep.DeviceInterfaceFriendlyName == aoiSpeakerName) ?? throw new Exception($"オーディオデバイス '{aoiSpeakerName}' が見つかりません。");
 
             return (switchSpeaker, akaneDevice, aoiDevice);
-        }
-
-        private static async Task RunCommand(string command, string payload)
-        {
-            switch (command)
-            {
-                case "SPEAK":
-                    var request = JsonConvert.DeserializeObject<SpeakRequest>(payload);
-                    await SpeakAsync(request.SisterType, request.Message);
-                    break;
-                case "STOP":
-                    await StopAsync();
-                    break;
-            }
         }
 
         public static void InitializeEditorHost()

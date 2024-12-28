@@ -13,7 +13,7 @@ public abstract class ToolFunction
     /// <summary>
     /// ë”ÇØï»ëŒè€Ç©Ç«Ç§Ç©
     /// </summary>
-    public virtual bool CanBeLazy { get; set; }
+    public virtual bool CanBeLazy { get; set; } = true;
 
     public abstract bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments);
 

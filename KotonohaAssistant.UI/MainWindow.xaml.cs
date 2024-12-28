@@ -3,10 +3,10 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
 using Color = System.Drawing.Color;
 
 namespace KotonohaAssistant.UI
@@ -43,6 +43,10 @@ namespace KotonohaAssistant.UI
         // EnumWindowsのコールバックデリゲート
         public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
+        private Bitmap _bitmap = new Bitmap(CaptureWidth, CaptureHeight);
+
+        private const int FPS = 1000 / 30; // 30vps
+
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
         {
@@ -60,8 +64,6 @@ namespace KotonohaAssistant.UI
             SRCCOPY = 0x00CC0020
         }
 
-        private DispatcherTimer _timer;
-
         /// <summary>
         /// 茜の背景色
         /// </summary>
@@ -76,13 +78,30 @@ namespace KotonohaAssistant.UI
         {
             InitializeComponent();
 
-            // タイマーの初期化
-            _timer = new DispatcherTimer
+            _bitmap = new Bitmap(CaptureWidth, CaptureHeight);
+            _ = StartCaptureLoop().ContinueWith(t =>
             {
-                Interval = TimeSpan.FromMilliseconds(1000 / 30) // 30fps
-            };
-            _timer.Tick += UpdateCapture;
-            _timer.Start();
+                if (t.IsFaulted)
+                {
+                    // ログやエラーメッセージの出力
+                    Console.WriteLine($"Capture loop error: {t.Exception}");
+                }
+            });
+        }
+
+        private async Task StartCaptureLoop()
+        {
+            while (true)
+            {
+                UpdateCapture();
+                await Task.Delay(FPS);
+            }
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            _bitmap?.Dispose();
+            base.OnClosed(e);
         }
 
         public static string FindWindowTitle(string targetTitle)
@@ -116,44 +135,41 @@ namespace KotonohaAssistant.UI
         private const int CaptureWidth = 190;
         private const int CaptureHeight = 300;
 
-        private void UpdateCapture(object sender, EventArgs e)
+        private void UpdateCapture()
         {
             if(!TryGetWindowData("A.I.VOICE Editor", out var windowData))
             {
                 return;
             }
 
-            using (var bitmap = new Bitmap(CaptureWidth, CaptureHeight))
+            var success = false;
+            using (var g = Graphics.FromImage(_bitmap))
             {
-                var success = false;
-                using (var g = Graphics.FromImage(bitmap))
-                {
-                    var hdc = g.GetHdc();
-                    // エディタ上のキャラクターが写ってる部分をキャプチャ
-                    success = BitBlt(
-                        hdc,
-                        xDest: 0,
-                        yDest: 0,
-                        width: CaptureWidth,
-                        height: CaptureHeight,
-                        windowData.hdcWindow,
-                        xSrc: windowData.rect.Width - CaptureWidth - CaptureWidthOffset,
-                        ySrc: CaptureHeightOffset,
-                        (uint)TernaryRasterOperations.SRCCOPY);
-                }
+                var hdc = g.GetHdc();
+                // エディタ上のキャラクターが写ってる部分をキャプチャ
+                success = BitBlt(
+                    hdc,
+                    xDest: 0,
+                    yDest: 0,
+                    width: CaptureWidth,
+                    height: CaptureHeight,
+                    windowData.hdcWindow,
+                    xSrc: windowData.rect.Width - CaptureWidth - CaptureWidthOffset,
+                    ySrc: CaptureHeightOffset,
+                    (uint)TernaryRasterOperations.SRCCOPY);
+            }
 
-                if (success)
+            if (success)
+            {
+                // 背景色でどちらが喋ってるか判断
+                var pixelColor = GetPixelFast(_bitmap, 0, 0);
+                if (pixelColor == AkaneColor)
                 {
-                    // 背景色でどちらが喋ってるか判断
-                    var pixelColor = bitmap.GetPixel(0, 0);
-                    if (pixelColor == AkaneColor)
-                    {
-                        Akane.Source = ConvertBitmapToImageSource(bitmap);
-                    }
-                    if (pixelColor == AoiColor)
-                    {
-                        Aoi.Source = ConvertBitmapToImageSource(bitmap);
-                    }
+                    Akane.Source = ConvertBitmapToImageSource(_bitmap);
+                }
+                else if (pixelColor == AoiColor)
+                {
+                    Aoi.Source = ConvertBitmapToImageSource(_bitmap);
                 }
             }
 
@@ -212,6 +228,35 @@ namespace KotonohaAssistant.UI
                 bitmapData.Stride);
             bitmap.UnlockBits(bitmapData);
             return writeableBitmap;
+        }
+
+        public Color GetPixelFast(Bitmap bitmap, int x, int y)
+        {
+            // 画像のビットマップデータをロック
+            var rect = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+            var bitmapData = bitmap.LockBits(rect, ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+
+            try
+            {
+                // ピクセルの位置に基づいて、データを直接読み取る
+                var stride = bitmapData.Stride;  // 1行あたりのバイト数
+                var ptr = bitmapData.Scan0;  // ピクセルデータの開始位置
+
+                // ピクセルの位置を計算
+                var offset = (y * stride) + (x * 4); // 4バイト（ARGB）ごとにピクセル
+
+                // メモリをバイト配列にコピー
+                var pixelData = new byte[4]; // ARGB 各1バイト（アルファ、赤、緑、青）
+                Marshal.Copy(IntPtr.Add(ptr, offset), pixelData, 0, 4);
+
+                // 色を生成
+                return Color.FromArgb(pixelData[3], pixelData[2], pixelData[1], pixelData[0]); // ARGB順
+            }
+            finally
+            {
+                // ビットマップデータのロックを解除
+                bitmap.UnlockBits(bitmapData);
+            }
         }
     }
 }

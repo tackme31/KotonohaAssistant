@@ -37,12 +37,13 @@ public class CalendarEventRepository : ICalendarEventRepository
 
     public async Task<IList<Event>> GetEventsAsync(DateTime date)
     {
-        var start = date.Date;
-        var end = date.Date.AddDays(1).AddSeconds(-1);
+        var timeZone = TimeZoneInfo.Local;
+        var start = TimeZoneInfo.ConvertTimeToUtc(date.Date, timeZone);
+        var end = TimeZoneInfo.ConvertTimeToUtc(date.Date.AddDays(1), timeZone);
 
         var request = _calendarService.Events.List(_calendarId);
-        request.TimeMinDateTimeOffset = new DateTimeOffset(start, TimeZoneInfo.Local.GetUtcOffset(start));
-        request.TimeMaxDateTimeOffset = new DateTimeOffset(end, TimeZoneInfo.Local.GetUtcOffset(end));
+        request.TimeMinDateTimeOffset = start;
+        request.TimeMaxDateTimeOffset = end;
         request.ShowDeleted = false;
         request.SingleEvents = true;
         request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;

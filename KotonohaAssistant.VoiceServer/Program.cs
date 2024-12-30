@@ -1,15 +1,15 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using AI.Talk.Editor.Api;
+﻿using AI.Talk.Editor.Api;
+using CoreAudio;
+using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Models;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
-using KotonohaAssistant.Core.Models;
-using KotonohaAssistant.Core;
+using System.Linq;
 using System.Text.RegularExpressions;
-using System.Collections.Generic;
-using CoreAudio;
-using Newtonsoft.Json;
+using System.Threading.Tasks;
 
 namespace KotonohaAssistant.VoiceServer
 {
@@ -24,19 +24,37 @@ namespace KotonohaAssistant.VoiceServer
         private static readonly int _waitCheckInterval = 500;
         private static readonly int _waitTimeout = 15 * 1000;
 
-        private static bool _switchSpeaker;
-        private static MMDevice _akaneDevice;
-        private static MMDevice _aoiDevice;
+        private static bool _enableChannelSwitching;
 
+        /// <summary>
+        /// スピーカー
+        /// </summary>
+        private static MMDevice _speakerDevice;
 
+        /// <summary>
+        /// デフォルトのボリューム設定
+        /// </summary>
+        private static readonly float[] _initialVolumeLevelScalars = new float[2];
 
         static async Task Main(string[] args)
         {
             // load .env
             DotNetEnv.Env.TraversePath().Load();
 
-            // 姉妹のスピーカー切り替え
-            (_switchSpeaker, _akaneDevice, _aoiDevice) = GetSpeakerSettings();
+            _enableChannelSwitching = bool.TryParse(Environment.GetEnvironmentVariable("ENABLE_CHANNEL_SWITCHING"), out var enableChannelSwitching) && enableChannelSwitching;
+            _speakerDevice = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            if (_speakerDevice is null)
+            {
+                Console.WriteLine("No audio output devices found. Press any key to exit.");
+                Console.ReadKey();
+                return;
+            }
+
+            if (_speakerDevice.AudioEndpointVolume.Channels.Count >= 2)
+            {
+                _initialVolumeLevelScalars[0] = _speakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar;
+                _initialVolumeLevelScalars[1] = _speakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar;
+            }
 
             Console.WriteLine("Initializing editor host...");
             InitializeEditorHost();
@@ -89,7 +107,7 @@ namespace KotonohaAssistant.VoiceServer
                             await RunCommand(command, payload);
                             await writer.WriteLineAsync("OK");
                         }
-                        catch(Exception ex)
+                        catch (Exception ex)
                         {
                             await writer.WriteLineAsync("ERROR: " + ex.Message);
                         }
@@ -120,27 +138,6 @@ namespace KotonohaAssistant.VoiceServer
                 var m = Regex.Match(input, @"^(?<command>[^:]+):?(?<payload>.*)$");
                 return (m.Groups["command"].Value, m.Groups["payload"].Value);
             }
-        }
-
-        private static (bool switchSpeaker, MMDevice akaneSpeaker, MMDevice aoiSpeaker) GetSpeakerSettings()
-        {
-            var switchSpeaker = bool.TryParse(Environment.GetEnvironmentVariable("SWITCH_SPEAKER") ?? throw new Exception("環境変数 'SWITCH_SPEAKER' が存在しません。"), out var v) ? v : throw new FormatException("無効な環境変数です: 'SWITCH_SPEAKER'");
-            if (!switchSpeaker)
-            {
-                return (switchSpeaker, null, null);
-            }
-
-            var deviceEnumerator = new MMDeviceEnumerator();
-            var endpoints = deviceEnumerator
-                .EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active)
-                .ToList();
-
-            var akaneSpeakerName = Environment.GetEnvironmentVariable("AKANE_SPEAKER") ?? throw new Exception("環境変数 'AKANE_SPEAKER' が存在しません。");
-            var aoiSpeakerName = Environment.GetEnvironmentVariable("AOI_SPEAKER") ?? throw new Exception("環境変数 'AOI_SPEAKER' が存在しません。");
-            var akaneDevice = endpoints.FirstOrDefault(ep => ep.DeviceInterfaceFriendlyName == akaneSpeakerName) ?? throw new Exception($"オーディオデバイス '{akaneSpeakerName}' が見つかりません。");
-            var aoiDevice = endpoints.FirstOrDefault(ep => ep.DeviceInterfaceFriendlyName == aoiSpeakerName) ?? throw new Exception($"オーディオデバイス '{aoiSpeakerName}' が見つかりません。");
-
-            return (switchSpeaker, akaneDevice, aoiDevice);
         }
 
         public static void InitializeEditorHost()
@@ -189,7 +186,7 @@ namespace KotonohaAssistant.VoiceServer
         public static async Task SpeakAsync(Kotonoha sister, string message)
         {
             EnsureEditorConnected();
-            SwitchSpeakerTo(sister);
+            SwitchSpeakerChannelVolumeLevels(sister);
 
             try
             {
@@ -214,6 +211,8 @@ namespace KotonohaAssistant.VoiceServer
             {
                 Console.WriteLine(ex.Message);
             }
+
+            ResetChannelVolumeLevels();
         }
 
         public static async Task StopAsync()
@@ -253,23 +252,35 @@ namespace KotonohaAssistant.VoiceServer
             }
         }
 
-        private static void SwitchSpeakerTo(Kotonoha sister)
+        private static void SwitchSpeakerChannelVolumeLevels(Kotonoha sister)
         {
-            if (!_switchSpeaker)
+            if (!_enableChannelSwitching || _speakerDevice.AudioEndpointVolume.Channels.Count < 2)
             {
                 return;
             }
 
-            var deviceEnumerator = new MMDeviceEnumerator();
             switch (sister)
             {
                 case Kotonoha.Akane:
-                    deviceEnumerator.SetDefaultAudioEndpoint(_akaneDevice);
+                    _speakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = 1;
+                    _speakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = 0;
                     break;
                 case Kotonoha.Aoi:
-                    deviceEnumerator.SetDefaultAudioEndpoint(_aoiDevice);
+                    _speakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = 0;
+                    _speakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = 1;
                     break;
             }
+        }
+
+        private static void ResetChannelVolumeLevels()
+        {
+            if (!_enableChannelSwitching || _speakerDevice.AudioEndpointVolume.Channels.Count < 2)
+            {
+                return;
+            }
+
+            _speakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = _initialVolumeLevelScalars[0];
+            _speakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = _initialVolumeLevelScalars[1];
         }
     }
 }

@@ -3,7 +3,7 @@ using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 
-namespace KotonohaAssistant.App;
+namespace KotonohaAssistant.Vui;
 
 public static class ServiceCollectionExtensions
 {

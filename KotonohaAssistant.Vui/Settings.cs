@@ -1,6 +1,6 @@
 ﻿using KotonohaAssistant.AI.Prompts;
 
-namespace KotonohaAssistant.App;
+namespace KotonohaAssistant.Vui;
 
 public class Settings
 {

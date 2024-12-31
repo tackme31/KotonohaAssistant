@@ -13,14 +13,14 @@
     ]
   },
   {
-    "Name": "Blazor App",
+    "Name": "VUI App",
     "Projects": [
       {
         "Path": "KotonohaAssistant.VoiceServer\\KotonohaAssistant.VoiceServer.csproj",
         "Action": "Start"
       },
       {
-        "Path": "KotonohaAssistant.App\\KotonohaAssistant.App.csproj",
+        "Path": "KotonohaAssistant.Vui\\KotonohaAssistant.Vui.csproj",
         "Action": "Start"
       }
     ]

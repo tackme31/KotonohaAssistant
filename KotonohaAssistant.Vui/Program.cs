@@ -1,6 +1,6 @@
 using KotonohaAssistant.AI.Services;
-using KotonohaAssistant.App;
-using KotonohaAssistant.App.Components;
+using KotonohaAssistant.Vui;
+using KotonohaAssistant.Vui.Components;
 using Toolbelt.Blazor.Extensions.DependencyInjection;
 
 // load .env

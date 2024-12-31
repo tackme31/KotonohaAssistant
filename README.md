@@ -35,7 +35,10 @@ Open Weather MapのAPI
 ### 姉妹の音声再生をスピーカー左右で分ける
 
 ## Author
-WIP
+- Takumi Yamada
+
+## Credits
+- アラーム音提供: [OtoLogic](https://otologic.jp)
 
 ## LICENSE
 WIP

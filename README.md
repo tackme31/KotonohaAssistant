@@ -12,7 +12,10 @@
 WIP
 
 1. A.I. VOICEをインストールし、琴葉 茜・琴葉 葵の両キャラクターを追加
-1. `C:\Program Files\AI\AIVoice\AIVoiceEditor\AI.Talk.Editor.Api.dll`を、リポジトリの`/lib`フォルダにコピー
+1. `%PROGRAMFILES%/AI/AIVoice/AIVoiceEditor`内の以下のDLLファイルを、本リポジトリの`/lib`フォルダにコピー
+    - AI.Talk.dll
+    - AI.Talk.Editor.Api.dll
+    - AI.Framework.dll
 1. `.env.example`ファイルをコピーして`.env`ファイルを作成
 1. `.env`ファイルの`OPENAI_API_KEY`にOpen AI APIのAPIキーを設定
 
@@ -27,6 +30,9 @@ Google CloudでGoogleカレンダーのシークレットファイルを作成
 権限は「予定の変更」
 
 ### 天気の取得
+Open Weather MapのAPI
+
+### 姉妹の音声再生をスピーカー左右で分ける
 
 ## Author
 WIP

@@ -92,7 +92,7 @@ try
             Console.Write(name);
             Console.WriteLine(result.Message);
 
-            await voiceClient.SpeakAsync(result.Sister, result.Message);
+            await voiceClient.SpeakAsync(result.Sister, Emotion.Calm, result.Message);
         }
     }
 }

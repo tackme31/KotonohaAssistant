@@ -1,4 +1,5 @@
 ﻿using AI.Talk.Editor.Api;
+using AI.Talk;
 using CoreAudio;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Models;
@@ -125,7 +126,7 @@ namespace KotonohaAssistant.VoiceServer
                 {
                     case "SPEAK":
                         var request = JsonConvert.DeserializeObject<SpeakRequest>(payload);
-                        await SpeakAsync(request.SisterType, request.Message);
+                        await SpeakAsync(request.SisterType, request.Emotion, request.Message);
                         break;
                     case "STOP":
                         await StopAsync();
@@ -183,7 +184,7 @@ namespace KotonohaAssistant.VoiceServer
             }
         }
 
-        public static async Task SpeakAsync(Kotonoha sister, string message)
+        public static async Task SpeakAsync(Kotonoha sister, Emotion emotion, string message)
         {
             EnsureEditorConnected();
             SwitchSpeakerChannelVolumeLevels(sister);
@@ -192,15 +193,9 @@ namespace KotonohaAssistant.VoiceServer
             {
                 await WaitForStatusAsync(HostStatus.Idle);
 
-                switch (sister)
-                {
-                    case Kotonoha.Akane:
-                        _ttsControl.CurrentVoicePresetName = "琴葉 茜";
-                        break;
-                    case Kotonoha.Aoi:
-                        _ttsControl.CurrentVoicePresetName = "琴葉 葵";
-                        break;
-                }
+                var presetName = GetPresetName();
+                _ttsControl.CurrentVoicePresetName = presetName;
+                ChangeStyle(presetName, emotion);
 
                 _ttsControl.Text = message;
                 _ttsControl.Play();
@@ -213,6 +208,19 @@ namespace KotonohaAssistant.VoiceServer
             }
 
             ResetChannelVolumeLevels();
+
+            string GetPresetName()
+            {
+                switch (sister)
+                {
+                    case Kotonoha.Akane:
+                        return "琴葉 茜";
+                    case Kotonoha.Aoi:
+                        return "琴葉 葵";
+                    default:
+                        return _ttsControl.CurrentVoicePresetName;
+                }
+            }
         }
 
         public static async Task StopAsync()
@@ -250,6 +258,40 @@ namespace KotonohaAssistant.VoiceServer
 
                 await Task.Delay(_waitCheckInterval);
             }
+        }
+
+        public static void ChangeStyle(string presetName, Emotion emotion)
+        {
+            var presetValue = _ttsControl.GetVoicePreset(presetName);
+            var preset = JsonConvert.DeserializeObject<VoicePreset>(presetValue);
+
+            switch (emotion)
+            {
+                case Emotion.Calm:
+                    preset.Styles["J"].Value = 0;
+                    preset.Styles["A"].Value = 0;
+                    preset.Styles["S"].Value = 0;
+                    break;
+                case Emotion.Joy:
+                    preset.Styles["J"].Value = 0.3;
+                    preset.Styles["A"].Value = 0;
+                    preset.Styles["S"].Value = 0;
+                    break;
+                case Emotion.Anger:
+                    preset.Styles["J"].Value = 0;
+                    preset.Styles["A"].Value = 0.3;
+                    preset.Styles["S"].Value = 0;
+                    break;
+                case Emotion.Sadness:
+                    preset.Styles["J"].Value = 0;
+                    preset.Styles["A"].Value = 0;
+                    preset.Styles["S"].Value = 0.3;
+                    break;
+            }
+
+            var newPreset = JsonConvert.SerializeObject(preset);
+
+            _ttsControl.SetVoicePreset(newPreset);
         }
 
         private static void SwitchSpeakerChannelVolumeLevels(Kotonoha sister)

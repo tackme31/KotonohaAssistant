@@ -122,7 +122,7 @@ public class AlarmService : IDisposable, IAlarmService
             while (DateTime.Now < end && !_cts.Token.IsCancellationRequested)
             {
                 await PlayAlarmSoundAsync(TimeSpan.FromSeconds(5), _cts.Token);
-                await _voiceClient.SpeakAsync(alarm.Sister, alarm.Message);
+                await _voiceClient.SpeakAsync(alarm.Sister, Core.Emotion.Calm, alarm.Message);
             }
         }
         catch(OperationCanceledException)

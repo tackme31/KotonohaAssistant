@@ -34,7 +34,7 @@ public class VoiceClient : IDisposable
         }
     }
 
-    public async Task SpeakAsync(Kotonoha sister, string message)
+    public async Task SpeakAsync(Kotonoha sister, Emotion emotion, string message)
     {
         await ConnectToServerAsync();
 
@@ -48,6 +48,7 @@ public class VoiceClient : IDisposable
             var request = new SpeakRequest()
             {
                 SisterType = sister,
+                Emotion = emotion,
                 Message = message,
             };
             var serialized = JsonConvert.SerializeObject(request, Formatting.None);

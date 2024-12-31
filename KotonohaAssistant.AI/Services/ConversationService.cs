@@ -63,7 +63,7 @@ public class ConversationService
         _chatCompletionRepository = chatCompletionRepository;
     }
 
-    public IEnumerable<string> GetAllMessageTexts()
+    public IEnumerable<(Kotonoha? sister, string message)> GetAllMessages()
     {
         foreach (var message in _state.ChatMessages)
         {
@@ -71,13 +71,14 @@ public class ConversationService
                 user.Content.Any() &&
                 user.Content[0].Text.StartsWith("私:"))
             {
-                yield return user.Content[0].Text;
+                yield return (null, user.Content[0].Text.Replace("私: ", string.Empty));
             }
 
             if (message is AssistantChatMessage assistant &&
                 assistant.Content.Any())
             {
-                yield return assistant.Content[0].Text;
+                var (sister, _, messageText) = ParseMessage(assistant.Content[0].Text);
+                yield return (sister, messageText);
             }
         }
     }
@@ -90,10 +91,10 @@ public class ConversationService
     {
         // 生成時の参考のためにあらかじめ会話を入れておく
         _state.ClearChatMessages();
-        _state.AddAssistantMessage("葵: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
-        _state.AddAssistantMessage("茜: 今日からうちらがマスターのことサポートするで。");
-        _state.AddAssistantMessage("葵: これから一緒に過ごすことになるけど、気軽に声をかけてね。");
-        _state.AddAssistantMessage("茜: せやな！これからいっぱい思い出作っていこな。");
+        _state.AddAssistantMessage("葵 [平常心]: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
+        _state.AddAssistantMessage("茜 [平常心]: 今日からうちらがマスターのことサポートするで。");
+        _state.AddAssistantMessage("葵 [喜び]: これから一緒に過ごすことになるけど、気軽に声をかけてね。");
+        _state.AddAssistantMessage("茜 [喜び]: せやな！これからいっぱい思い出作っていこな。");
         _state.AddUserMessage("私: うん。よろしくね。");
 
         _lastSavedMessage = null;
@@ -223,9 +224,11 @@ public class ConversationService
             else
             {
                 // フロントに生成テキストを送信
+                var (_, emotion, message) = ParseMessage(completion.Value.Content[0].Text);
                 yield return new ConversationResult
                 {
-                    Message = TrimSisterName(completion.Value.Content[0].Text),
+                    Message = message,
+                    Emotion = emotion,
                     Sister = _state.CurrentSister
                 }; ;
 
@@ -250,12 +253,16 @@ public class ConversationService
         (completion, functions) = await InvokeFunctions(completion);
 
         // フロントに生成テキストを送信
-        yield return new ConversationResult
         {
-            Message = TrimSisterName(completion.Value.Content[0].Text),
-            Sister = _state.CurrentSister,
-            Functions = functions
-        }; ;
+            var (_, emotion, message) = ParseMessage(completion.Value.Content[0].Text);
+            yield return new ConversationResult
+            {
+                Message = message,
+                Emotion = emotion,
+                Sister = _state.CurrentSister,
+                Functions = functions
+            };
+        }
 
         // 記憶削除時は新しい会話にする
         if (functions.Any(f => f.Name == nameof(ForgetMemory) && f.Result == ForgetMemory.SuccessMessage))
@@ -292,7 +299,31 @@ public class ConversationService
         }
     }
 
-    private static string TrimSisterName(string input) => Regex.Replace(input, @"^(茜|葵):\s+", string.Empty);
+    private static (Kotonoha sister, Emotion emotion, string message) ParseMessage(string input)
+    {
+        var match = Regex.Match(input, @"^(?<sister>茜|葵) \[(?<emotion>.+?)\]: (?<message>.+)$");
+        var sister = match.Groups["sister"].Value;
+        var emotion = match.Groups["emotion"].Value;
+        var message = match.Groups["message"].Value;
+
+        var sisterType = sister switch
+        {
+            "茜" => Kotonoha.Akane,
+            "葵" => Kotonoha.Aoi,
+            _ => Kotonoha.Akane // 不明な場合は一旦茜ちゃん
+        };
+
+        var emotionType = emotion switch
+        {
+            "平常心" => Emotion.Calm,
+            "喜び" => Emotion.Joy,
+            "怒り" => Emotion.Anger,
+            "悲しみ" => Emotion.Sadness,
+            _ => Emotion.Calm
+        };
+
+        return (sisterType, emotionType, message);
+    }
 
     /// <summary>
     /// Function callingで呼び出された関数の実行を行います

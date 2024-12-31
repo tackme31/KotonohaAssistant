@@ -144,23 +144,9 @@
         _voiceClient = new VoiceClient();
 
         await ConversationService.LoadLatestConversation();
-        foreach (var message in ConversationService.GetAllMessageTexts())
+        foreach (var (sister, message) in ConversationService.GetAllMessages())
         {
-            if (message.StartsWith('私'))
-            {
-                var trimed = message.Replace("私: ", string.Empty);
-                _messages.Add((trimed, null, null));
-            }
-            if (message.StartsWith('茜'))
-            {
-                var trimed = message.Replace("茜: ", string.Empty);
-                _messages.Add((trimed, Kotonoha.Akane, null));
-            }
-            if (message.StartsWith('葵'))
-            {
-                var trimed = message.Replace("葵: ", string.Empty);
-                _messages.Add((trimed, Kotonoha.Aoi, null));
-            }
+            _messages.Add((message, sister, null));
         }
 
         this.StateHasChanged();
@@ -282,7 +268,7 @@
             ScrollToEnd();
 
             // 読み上げ
-            await _voiceClient.SpeakAsync(result.Sister, Emotion.Calm, result.Message);
+            await _voiceClient.SpeakAsync(result.Sister, result.Emotion, result.Message);
 
             _isThinking = true;
             this.StateHasChanged();

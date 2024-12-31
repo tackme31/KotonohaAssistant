@@ -55,9 +55,20 @@ var service = new ConversationService(
 
 alarmService.Start();
 
-foreach (var text in service.GetAllMessageTexts())
+foreach (var (sister, message) in service.GetAllMessages())
 {
-    Console.WriteLine(text);
+    switch (sister)
+    {
+        case Kotonoha.Akane:
+            Console.WriteLine($"茜: {message}");
+            break;
+        case Kotonoha.Aoi:
+            Console.WriteLine($"葵: {message}");
+            break;
+        default:
+            Console.WriteLine($"私: {message}");
+            break;
+    }
 }
 
 try
@@ -85,14 +96,13 @@ try
                 {
                     Console.WriteLine($"[FUNCTION CALLING]: {function.Name}({string.Join(", ", function.Arguments.Select(arg => $"{arg.Key}={arg.Value}"))})");
                     Console.WriteLine($"[FUNCTION RETURNS]: {function.Result}");
-
                 }
             }
 
             Console.Write(name);
             Console.WriteLine(result.Message);
 
-            await voiceClient.SpeakAsync(result.Sister, Emotion.Calm, result.Message);
+            await voiceClient.SpeakAsync(result.Sister, result.Emotion, result.Message);
         }
     }
 }

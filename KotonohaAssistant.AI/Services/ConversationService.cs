@@ -216,7 +216,7 @@ public class ConversationService
             completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
 
             // それでも関数呼び出しされることがあるのでチェック
-            if (completion.Value.FinishReason != ChatFinishReason.Stop)
+            if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
             {
                 _state.AddHint(Hint.CancelLazyMode);
             }

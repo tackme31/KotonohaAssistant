@@ -273,7 +273,7 @@ namespace KotonohaAssistant.VoiceServer
                     preset.Styles["S"].Value = 0;
                     break;
                 case Emotion.Joy:
-                    preset.Styles["J"].Value = 0.3;
+                    preset.Styles["J"].Value = 0.15;
                     preset.Styles["A"].Value = 0;
                     preset.Styles["S"].Value = 0;
                     break;

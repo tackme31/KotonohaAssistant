@@ -14,10 +14,9 @@ public class StopTimer(ITimerService timerRepository) : ToolFunction
 - 「タイマー停止」
 - 「タイマー止めて」
 
-## 注意点
-
-1. **発言制限:**  
-   タイマーを停止したこと以外は発言しないでください。
+## 呼び出し後のセリフ
+タイマーを停止したことを**一言で**伝えてください。
+「お疲れ様」などのタイマーの停止とは無関係な発言はしないでください。
 """;
 
     public override string Parameters => """

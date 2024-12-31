@@ -19,6 +19,8 @@ WIP
 1. `.env.example`ファイルをコピーして`.env`ファイルを作成
 1. `.env`ファイルの`OPENAI_API_KEY`にOpen AI APIのAPIキーを設定
 
+ChromeよりもEdgeの方が音声認識の精度が良好なので、Edgeを使うことを推奨します。
+
 ## Option
 ### カレンダーの予定取得・作成
 GOOGLE_API_KEY: シークレットファイルのパス

@@ -9,7 +9,7 @@ using OpenAI.Chat;
 // load .env
 DotNetEnv.Env.TraversePath().Load();
 
-var modelName = "gpt-4o-mini";
+var modelName = Environment.GetEnvironmentVariable("OPENAI_MODEL") ?? throw new Exception("");
 var openAiApiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") ?? throw new Exception("");
 var googleApiKey = Environment.GetEnvironmentVariable("GOOGLE_API_KEY") ?? throw new Exception("");
 var calendarId = Environment.GetEnvironmentVariable("CALENDAR_ID") ?? throw new Exception("");

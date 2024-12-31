@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
     private static readonly string AlarmDBPath = Path.Combine(AppFolder, "alarm.db");
 
     private static string OpenAIApiKey => GetEnvVar("OPENAI_API_KEY");
+    private static string OpenAIModel = GetEnvVar("OPENAI_MODEL");
     private static string GoogleApiKey => GetEnvVar("GOOGLE_API_KEY");
     private static string CalendarId => GetEnvVar("CALENDAR_ID");
     private static string OwmApiKey => GetEnvVar("OWM_API_KEY");
@@ -29,7 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICalendarEventRepository>(new CalendarEventRepository(GoogleApiKey, CalendarId));
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
         services.AddSingleton<IChatMessageRepositoriy>(new ChatMessageRepositoriy(DBPath));
-        services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(Settings.ModelName, OpenAIApiKey));
+        services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
         services.AddSingleton<IAlarmService, AlarmService>();
         services.AddSingleton<ITimerService, TimerService>();
 

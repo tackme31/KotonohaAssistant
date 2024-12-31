@@ -47,9 +47,4 @@ public class Settings
     /// 葵ちゃんの性格（振る舞い）
     /// </summary>
     public static readonly string? AoiBehaviour = Behaviour.Default;
-
-    /// <summary>
-    /// 使用するモデル名
-    /// </summary>
-    public static readonly string ModelName = "gpt-4o-mini";
 }

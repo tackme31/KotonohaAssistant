@@ -1,11 +1,12 @@
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StartTimer(ITimerService timerRepository) : ToolFunction
+public class StartTimer(ITimerService timerRepository, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、タイマーの設定を依頼されたときに呼び出されます。依頼内容に応じてタイマーを開始します。

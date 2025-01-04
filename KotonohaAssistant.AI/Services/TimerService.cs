@@ -1,4 +1,5 @@
-﻿using NAudio.Wave;
+﻿using KotonohaAssistant.Core.Utils;
+using NAudio.Wave;
 
 namespace KotonohaAssistant.AI.Services;
 
@@ -9,7 +10,7 @@ public interface ITimerService
     void StopAllTimers();
 }
 
-public class TimerService : ITimerService
+public class TimerService(ILogger logger) : ITimerService
 {
     /// <summary>
     /// タスクとキャンセルトークンを格納するリスト
@@ -17,6 +18,8 @@ public class TimerService : ITimerService
     private readonly List<(Task Task, CancellationTokenSource Cts)> _timers = [];
 
     private static readonly string AudioFilePath = @"D:\Windows\Programs\csharp\KotonohaAssistant\assets\Clock-Alarm02-1(Loop).mp3";
+
+    private readonly ILogger _logger = logger;
 
     public void SetTimer(int seconds)
     {

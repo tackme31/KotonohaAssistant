@@ -1,4 +1,5 @@
-﻿using OpenAI.Chat;
+﻿using KotonohaAssistant.Core.Utils;
+using OpenAI.Chat;
 using System.ClientModel;
 
 namespace KotonohaAssistant.AI.Repositories;

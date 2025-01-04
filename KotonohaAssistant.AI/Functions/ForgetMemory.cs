@@ -1,9 +1,10 @@
 using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class ForgetMemory : ToolFunction
+public class ForgetMemory(ILogger logger) : ToolFunction(logger)
 {
     // ライト版
     /*public override string Description => """

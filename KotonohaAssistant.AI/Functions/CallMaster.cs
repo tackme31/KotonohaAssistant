@@ -2,11 +2,12 @@ using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CallMaster(IAlarmService service) : ToolFunction
+public class CallMaster(IAlarmService service, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、指定された時間に「呼びかける」または「知らせる」依頼を受けた場合に呼び出されます。

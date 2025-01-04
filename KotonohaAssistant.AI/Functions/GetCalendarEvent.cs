@@ -1,15 +1,14 @@
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.Core.Utils;
 using System.Text;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class GetCalendarEvent(ICalendarEventRepository calendarEventRepository) : ToolFunction
+public class GetCalendarEvent(ICalendarEventRepository calendarEventRepository, ILogger logger) : ToolFunction(logger)
 {
-    private readonly ICalendarEventRepository _calendarEventService = calendarEventRepository;
-
     public override string Description => """
 
 この関数は、指定された日の予定をGoogleカレンダーから取得するために呼び出されます。予定を尋ねられたときに以下のような依頼を受けて実行されます。
@@ -37,6 +36,8 @@ public class GetCalendarEvent(ICalendarEventRepository calendarEventRepository) 
     "additionalProperties": false
 }
 """;
+
+    private readonly ICalendarEventRepository _calendarEventService = calendarEventRepository;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {

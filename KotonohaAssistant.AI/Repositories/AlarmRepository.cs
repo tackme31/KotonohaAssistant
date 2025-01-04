@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using KotonohaAssistant.Core.Utils;
 using Microsoft.Data.Sqlite;
 using System.Data;
 

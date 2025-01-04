@@ -2,10 +2,11 @@ using KotonohaAssistant.AI.Extensions;
 using System.Text.Json;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CreateCalendarEvent(ICalendarEventRepository calendarEventRepository) : ToolFunction
+public class CreateCalendarEvent(ICalendarEventRepository calendarEventRepository, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、予定の作成を依頼されたときに呼び出されます。依頼された内容に基づいて予定を作成し、以下の動作を行います。

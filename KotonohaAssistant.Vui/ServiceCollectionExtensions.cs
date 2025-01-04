@@ -2,6 +2,7 @@
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.Vui;
 
@@ -11,6 +12,7 @@ public static class ServiceCollectionExtensions
     private static readonly string AppFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
     private static readonly string DBPath = Path.Combine(AppFolder, "app.db");
     private static readonly string AlarmDBPath = Path.Combine(AppFolder, "alarm.db");
+    private static readonly string LogPath = Path.Combine(AppFolder, "log.txt");
 
     private static string OpenAIApiKey => GetEnvVar("OPENAI_API_KEY");
     private static string OpenAIModel = GetEnvVar("OPENAI_MODEL");
@@ -26,6 +28,7 @@ public static class ServiceCollectionExtensions
             Directory.CreateDirectory(AppFolder);
         }
 
+        services.AddSingleton<Core.Utils.ILogger>(new Logger(LogPath, isConsoleLoggingEnabled: false));
         services.AddSingleton<IAlarmRepository>(new AlarmRepository(AlarmDBPath));
         services.AddSingleton<ICalendarEventRepository>(new CalendarEventRepository(GoogleApiKey, CalendarId));
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
@@ -36,6 +39,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton(sp =>
         {
+            var logger = sp.GetRequiredService<Core.Utils.ILogger>();
             var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
             var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
             var chatMessageRepository = sp.GetRequiredService<IChatMessageRepositoriy>();
@@ -46,20 +50,21 @@ public static class ServiceCollectionExtensions
             // 利用する関数一覧
             var functions = new ToolFunction[]
             {
-                new CallMaster(alarmService),
-                new StopAlarm(alarmService),
-                new StartTimer(timerService),
-                new StopTimer(timerService),
-                new CreateCalendarEvent(calendarRepository),
-                new GetCalendarEvent(calendarRepository),
-                new GetWeather(weatherRepository, (OwmLat, OwmLon)),
-                new ForgetMemory(),
+                new CallMaster(alarmService, logger),
+                new StopAlarm(alarmService, logger),
+                new StartTimer(timerService, logger),
+                new StopTimer(timerService, logger),
+                new CreateCalendarEvent(calendarRepository, logger),
+                new GetCalendarEvent(calendarRepository, logger),
+                new GetWeather(weatherRepository, (OwmLat, OwmLon), logger),
+                new ForgetMemory(logger),
             };
 
             return  new ConversationService(
                 chatMessageRepository,
                 chatCompletionRepository,
                 functions,
+                logger,
                 akaneBehaviour: Behaviour.Default,
                 aoiBehaviour: Behaviour.Default);
         });

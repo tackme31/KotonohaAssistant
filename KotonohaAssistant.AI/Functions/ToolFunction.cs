@@ -1,14 +1,17 @@
 using System.Text;
 using System.Text.Json;
 using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public abstract class ToolFunction
+public abstract class ToolFunction(ILogger logger)
 {
     public abstract string Description { get; }
     public abstract string Parameters { get; }
+
+    protected ILogger Logger { get; } = logger;
 
     /// <summary>
     /// ë”ÇØï»ëŒè€Ç©Ç«Ç§Ç©

@@ -1,11 +1,12 @@
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopAlarm(IAlarmService service) : ToolFunction
+public class StopAlarm(IAlarmService service, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、再生中のアラームを停止するために呼び出されます。アラーム停止の依頼があった際に実行されます。

@@ -1,10 +1,11 @@
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopTimer(ITimerService timerRepository) : ToolFunction
+public class StopTimer(ITimerService timerRepository, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、タイマーの停止を依頼されたときに呼び出されます。タイマー停止の依頼があった際に実行されます。

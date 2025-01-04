@@ -29,6 +29,7 @@ public class AlarmService : IDisposable, IAlarmService
     private readonly System.Timers.Timer _timer;
     private readonly ElapsedEventHandler _onTimeElapsed;
     private readonly IAlarmRepository _alarmRepository;
+    private readonly ILogger _logger;
     private bool _calling = false;
 
     /// <summary>
@@ -36,10 +37,11 @@ public class AlarmService : IDisposable, IAlarmService
     /// </summary>
     private CancellationTokenSource? _cts;
 
-    public AlarmService(IAlarmRepository alarmRepository)
+    public AlarmService(IAlarmRepository alarmRepository, ILogger logger)
     {
         _voiceClient = new VoiceClient();
         _alarmRepository = alarmRepository;
+        _logger = logger;
 
         _timer = new System.Timers.Timer(MaxCallingTime);
         _onTimeElapsed = new ElapsedEventHandler(async (sender, args) => await OnTimeElapsed(sender, args));

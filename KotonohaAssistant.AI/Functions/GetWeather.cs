@@ -1,12 +1,13 @@
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.Core.Utils;
 using System.Text;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class GetWeather(IWeatherRepository weatherRepository, (double lat, double lon) location) : ToolFunction
+public class GetWeather(IWeatherRepository weatherRepository, (double lat, double lon) location, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、指定された日の天気を取得するために呼び出されます。

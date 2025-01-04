@@ -2,6 +2,7 @@
 using Google.Apis.Calendar.v3.Data;
 using Google.Apis.Calendar.v3;
 using Google.Apis.Services;
+using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Repositories;
 
@@ -20,7 +21,7 @@ public class CalendarEventRepository : ICalendarEventRepository
         CalendarService.Scope.Calendar
     };
 
-    public CalendarEventRepository(string credentialsFilePath, string calendarId = "primary")
+    public CalendarEventRepository(string credentialsFilePath, string calendarId)
     {
         _calendarId = calendarId;
 

@@ -4,7 +4,6 @@ using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
-using OpenAI.Chat;
 
 // load .env
 DotNetEnv.Env.TraversePath().Load();
@@ -19,6 +18,7 @@ _ = double.TryParse(Environment.GetEnvironmentVariable("OWM_LON"), out var owmLo
 var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
 var dbPath = Path.Combine(appDirectory, "app.cli.db");
 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
+var logPath = Path.Combine(appDirectory, "log.cli.db");
 
 // DBの保存先
 if (!Directory.Exists(appDirectory))
@@ -27,20 +27,21 @@ if (!Directory.Exists(appDirectory))
 }
 
 // 利用可能な関数
-var timerService = new TimerService();
-var alarmService = new AlarmService(new AlarmRepository(alarmDBPath));
+var logger = new Logger(logPath, isConsoleLoggingEnabled: true);
+var timerService = new TimerService(logger);
+var alarmService = new AlarmService(new AlarmRepository(alarmDBPath), logger);
 var calendarRepository = new CalendarEventRepository(googleApiKey, calendarId);
 using var weatherRepository = new WeatherRepository(owmApiKey);
 var functions = new List<ToolFunction>
 {
-    new CallMaster(alarmService),
-    new StopAlarm(alarmService),
-    new StartTimer(timerService),
-    new StopTimer(timerService),
-    new CreateCalendarEvent(calendarRepository),
-    new GetCalendarEvent(calendarRepository),
-    new GetWeather(weatherRepository, (owmLat, owmLon)),
-    new ForgetMemory(),
+    new CallMaster(alarmService, logger),
+    new StopAlarm(alarmService, logger),
+    new StartTimer(timerService, logger),
+    new StopTimer(timerService, logger),
+    new CreateCalendarEvent(calendarRepository, logger),
+    new GetCalendarEvent(calendarRepository, logger),
+    new GetWeather(weatherRepository, (owmLat, owmLon), logger),
+    new ForgetMemory(logger),
 };
 
 var chatMessageRepository = new ChatMessageRepositoriy(dbPath);
@@ -50,6 +51,7 @@ var service = new ConversationService(
     chatMessageRepository,
     chatCompletionRepository,
     functions,
+    logger,
     akaneBehaviour: Behaviour.Default,
     aoiBehaviour: Behaviour.Default);
 

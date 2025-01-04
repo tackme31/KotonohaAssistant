@@ -4,6 +4,7 @@ using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
 using System.ClientModel;
 using System.Text.Json;
@@ -24,8 +25,9 @@ public class ConversationService
     /// </summary>
     private ChatMessage? _lastSavedMessage;
 
-    private IChatMessageRepositoriy _chatMessageRepositoriy;
-    private IChatCompletionRepository _chatCompletionRepository;
+    private readonly IChatMessageRepositoriy _chatMessageRepositoriy;
+    private readonly IChatCompletionRepository _chatCompletionRepository;
+    private readonly ILogger _logger;
 
     private long? _currentConversationId = null;
 
@@ -35,6 +37,7 @@ public class ConversationService
         IChatMessageRepositoriy chatMessageRepositoriy,
         IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
+        ILogger logger,
         Kotonoha defaultSister = Kotonoha.Akane,
         string? akaneBehaviour = null,
         string? aoiBehaviour = null)
@@ -61,6 +64,7 @@ public class ConversationService
 
         _chatMessageRepositoriy = chatMessageRepositoriy;
         _chatCompletionRepository = chatCompletionRepository;
+        _logger = logger;
     }
 
     public IEnumerable<(Kotonoha? sister, string message)> GetAllMessages()

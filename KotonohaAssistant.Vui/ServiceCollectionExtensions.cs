@@ -21,6 +21,8 @@ public static class ServiceCollectionExtensions
     private static string OwmApiKey => GetEnvVar("OWM_API_KEY");
     private static double OwmLat => double.TryParse(GetEnvVar("OWM_LAT"), out var owmLat) ? owmLat : throw new FormatException($"無効な環境変数です: 'OWM_LAT'");
     private static double OwmLon => double.TryParse(GetEnvVar("OWM_LON"), out var owmLon) ? owmLon : throw new FormatException($"無効な環境変数です: 'OWM_LON'");
+    private static string AlarmSoundFile => GetEnvVar("ALARM_SOUND_FILE");
+
     public static void AddConversationService(this IServiceCollection services)
     {
         if (!Directory.Exists(AppFolder))
@@ -34,8 +36,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
         services.AddSingleton<IChatMessageRepository>(new ChatMessageRepository(DBPath));
         services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
-        services.AddSingleton<IAlarmService, AlarmService>();
-        services.AddSingleton<ITimerService, TimerService>();
+        services.AddSingleton<IAlarmService>(sp => new AlarmService(sp.GetRequiredService<AlarmRepository>(), AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
+        services.AddSingleton<ITimerService>(sp => new TimerService(AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
 
         services.AddSingleton(sp =>
         {

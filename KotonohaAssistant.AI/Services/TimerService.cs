@@ -10,14 +10,14 @@ public interface ITimerService
     void StopAllTimers();
 }
 
-public class TimerService(ILogger logger) : ITimerService
+public class TimerService(string alarmSoundFile, ILogger logger) : ITimerService
 {
     /// <summary>
     /// タスクとキャンセルトークンを格納するリスト
     /// </summary>
     private readonly List<(Task Task, CancellationTokenSource Cts)> _timers = [];
 
-    private static readonly string AudioFilePath = @"D:\Windows\Programs\csharp\KotonohaAssistant\assets\Clock-Alarm02-1(Loop).mp3";
+    private readonly string _alarmSoundFile = alarmSoundFile;
 
     private readonly ILogger _logger = logger;
 
@@ -28,7 +28,7 @@ public class TimerService(ILogger logger) : ITimerService
         // 非同期タスクを開始
         var task = Task.Run(async () =>
         {
-            using var audioFile = new AudioFileReader(AudioFilePath);
+            using var audioFile = new AudioFileReader(_alarmSoundFile);
             using var outputDevice = new WaveOutEvent();
             outputDevice.Init(audioFile);
 

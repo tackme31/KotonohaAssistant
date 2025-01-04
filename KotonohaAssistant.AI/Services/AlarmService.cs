@@ -30,6 +30,7 @@ public class AlarmService : IDisposable, IAlarmService
     private readonly System.Timers.Timer _timer;
     private readonly ElapsedEventHandler _onTimeElapsed;
     private readonly IAlarmRepository _alarmRepository;
+    private readonly string _alarmSoundFile;
     private readonly ILogger _logger;
     private bool _calling = false;
 
@@ -38,10 +39,11 @@ public class AlarmService : IDisposable, IAlarmService
     /// </summary>
     private CancellationTokenSource? _cts;
 
-    public AlarmService(IAlarmRepository alarmRepository, ILogger logger)
+    public AlarmService(IAlarmRepository alarmRepository, string alarmSoundFile, ILogger logger)
     {
         _voiceClient = new VoiceClient();
         _alarmRepository = alarmRepository;
+        _alarmSoundFile = alarmSoundFile;
         _logger = logger;
 
         _timer = new System.Timers.Timer(MaxCallingTime);
@@ -162,8 +164,7 @@ public class AlarmService : IDisposable, IAlarmService
 
     async Task PlayAlarmSoundAsync(TimeSpan playingTime, CancellationToken token)
     {
-        var path = @"D:\Windows\Programs\csharp\KotonohaAssistant\assets\Clock-Alarm02-1(Loop).mp3";
-        using var audioFile = new AudioFileReader(path);
+        using var audioFile = new AudioFileReader(_alarmSoundFile);
         using var outputDevice = new WaveOutEvent();
 
         try

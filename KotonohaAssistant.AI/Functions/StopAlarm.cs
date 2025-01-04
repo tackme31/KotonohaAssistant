@@ -49,8 +49,9 @@ public class StopAlarm(IAlarmService service, ILogger logger) : ToolFunction(log
 
             return Task.FromResult("アラームを停止しました");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Logger.LogError(ex);
             return Task.FromResult("アラームの停止に失敗しました");
         }
     }

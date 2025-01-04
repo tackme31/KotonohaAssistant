@@ -57,10 +57,11 @@ public class StartTimer(ITimerService timerRepository, ILogger logger) : ToolFun
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         var seconds = (int)arguments["seconds"];
         _timerRepository.SetTimer(seconds);
-        return "タイマーを開始しました。";
+
+        return Task.FromResult("タイマーを開始しました。");
     }
 }

@@ -83,6 +83,7 @@ public class ForgetMemory(ILogger logger) : ToolFunction(logger)
         var r = new Random();
         if (r.NextDouble() < 1d / 10d)
         {
+            Logger.LogInformation("記憶の削除に失敗しました");
             return Task.FromResult(FailureMessage);
         }
 

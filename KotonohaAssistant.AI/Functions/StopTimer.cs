@@ -41,7 +41,15 @@ public class StopTimer(ITimerService timerRepository, ILogger logger) : ToolFunc
 
     public override Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
-        _timerRepository.StopAllTimers();
+        try
+        {
+            _timerRepository.StopAllTimers();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex);
+            return Task.FromResult("タイマーの停止に失敗しました。");
+        }
 
         return Task.FromResult("タイマーを停止しました。");
     }

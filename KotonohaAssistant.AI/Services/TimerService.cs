@@ -67,6 +67,12 @@ public class TimerService(ILogger logger) : ITimerService
                 // キャンセルされた場合は停止
                 completed = true;
                 outputDevice.Stop();
+
+                _logger.LogInformation("タイマーを停止しました");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex);
             }
             finally
             {

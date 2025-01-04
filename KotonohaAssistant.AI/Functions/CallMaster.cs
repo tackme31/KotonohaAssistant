@@ -3,6 +3,7 @@ using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core.Utils;
+using SQLitePCL;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
@@ -105,8 +106,10 @@ public class CallMaster(IAlarmService service, ILogger logger) : ToolFunction(lo
         {
             await _alarmService.SetAlarm(setting);
         }
-        catch(Exception)
+        catch(Exception ex)
         {
+            Logger.LogError(ex);
+
             return "FAILED";
         }
 

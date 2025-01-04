@@ -5,8 +5,10 @@ using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
+using Microsoft.VisualBasic;
 using OpenAI.Chat;
 using System.ClientModel;
+using System.Security.AccessControl;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -25,7 +27,7 @@ public class ConversationService
     /// </summary>
     private ChatMessage? _lastSavedMessage;
 
-    private readonly IChatMessageRepositoriy _chatMessageRepositoriy;
+    private readonly IChatMessageRepository _chatMessageRepositoriy;
     private readonly IChatCompletionRepository _chatCompletionRepository;
     private readonly ILogger _logger;
 
@@ -34,7 +36,7 @@ public class ConversationService
     public IReadOnlyConversationState State => _state;
 
     public ConversationService(
-        IChatMessageRepositoriy chatMessageRepositoriy,
+        IChatMessageRepository chatMessageRepository,
         IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
         ILogger logger,
@@ -62,7 +64,7 @@ public class ConversationService
         _state.PatienceCount = 0;
         _state.LastToolCallSister = 0;
 
-        _chatMessageRepositoriy = chatMessageRepositoriy;
+        _chatMessageRepositoriy = chatMessageRepository;
         _chatCompletionRepository = chatCompletionRepository;
         _logger = logger;
     }
@@ -94,6 +96,17 @@ public class ConversationService
     private async Task<long> CreateNewConversationAsync()
     {
         // 生成時の参考のためにあらかじめ会話を入れておく
+        long conversationId = -1;
+        try
+        {
+            conversationId = await _chatMessageRepositoriy.CreateNewConversationIdAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex);
+            return -1;
+        }
+
         _state.ClearChatMessages();
         _state.AddAssistantMessage("葵 [平常心]: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
         _state.AddAssistantMessage("茜 [平常心]: 今日からうちらがマスターのことサポートするで。");
@@ -103,7 +116,7 @@ public class ConversationService
 
         _lastSavedMessage = null;
 
-        return await _chatMessageRepositoriy.CreateNewConversationIdAsync();
+        return conversationId;
     }
 
     /// <summary>
@@ -112,7 +125,16 @@ public class ConversationService
     /// <returns></returns>
     public async Task LoadLatestConversation()
     {
-        var conversationId = await _chatMessageRepositoriy.GetLatestConversationIdAsync();
+        long conversationId = -1;
+        try
+        {
+            await _chatMessageRepositoriy.GetLatestConversationIdAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex);
+        }
+
         // 会話履歴が存在しない場合
         if (conversationId < 0)
         {
@@ -120,7 +142,16 @@ public class ConversationService
             return;
         }
 
-        var messages = await _chatMessageRepositoriy.GetAllChatMessagesAsync(conversationId);
+        IEnumerable<ChatMessage>? messages;
+        try
+        {
+            messages = await _chatMessageRepositoriy.GetAllChatMessagesAsync(conversationId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex);
+            return;
+        }
 
         _currentConversationId = conversationId;
         _state.LoadMessages(messages);
@@ -153,9 +184,29 @@ public class ConversationService
             ? _state.ChatMessages
             : _state.ChatMessages.SkipWhile(message => message != _lastSavedMessage).Skip(1);
 
-        await _chatMessageRepositoriy.InsertChatMessagesAsync(unsavedMessages, _currentConversationId.Value);
+        try
+        {
+            await _chatMessageRepositoriy.InsertChatMessagesAsync(unsavedMessages, _currentConversationId.Value);
+            _lastSavedMessage = _state.ChatMessages.Last();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex);
+        }
+    }
 
-        _lastSavedMessage = _state.ChatMessages.Last();
+    private async Task<ChatCompletion?> CompleteChatAsync(IEnumerable<ChatMessage> messages)
+    {
+        try
+        {
+            return await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex);
+
+            return null;
+        }
     }
 
     /// <summary>
@@ -193,10 +244,14 @@ public class ConversationService
 
         // 返信を生成
         _state.AddUserMessage($"私: {input}");
-        var completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
+        var completion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
+        if (completion is null)
+        {
+            yield break;
+        }
 
         // 忍耐値の処理
-        if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
+        if (completion.FinishReason == ChatFinishReason.ToolCalls)
         {
             // 連続して同じ方にお願いした場合
             if (_state.LastToolCallSister == _state.CurrentSister)
@@ -212,15 +267,14 @@ public class ConversationService
         }
 
         // 怠け癖発動
-        if (ShouldBeLazy(completion.Value))
+        if (ShouldBeLazy(completion))
         {
             BeginLazyMode();
 
             // 再度返信を生成
-            completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
-
+            completion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
             // それでも関数呼び出しされることがあるのでチェック
-            if (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
+            if (completion is null || completion.FinishReason == ChatFinishReason.ToolCalls)
             {
                 _state.AddHint(Hint.CancelLazyMode);
             }
@@ -228,7 +282,7 @@ public class ConversationService
             else
             {
                 // フロントに生成テキストを送信
-                var (_, emotion, message) = ParseMessage(completion.Value.Content[0].Text);
+                var (_, emotion, message) = ParseMessage(completion.Content[0].Text);
                 yield return new ConversationResult
                 {
                     Message = message,
@@ -236,21 +290,25 @@ public class ConversationService
                     Sister = _state.CurrentSister
                 }; ;
 
-                _state.AddAssistantMessage(completion.Value);
+                _state.AddAssistantMessage(completion);
 
                 EndLazyMode();
 
                 // 姉妹を切り替えて、再度呼び出し
                 _state.CurrentSister = _state.CurrentSister.Switch();
                 _state.AddHint(Hint.SwitchSisterTo(_state.CurrentSister));
-                completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
+                completion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
 
                 // 怠けると姉妹が入れ替わるのでカウンターをリセット
                 _state.PatienceCount = 1;
             }
         }
 
-        _state.AddAssistantMessage(completion.Value);
+        if (completion is null)
+        {
+            yield break;
+        }
+        _state.AddAssistantMessage(completion);
 
         // 関数の実行
         List<ConversationFunction> functions;
@@ -258,7 +316,7 @@ public class ConversationService
 
         // フロントに生成テキストを送信
         {
-            var (_, emotion, message) = ParseMessage(completion.Value.Content[0].Text);
+            var (_, emotion, message) = ParseMessage(completion.Content[0].Text);
             yield return new ConversationResult
             {
                 Message = message,
@@ -334,12 +392,12 @@ public class ConversationService
     /// </summary>
     /// <param name="completion"></param>
     /// <returns></returns>
-    private async Task<(ClientResult<ChatCompletion> result, List<ConversationFunction> functions)> InvokeFunctions(ClientResult<ChatCompletion> completion)
+    private async Task<(ChatCompletion result, List<ConversationFunction> functions)> InvokeFunctions(ChatCompletion completion)
     {
         var invokedFunctions = new List<ConversationFunction>();
-        while (completion.Value.FinishReason == ChatFinishReason.ToolCalls)
+        while (completion.FinishReason == ChatFinishReason.ToolCalls)
         {
-            foreach (var toolCall in completion.Value.ToolCalls)
+            foreach (var toolCall in completion.ToolCalls)
             {
                 using var doc = JsonDocument.Parse(toolCall.FunctionArguments);
                 if (!_functions.TryGetValue(toolCall.FunctionName, out var function) || function is null)
@@ -365,8 +423,14 @@ public class ConversationService
                 _state.AddToolMessage(toolCall.Id, result);
             }
 
-            completion = await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
-            _state.AddAssistantMessage(completion.Value);
+            var nextCompletion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
+            if (nextCompletion is null)
+            {
+                continue;
+            }
+
+            completion = nextCompletion;
+            _state.AddAssistantMessage(completion);
         }
 
         return (completion, invokedFunctions);

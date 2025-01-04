@@ -54,20 +54,29 @@ public class GetWeather(IWeatherRepository weatherRepository, (double lat, doubl
 
     public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
-        var date = (DateTime)arguments["date"];
-        var weathers = await _weatherRepository.GetWeather(date, _location);
-        if (weathers is null or [])
+        try
         {
+            var date = (DateTime)arguments["date"];
+            var weathers = await _weatherRepository.GetWeather(date, _location);
+            if (weathers is null or [])
+            {
+                throw new Exception("天気の取得に失敗しました");
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"## {date:M月d日の天気}");
+            foreach (var weather in weathers)
+            {
+                sb.AppendLine($"- {weather.DateTime:HH}時: {weather.Text}");
+            }
+
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex);
+
             return "天気が取得できませんでした";
         }
-
-        var sb = new StringBuilder();
-        sb.AppendLine($"## {date:M月d日の天気}");
-        foreach (var weather in weathers)
-        {
-            sb.AppendLine($"- {weather.DateTime:HH}時: {weather.Text}");
-        }
-
-        return sb.ToString();
     }
 }

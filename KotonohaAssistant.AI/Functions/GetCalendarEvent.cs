@@ -105,8 +105,10 @@ public class GetCalendarEvent(ICalendarEventRepository calendarEventRepository, 
 
             return sb.ToString(); ;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Logger.LogError(ex);
+
             return "予定が取得できませんでした";
         }
 

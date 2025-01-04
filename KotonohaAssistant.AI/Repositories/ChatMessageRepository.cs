@@ -3,11 +3,10 @@ using Dapper;
 using Microsoft.Data.Sqlite;
 using System.Data;
 using System.Text.Json;
-using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Repositories;
 
-public interface IChatMessageRepositoriy
+public interface IChatMessageRepository
 {
     Task<long> GetLatestConversationIdAsync();
     Task<int> CreateNewConversationIdAsync();
@@ -15,7 +14,7 @@ public interface IChatMessageRepositoriy
     Task InsertChatMessagesAsync(IEnumerable<ChatMessage> chatMessages, long conversationId);
 }
 
-public class ChatMessageRepositoriy(string dbPath) : IChatMessageRepositoriy
+public class ChatMessageRepository(string dbPath) : IChatMessageRepository
 {
     private bool _isInitialized = false;
     private readonly string _connectionString = $"Data Source={dbPath}";

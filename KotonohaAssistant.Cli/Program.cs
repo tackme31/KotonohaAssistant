@@ -18,7 +18,7 @@ _ = double.TryParse(Environment.GetEnvironmentVariable("OWM_LON"), out var owmLo
 var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
 var dbPath = Path.Combine(appDirectory, "app.cli.db");
 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
-var logPath = Path.Combine(appDirectory, "log.cli.db");
+var logPath = Path.Combine(appDirectory, "log.cli.txt");
 
 // DBの保存先
 if (!Directory.Exists(appDirectory))
@@ -44,7 +44,7 @@ var functions = new List<ToolFunction>
     new ForgetMemory(logger),
 };
 
-var chatMessageRepository = new ChatMessageRepositoriy(dbPath);
+var chatMessageRepository = new ChatMessageRepository(dbPath);
 var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
 
 var service = new ConversationService(

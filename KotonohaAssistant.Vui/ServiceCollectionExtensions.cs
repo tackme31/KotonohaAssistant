@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAlarmRepository>(new AlarmRepository(AlarmDBPath));
         services.AddSingleton<ICalendarEventRepository>(new CalendarEventRepository(GoogleApiKey, CalendarId));
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
-        services.AddSingleton<IChatMessageRepositoriy>(new ChatMessageRepositoriy(DBPath));
+        services.AddSingleton<IChatMessageRepository>(new ChatMessageRepository(DBPath));
         services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
         services.AddSingleton<IAlarmService, AlarmService>();
         services.AddSingleton<ITimerService, TimerService>();
@@ -42,7 +42,7 @@ public static class ServiceCollectionExtensions
             var logger = sp.GetRequiredService<Core.Utils.ILogger>();
             var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
             var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
-            var chatMessageRepository = sp.GetRequiredService<IChatMessageRepositoriy>();
+            var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
             var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
             var alarmService = sp.GetRequiredService<IAlarmService>();
             var timerService = sp.GetRequiredService<ITimerService>();

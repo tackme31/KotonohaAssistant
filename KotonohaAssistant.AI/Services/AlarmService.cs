@@ -1,6 +1,7 @@
 ﻿using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.Core.Utils;
 using NAudio.Wave;
+using SQLitePCL;
 using System.Timers;
 
 namespace KotonohaAssistant.AI.Services;
@@ -85,8 +86,9 @@ public class AlarmService : IDisposable, IAlarmService
             await _alarmRepository.InsertAlarmSetting(setting);
             return true;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(ex);
             return false;
         }
     }
@@ -100,8 +102,17 @@ public class AlarmService : IDisposable, IAlarmService
         }
 
         var startTime = DateTime.Now;
-        var settings = await _alarmRepository.GetAlarmSettingsAsync(startTime.TimeOfDay - MaxCallingTime, startTime.TimeOfDay);
-        if (settings is [])
+        List<AlarmSetting>? settings = null;
+        try
+        {
+            settings = await _alarmRepository.GetAlarmSettingsAsync(startTime.TimeOfDay - MaxCallingTime, startTime.TimeOfDay);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex);
+        }
+
+        if (settings is null or [])
         {
             return;
         }
@@ -130,6 +141,7 @@ public class AlarmService : IDisposable, IAlarmService
         catch(OperationCanceledException)
         {
             // キャンセル時の処理
+            _logger.LogInformation("タイマーを停止しました");
         }
         finally
         {
@@ -138,10 +150,17 @@ public class AlarmService : IDisposable, IAlarmService
             _cts = null;
         }
 
-        await _alarmRepository.DeleteAlarmSettingsAsync(settings.Select(s => s.Id));
+        try
+        {
+            await _alarmRepository.DeleteAlarmSettingsAsync(settings.Select(s => s.Id));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex);
+        }
     }
 
-    static async Task PlayAlarmSoundAsync(TimeSpan playingTime, CancellationToken token)
+    async Task PlayAlarmSoundAsync(TimeSpan playingTime, CancellationToken token)
     {
         var path = @"D:\Windows\Programs\csharp\KotonohaAssistant\assets\Clock-Alarm02-1(Loop).mp3";
         using var audioFile = new AudioFileReader(path);
@@ -155,8 +174,9 @@ public class AlarmService : IDisposable, IAlarmService
 
             await Task.Delay(playingTime, token);
         }
-        catch(Exception)
+        catch(Exception ex)
         {
+            _logger.LogError(ex);
             outputDevice.Stop();
         }
     }

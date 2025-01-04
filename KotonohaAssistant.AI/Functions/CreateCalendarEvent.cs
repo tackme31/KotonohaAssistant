@@ -91,6 +91,8 @@ public class CreateCalendarEvent(ICalendarEventRepository calendarEventRepositor
         }
         catch(Exception ex)
         {
+            Logger.LogError(ex);
+
             return "予定の作成に失敗しました。";
         }
 

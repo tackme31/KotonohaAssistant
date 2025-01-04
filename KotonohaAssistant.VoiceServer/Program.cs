@@ -11,6 +11,7 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.VoiceServer
 {
@@ -21,40 +22,42 @@ namespace KotonohaAssistant.VoiceServer
     /// </summary>
     internal class Program
     {
-        private static readonly TtsControl _ttsControl = new TtsControl();
-        private static readonly int _waitCheckInterval = 500;
-        private static readonly int _waitTimeout = 15 * 1000;
+        private static readonly string LogPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant", "log.voiceserver.txt");
+        private static readonly TtsControl TtsControl = new TtsControl();
+        private static readonly int WaitCheckInterval = 500;
+        private static readonly int WaitTimeout = 15 * 1000;
+        private static readonly ILogger Logger = new Logger(LogPath, isConsoleLoggingEnabled: true);
 
-        private static bool _enableChannelSwitching;
+        private static bool EnableChannelSwitching;
 
         /// <summary>
         /// スピーカー
         /// </summary>
-        private static MMDevice _speakerDevice;
+        private static MMDevice SpeakerDevice;
 
         /// <summary>
         /// デフォルトのボリューム設定
         /// </summary>
-        private static readonly float[] _initialVolumeLevelScalars = new float[2];
+        private static readonly float[] InitialVolumeLevelScalars = new float[2];
 
         static async Task Main(string[] args)
         {
             // load .env
             DotNetEnv.Env.TraversePath().Load();
 
-            _enableChannelSwitching = bool.TryParse(Environment.GetEnvironmentVariable("ENABLE_CHANNEL_SWITCHING"), out var enableChannelSwitching) && enableChannelSwitching;
-            _speakerDevice = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            if (_speakerDevice is null)
+            EnableChannelSwitching = bool.TryParse(Environment.GetEnvironmentVariable("ENABLE_CHANNEL_SWITCHING"), out var enableChannelSwitching) && enableChannelSwitching;
+            SpeakerDevice = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            if (SpeakerDevice is null)
             {
                 Console.WriteLine("No audio output devices found. Press any key to exit.");
                 Console.ReadKey();
                 return;
             }
 
-            if (_speakerDevice.AudioEndpointVolume.Channels.Count >= 2)
+            if (SpeakerDevice.AudioEndpointVolume.Channels.Count >= 2)
             {
-                _initialVolumeLevelScalars[0] = _speakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar;
-                _initialVolumeLevelScalars[1] = _speakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar;
+                InitialVolumeLevelScalars[0] = SpeakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar;
+                InitialVolumeLevelScalars[1] = SpeakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar;
             }
 
             Console.WriteLine("Initializing editor host...");
@@ -88,7 +91,7 @@ namespace KotonohaAssistant.VoiceServer
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Exception: {ex.Message}");
+                    Logger.LogError(ex);
                 }
             }
 
@@ -143,7 +146,7 @@ namespace KotonohaAssistant.VoiceServer
 
         public static void InitializeEditorHost()
         {
-            var availableHosts = _ttsControl.GetAvailableHostNames();
+            var availableHosts = TtsControl.GetAvailableHostNames();
             if (!availableHosts.Any())
             {
                 throw new Exception("利用可能なホストが存在しません。");
@@ -152,18 +155,18 @@ namespace KotonohaAssistant.VoiceServer
             try
             {
                 var host = availableHosts.First();
-                _ttsControl.Initialize(host);
+                TtsControl.Initialize(host);
 
-                if (_ttsControl.Status == HostStatus.NotRunning)
+                if (TtsControl.Status == HostStatus.NotRunning)
                 {
-                    _ttsControl.StartHost();
+                    TtsControl.StartHost();
                 }
 
-                _ttsControl.Connect();
+                TtsControl.Connect();
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e.Message);
+                Logger.LogError(ex);
                 throw;
             }
         }
@@ -172,14 +175,14 @@ namespace KotonohaAssistant.VoiceServer
         {
             try
             {
-                if (_ttsControl.Status == HostStatus.NotConnected)
+                if (TtsControl.Status == HostStatus.NotConnected)
                 {
-                    _ttsControl.Connect();
+                    TtsControl.Connect();
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e.Message);
+                Logger.LogError(ex);
                 throw;
             }
         }
@@ -194,17 +197,17 @@ namespace KotonohaAssistant.VoiceServer
                 await WaitForStatusAsync(HostStatus.Idle);
 
                 var presetName = GetPresetName();
-                _ttsControl.CurrentVoicePresetName = presetName;
+                TtsControl.CurrentVoicePresetName = presetName;
                 ChangeStyle(presetName, emotion);
 
-                _ttsControl.Text = message;
-                _ttsControl.Play();
+                TtsControl.Text = message;
+                TtsControl.Play();
 
                 await WaitForStatusAsync(HostStatus.Idle);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Logger.LogError(ex);
             }
 
             ResetChannelVolumeLevels();
@@ -218,7 +221,7 @@ namespace KotonohaAssistant.VoiceServer
                     case Kotonoha.Aoi:
                         return "琴葉 葵";
                     default:
-                        return _ttsControl.CurrentVoicePresetName;
+                        return TtsControl.CurrentVoicePresetName;
                 }
             }
         }
@@ -227,20 +230,20 @@ namespace KotonohaAssistant.VoiceServer
         {
             EnsureEditorConnected();
 
-            if (_ttsControl.Status == HostStatus.Idle)
+            if (TtsControl.Status == HostStatus.Idle)
             {
                 return;
             }
 
             try
             {
-                _ttsControl.Stop();
+                TtsControl.Stop();
 
                 await WaitForStatusAsync(HostStatus.Idle);
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Logger.LogError(ex);
             }
         }
 
@@ -248,21 +251,21 @@ namespace KotonohaAssistant.VoiceServer
         {
             var startTime = DateTime.Now;
 
-            while (_ttsControl.Status != status)
+            while (TtsControl.Status != status)
             {
                 // タイムアウトチェック
-                if ((DateTime.Now - startTime).TotalMilliseconds > _waitTimeout)
+                if ((DateTime.Now - startTime).TotalMilliseconds > WaitTimeout)
                 {
                     throw new TimeoutException();
                 }
 
-                await Task.Delay(_waitCheckInterval);
+                await Task.Delay(WaitCheckInterval);
             }
         }
 
         public static void ChangeStyle(string presetName, Emotion emotion)
         {
-            var presetValue = _ttsControl.GetVoicePreset(presetName);
+            var presetValue = TtsControl.GetVoicePreset(presetName);
             var preset = JsonConvert.DeserializeObject<VoicePreset>(presetValue);
 
             switch (emotion)
@@ -291,38 +294,52 @@ namespace KotonohaAssistant.VoiceServer
 
             var newPreset = JsonConvert.SerializeObject(preset);
 
-            _ttsControl.SetVoicePreset(newPreset);
+            TtsControl.SetVoicePreset(newPreset);
         }
 
         private static void SwitchSpeakerChannelVolumeLevels(Kotonoha sister)
         {
-            if (!_enableChannelSwitching || _speakerDevice.AudioEndpointVolume.Channels.Count < 2)
+            if (!EnableChannelSwitching || SpeakerDevice.AudioEndpointVolume.Channels.Count < 2)
             {
                 return;
             }
 
-            switch (sister)
+            try
             {
-                case Kotonoha.Akane:
-                    _speakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = 1;
-                    _speakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = 0;
-                    break;
-                case Kotonoha.Aoi:
-                    _speakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = 0;
-                    _speakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = 1;
-                    break;
+                switch (sister)
+                {
+                    case Kotonoha.Akane:
+                        SpeakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = 1;
+                        SpeakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = 0;
+                        break;
+                    case Kotonoha.Aoi:
+                        SpeakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = 0;
+                        SpeakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = 1;
+                        break;
+                }
+            }
+            catch(Exception ex)
+            {
+                Logger.LogError(ex);
             }
         }
 
         private static void ResetChannelVolumeLevels()
         {
-            if (!_enableChannelSwitching || _speakerDevice.AudioEndpointVolume.Channels.Count < 2)
+            if (!EnableChannelSwitching || SpeakerDevice.AudioEndpointVolume.Channels.Count < 2)
             {
                 return;
             }
 
-            _speakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = _initialVolumeLevelScalars[0];
-            _speakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = _initialVolumeLevelScalars[1];
+            try
+            {
+                SpeakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = InitialVolumeLevelScalars[0];
+                SpeakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = InitialVolumeLevelScalars[1];
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex);
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using KotonohaAssistant.AI.Extensions;
+﻿using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core;
 
 namespace KotonohaAssistant.AI.Prompts;

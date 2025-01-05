@@ -4,11 +4,9 @@ using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Utils;
-using Microsoft.VisualBasic;
 using OpenAI.Chat;
-using System.ClientModel;
-using System.Security.AccessControl;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 

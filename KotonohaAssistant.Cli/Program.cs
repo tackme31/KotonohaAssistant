@@ -3,6 +3,7 @@ using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Utils;
 
 // load .env
@@ -60,18 +61,8 @@ alarmService.Start();
 
 foreach (var (sister, message) in service.GetAllMessages())
 {
-    switch (sister)
-    {
-        case Kotonoha.Akane:
-            Console.WriteLine($"茜: {message}");
-            break;
-        case Kotonoha.Aoi:
-            Console.WriteLine($"葵: {message}");
-            break;
-        default:
-            Console.WriteLine($"私: {message}");
-            break;
-    }
+    var name = sister?.ToDisplayName() ?? "私";
+    Console.WriteLine($"{name}: {message}");
 }
 
 try
@@ -81,18 +72,14 @@ try
     while (true)
     {
         Console.Write("私: ");
-        var stdin = Console.ReadLine();
-        var input = "私: " + stdin;
+        var input = Console.ReadLine();
+        if (input is null)
+        {
+            continue;
+        }
 
         await foreach (var result in service.TalkWithKotonohaSisters(input))
         {
-            var name = result.Sister switch
-            {
-                Kotonoha.Akane => "茜: ",
-                Kotonoha.Aoi => "葵: ",
-                _ => string.Empty
-            };
-
             if (result.Functions is not null)
             {
                 foreach (var function in result.Functions)
@@ -102,8 +89,7 @@ try
                 }
             }
 
-            Console.Write(name);
-            Console.WriteLine(result.Message);
+            Console.WriteLine($"{result.Sister.ToDisplayName()}: {result.Message}");
 
             await voiceClient.SpeakAsync(result.Sister, result.Emotion, result.Message);
         }

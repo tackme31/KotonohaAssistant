@@ -1,8 +1,6 @@
-﻿using KotonohaAssistant.Core;
+﻿namespace KotonohaAssistant.Core.Extensions;
 
-namespace KotonohaAssistant.AI.Extensions;
-
-internal static class EnumExtensions
+public static class EnumExtensions
 {
     public static string ToDisplayName(this Kotonoha sister)
     {

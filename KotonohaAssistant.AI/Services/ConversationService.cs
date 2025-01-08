@@ -69,7 +69,7 @@ public class ConversationService
 
     public IEnumerable<(Kotonoha? sister, string message)> GetAllMessages()
     {
-        foreach (var message in _state.ChatMessages)
+        foreach (var message in _state.ChatMessages.Skip(5)) // CreateNewConversationAsyncで追加した生成参考用の会話をスキップ
         {
             if (message is UserChatMessage user &&
                 user.Content.Any() &&
@@ -93,7 +93,6 @@ public class ConversationService
     /// <returns></returns>
     private async Task<long> CreateNewConversationAsync()
     {
-        // 生成時の参考のためにあらかじめ会話を入れておく
         long conversationId = -1;
         try
         {
@@ -106,6 +105,8 @@ public class ConversationService
         }
 
         _state.ClearChatMessages();
+
+        // 生成時の参考のためにあらかじめ会話を入れておく
         _state.AddAssistantMessage("葵 [平常心]: はじめまして、マスター。私は琴葉葵。こっちは姉の茜。");
         _state.AddAssistantMessage("茜 [平常心]: 今日からうちらがマスターのことサポートするで。");
         _state.AddAssistantMessage("葵 [喜び]: これから一緒に過ごすことになるけど、気軽に声をかけてね。");
@@ -126,7 +127,7 @@ public class ConversationService
         long conversationId = -1;
         try
         {
-            await _chatMessageRepositoriy.GetLatestConversationIdAsync();
+            conversationId = await _chatMessageRepositoriy.GetLatestConversationIdAsync();
         }
         catch (Exception ex)
         {

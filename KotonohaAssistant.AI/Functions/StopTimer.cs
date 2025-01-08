@@ -16,8 +16,8 @@ public class StopTimer(ITimerService timerRepository, ILogger logger) : ToolFunc
 - 「タイマー止めて」
 
 ## 呼び出し後のセリフ
-タイマーを停止したことを**一言で**伝えてください。
-「お疲れ様」などのタイマーの停止とは無関係な発言はしないでください。
+- タイマーを停止したことを**一言で**伝えてください。
+- 「おつかれさま」「どうだった？」などのタイマーの停止とは無関係な発言はしないでください。
 """;
 
     public override string Parameters => """

@@ -45,7 +45,7 @@ public class CallMaster(IAlarmService service, ILogger logger) : ToolFunction(lo
    - **目的不明:** シンプルに「時間になった」旨を伝える。
 
 2. **メッセージはアシスタントの性格や話し方を保つ:**  
-   - 具体的な文言は含めず、アシスタントの性格や話し方を踏まえた自然な表現で生成することを期待してください。
+   - 具体的な文言は含めず、アシスタントの性格や話し方を踏まえた自然な表現で生成してください。
 """;
 
     public override string Parameters => """

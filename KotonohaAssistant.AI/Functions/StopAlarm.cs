@@ -16,10 +16,9 @@ public class StopAlarm(IAlarmService service, ILogger logger) : ToolFunction(log
 - 「アラーム停止」
 - 「アラームを止めてくれない？」
 
-## 注意点
-
-1. **発言制限:**  
-   アラームを停止したこと以外は発言しないでください。
+## 呼び出し後のセリフ
+- タイマーを停止したことを**一言で**伝えてください。
+- 「おつかれさま」「どうだった？」などのアラームの停止とは無関係な発言はしないでください。
 """;
 
     public override string Parameters => """

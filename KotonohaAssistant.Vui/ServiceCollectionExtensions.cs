@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
         services.AddSingleton<IChatMessageRepository>(new ChatMessageRepository(DBPath));
         services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
-        services.AddSingleton<IAlarmService>(sp => new AlarmService(sp.GetRequiredService<AlarmRepository>(), AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
+        services.AddSingleton<IAlarmService>(sp => new AlarmService(sp.GetRequiredService<IAlarmRepository>(), AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
         services.AddSingleton<ITimerService>(sp => new TimerService(AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
 
         services.AddSingleton(sp =>

@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.Cli", "Ko
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.Vui", "KotonohaAssistant.Vui\KotonohaAssistant.Vui.csproj", "{1FF66DA5-AA3D-4731-B7B6-0061FEBDD2AA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.UI", "KotonohaAssistant.UI\KotonohaAssistant.UI.csproj", "{F5AD1CA9-5C8B-47D9-9A53-0C34EB785D97}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.CharacterView", "KotonohaAssistant.CharacterView\KotonohaAssistant.CharacterView.csproj", "{F5AD1CA9-5C8B-47D9-9A53-0C34EB785D97}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

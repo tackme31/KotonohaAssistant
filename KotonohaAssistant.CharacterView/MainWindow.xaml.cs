@@ -9,7 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Color = System.Drawing.Color;
 
-namespace KotonohaAssistant.UI
+namespace KotonohaAssistant.CharacterView
 {
     /// <summary>
     /// MainWindow.xaml の相互作用ロジック

@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace KotonohaAssistant.UI.Properties
+namespace KotonohaAssistant.CharacterView.Properties
 {
 
 

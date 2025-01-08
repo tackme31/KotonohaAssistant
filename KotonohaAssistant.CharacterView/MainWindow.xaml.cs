@@ -40,12 +40,11 @@ namespace KotonohaAssistant.CharacterView
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int width, int height, IntPtr hdcSrc, int xSrc, int ySrc, uint dwRop);
 
-        // EnumWindowsのコールバックデリゲート
         public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
-        private Bitmap _bitmap = new Bitmap(CaptureWidth, CaptureHeight);
+        private readonly Bitmap _bitmap = new Bitmap(CaptureWidth, CaptureHeight);
 
-        private const int FPS = 1000 / 30; // 30vps
+        private const int FPS = 30;
 
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
@@ -94,7 +93,7 @@ namespace KotonohaAssistant.CharacterView
             while (true)
             {
                 UpdateCapture();
-                await Task.Delay(FPS);
+                await Task.Delay(1000 / FPS);
             }
         }
 

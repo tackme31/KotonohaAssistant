@@ -28,6 +28,12 @@ public class Settings
         "あかねちゃんいる",
     ];
 
+    public static readonly string[] StopWords = [
+        "ばいばい",
+        "バイバイ",
+        "さようなら"
+    ];
+
     /// <summary>
     /// ウェイクワードの曖昧一致（茜）
     /// </summary>

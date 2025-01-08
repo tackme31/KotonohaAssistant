@@ -55,12 +55,7 @@
             {
                 <div style="display: flex; justify-content: center;">
                     <div style="width: 400px; background: whitesmoke; color: #adadad; padding: 5px 20px 5px; margin: 5px 0px">
-                        <details>
-                            <summary>
-                                入力
-                            </summary>
-                            @text
-                        </details>
+                        @text
                     </div>
                 </div>
             }
@@ -69,9 +64,11 @@
 </div>
 
 <div style="position: fixed; bottom: 1.5em; left: 1em; width: 100%;">
-    @if(_isMyTurn)
+    @if (_isMyTurn)
     {
-        <p style="color: gray;">
+        var color = _isInConversation ? "black" : "gray";
+        var fontWeight = _isInConversation ? "bold" : "normal";
+        <p style="color: @color; font-weight: @fontWeight">
             &gt;&nbsp;
             @(_talkingText)
             @if (_isInConversation)
@@ -80,7 +77,8 @@
             }
         </p>
     }
-    @if(_isThinking)
+
+    @if (_isThinking)
     {
         <p style="color: gray;">
             Thinking...

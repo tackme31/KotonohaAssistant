@@ -132,12 +132,16 @@ public class AlarmService : IDisposable, IAlarmService
         _calling = true;
         try
         {
-            // 3秒アラーム音声＋メッセージ読み上げを繰り返し
+            // アラーム音声3秒 + 読み上げ
+            await PlayAlarmSoundAsync(TimeSpan.FromSeconds(3), _cts.Token);
+            await _voiceClient.SpeakAsync(alarm.Sister, Core.Emotion.Calm, alarm.Message);
+
+            // 残りはアラーム音声の繰り返し
             var end = startTime + MaxCallingTime;
             while (DateTime.Now < end && !_cts.Token.IsCancellationRequested)
             {
                 await PlayAlarmSoundAsync(TimeSpan.FromSeconds(5), _cts.Token);
-                await _voiceClient.SpeakAsync(alarm.Sister, Core.Emotion.Calm, alarm.Message);
+                await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }
         catch(OperationCanceledException)

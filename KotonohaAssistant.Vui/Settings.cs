@@ -31,7 +31,6 @@ public class Settings
     public static readonly string[] StopWords = [
         "ばいばい",
         "バイバイ",
-        "さようなら"
     ];
 
     /// <summary>

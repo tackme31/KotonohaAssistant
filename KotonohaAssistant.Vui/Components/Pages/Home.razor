@@ -188,7 +188,6 @@
         }
 
         // ウェイクワードが含まれていたら会話開始
-
         if (ContainsWakeWord(transcript))
         {
             _isInConversation = true;
@@ -227,8 +226,8 @@
                 return false;
             }
 
-            var removed = text.TrimEnd('。');
-            return Settings.StopWords.Any(word => word == text);
+            var removed = Regex.Replace(text, @"[、。？?\s]", string.Empty);
+            return Settings.StopWords.Any(word => word == removed);
         }
     }
 

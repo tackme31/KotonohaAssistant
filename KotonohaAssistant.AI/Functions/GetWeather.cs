@@ -67,7 +67,7 @@ public class GetWeather(IWeatherRepository weatherRepository, (double lat, doubl
             sb.AppendLine($"## {date:M月d日の天気}");
             foreach (var weather in weathers)
             {
-                sb.AppendLine($"- {weather.DateTime:HH}時: {weather.Text}");
+                sb.AppendLine($"- {weather.DateTime:HH}時: {weather.Text} ({weather.Temperature}度)");
             }
 
             return sb.ToString();

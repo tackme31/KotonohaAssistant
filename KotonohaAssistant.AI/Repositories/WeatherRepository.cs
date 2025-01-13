@@ -10,6 +10,7 @@ public class Weather
 {
     public required DateTime DateTime { get; set; }
     public required string Text { get; set; }
+    public required double Temperature { get; set; }
 }
 
 public interface IWeatherRepository
@@ -56,7 +57,8 @@ public class WeatherRepository(string apiKey) : IWeatherRepository, IDisposable
                 return new Weather
                 {
                     DateTime = FromUnixTimestamp(data.Dt).ToLocalTime(),
-                    Text = GetWeatherText(weather.Id)
+                    Text = GetWeatherText(weather.Id),
+                    Temperature = data.Temp,
                 };
             });
     }
@@ -78,7 +80,8 @@ public class WeatherRepository(string apiKey) : IWeatherRepository, IDisposable
             .Select(forecast => new Weather
             {
                 DateTime = FromUnixTimestamp(forecast.Dt).ToLocalTime(),
-                Text = GetWeatherText(forecast.Weather![0].Id)
+                Text = GetWeatherText(forecast.Weather![0].Id),
+                Temperature = forecast.Temp
             });
     }
 
@@ -169,6 +172,9 @@ public class WeatherRepository(string apiKey) : IWeatherRepository, IDisposable
 
         [JsonPropertyName("dt")]
         public long Dt { get; set; }
+
+        [JsonPropertyName("temp")]
+        public double Temp { get; set; }
     }
 
     private class OneCallResponse
@@ -184,6 +190,9 @@ public class WeatherRepository(string apiKey) : IWeatherRepository, IDisposable
 
         [JsonPropertyName("dt")]
         public long Dt { get; set; }
+
+        [JsonPropertyName("temp")]
+        public double Temp { get; set; }
     }
 
     private class WeatherData

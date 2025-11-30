@@ -44,4 +44,11 @@ static class Hint
 
     public static string SwitchSisterTo(Kotonoha sister) =>
         $"姉妹が切り替わりました({sister.Switch().ToDisplayName()} => {sister.ToDisplayName()})";
+
+    public static string CurrentDateTime => $"""
+必要に応じて、以下のパラメータを使ってください。
+- 今日: {DateTime.Now:yyyy/MM/dd}
+- 時間: {DateTime.Now:HH/mm}
+- 曜日: {DateTime.Now:dddd}
+""";
 }

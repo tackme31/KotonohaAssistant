@@ -389,7 +389,7 @@ public class ConversationService
 
         // 返信を生成
         var message = await _assistantRepository.CreateMessageAsync(_currentThreadId, MessageRole.User, $"私: {input}");
-        var run = await _assistantRepository.CreateRunAsync(_currentThreadId, CurrentAssistantId);
+        var run = await _assistantRepository.CreateRunAsync(_currentThreadId, CurrentAssistantId, Hint.CurrentDateTime);
         run = await _assistantRepository.WaitForRunCompletedAsync(_currentThreadId, run.Id);
 
         // 忍耐値の処理
@@ -418,7 +418,7 @@ public class ConversationService
             await InsertBeginLazyModeHint(_currentThreadId);
 
             // 実行
-            run = await _assistantRepository.CreateRunAsync(_currentThreadId, CurrentAssistantId);
+            run = await _assistantRepository.CreateRunAsync(_currentThreadId, CurrentAssistantId, Hint.CurrentDateTime);
             run = await _assistantRepository.WaitForRunCompletedAsync(_currentThreadId, run.Id);
 
             // それでも関数呼び出しされることがあるのでチェック
@@ -446,7 +446,7 @@ public class ConversationService
                 await _assistantRepository.CreateMessageAsync(_currentThreadId, MessageRole.User, $"[Hint]: {Hint.SwitchSisterTo(_state.CurrentSister)}");
 
                 // 実行
-                run = await _assistantRepository.CreateRunAsync(_currentThreadId, CurrentAssistantId);
+                run = await _assistantRepository.CreateRunAsync(_currentThreadId, CurrentAssistantId, Hint.CurrentDateTime);
                 run = await _assistantRepository.WaitForRunCompletedAsync(_currentThreadId, run.Id);
 
                 // 怠けると姉妹が入れ替わるのでカウンターをリセット
@@ -832,7 +832,7 @@ public class ConversationService
         }
 
         // 4回以上同じ方にお願いすると怠ける
-        if (_state.PatienceCount > 1)
+        if (_state.PatienceCount > 3)
         {
             return true;
         }

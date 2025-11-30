@@ -12,7 +12,7 @@ public interface IAssistantRepository
     IAsyncEnumerable<Assistant> GetAssistantsAsync();
     Task<Assistant> GetAssistantAsync(string id);
     Task<AssistantThread> CreateThreadAsync(IList<(MessageRole role, string content)> initialMessages);
-    Task<ThreadRun> CreateRunAsync(string threadId, string assistantId);
+    Task<ThreadRun> CreateRunAsync(string threadId, string assistantId, params string[] additionalInstructions);
     Task<ThreadRun> CancelRunAsync(string threadId, string runId);
     Task<ThreadRun> WaitForRunCompletedAsync(string threadId, string runId);
     Task<ThreadRun> SubmitFunctionOutputsAsync(string threadId, string runId, IEnumerable<(string toolCallId, string value)> outputs);
@@ -71,15 +71,12 @@ public class AssistantRepository(string apiKey) : IAssistantRepository
         return thread.Value;
     }
 
-    public async Task<ThreadRun> CreateRunAsync(string threadId, string assistantId)
+    public async Task<ThreadRun> CreateRunAsync(string threadId, string assistantId, params string[] additionalInstructions)
     {
         var options = new RunCreationOptions()
         {
-            AdditionalInstructions = $"""
-必要に応じて、以下のパラメータを使ってください。
-- 今日: {DateTime.Now:yyyy/MM/dd}
-- 時間: {DateTime.Now:HH/mm}
-"""
+            AllowParallelToolCalls = true,
+            AdditionalInstructions = string.Join("\n\n", additionalInstructions),
         };
         var run = await Client.CreateRunAsync(threadId, assistantId, options);
         return run.Value;
@@ -90,7 +87,6 @@ public class AssistantRepository(string apiKey) : IAssistantRepository
         var run = await Client.CancelRunAsync(threadId, runId);
         return run.Value;
     }
-
 
     public async Task<ThreadRun> WaitForRunCompletedAsync(string threadId, string runId)
     {

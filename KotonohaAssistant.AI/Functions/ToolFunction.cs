@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core.Utils;
+using OpenAI.Assistants;
 using OpenAI.Chat;
 
 namespace KotonohaAssistant.AI.Functions;
@@ -49,5 +50,14 @@ public abstract class ToolFunction(ILogger logger)
           functionDescription: Description,
           functionParameters: BinaryData.FromBytes(Encoding.UTF8.GetBytes(Parameters))
         );
+    }
+
+    public FunctionToolDefinition CreateDefinition()
+    {
+        return new FunctionToolDefinition(GetType().Name)
+        {
+            Description = Description,
+            Parameters = BinaryData.FromBytes(Encoding.UTF8.GetBytes(Parameters))
+        };
     }
 }

@@ -34,8 +34,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAlarmRepository>(new AlarmRepository(AlarmDBPath));
         services.AddSingleton<ICalendarEventRepository>(new CalendarEventRepository(GoogleApiKey, CalendarId));
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
-        services.AddSingleton<IChatMessageRepository>(new ChatMessageRepository(DBPath));
-        services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
         services.AddSingleton<IAssistantDataRepository>(new AssistantDataRepository(DBPath));
         services.AddSingleton<IAssistantRepository>(new AssistantRepository(OpenAIApiKey));
         services.AddSingleton<IAlarmService>(sp => new AlarmService(sp.GetRequiredService<IAlarmRepository>(), AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
@@ -46,8 +44,6 @@ public static class ServiceCollectionExtensions
             var logger = sp.GetRequiredService<Core.Utils.ILogger>();
             var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
             var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
-            var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
-            var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
             var assistantDataRepository = sp.GetRequiredService<IAssistantDataRepository>();
             var assistantRepository = sp.GetRequiredService<IAssistantRepository>();
             var alarmService = sp.GetRequiredService<IAlarmService>();
@@ -67,8 +63,6 @@ public static class ServiceCollectionExtensions
             };
 
             return  new ConversationService(
-                chatMessageRepository,
-                chatCompletionRepository,
                 assistantDataRepository,
                 assistantRepository,
                 functions,

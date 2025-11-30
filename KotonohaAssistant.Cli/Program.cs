@@ -2,7 +2,6 @@
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
-using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Utils;
 
@@ -46,14 +45,10 @@ var functions = new List<ToolFunction>
     new ForgetMemory(logger),
 };
 
-var chatMessageRepository = new ChatMessageRepository(dbPath);
-var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
 var assistantDataRepository = new AssistantDataRepository(dbPath);
 var assistantRepository = new AssistantRepository(openAiApiKey);
 
 var service = new ConversationService(
-    chatMessageRepository,
-    chatCompletionRepository,
     assistantDataRepository,
     assistantRepository,
     functions,
@@ -63,7 +58,7 @@ var service = new ConversationService(
 
 alarmService.Start();
 
-foreach (var (sister, message) in await service.GetAllMessages_())
+foreach (var (sister, message) in await service.GetAllMessages())
 {
     var name = sister?.ToDisplayName() ?? "私";
     Console.WriteLine($"{name}: {message}");
@@ -82,7 +77,7 @@ try
             continue;
         }
 
-        await foreach (var result in service.TalkWithKotonohaSisters_(input))
+        await foreach (var result in service.TalkWithKotonohaSisters(input))
         {
             if (result.Functions is not null)
             {

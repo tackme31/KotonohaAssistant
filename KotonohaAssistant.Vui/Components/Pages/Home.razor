@@ -133,7 +133,6 @@
 
         _voiceClient = new VoiceClient();
 
-        await ConversationService.LoadLatestConversation();
         foreach (var (sister, message) in ConversationService.GetAllMessages())
         {
             _messages.Add((message, sister, null));

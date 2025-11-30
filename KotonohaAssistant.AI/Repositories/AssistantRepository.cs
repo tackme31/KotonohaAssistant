@@ -2,6 +2,7 @@
 using OpenAI;
 using OpenAI.Assistants;
 using System.ClientModel;
+using System.ClientModel.Primitives;
 
 namespace KotonohaAssistant.AI.Repositories;
 
@@ -14,7 +15,7 @@ public interface IAssistantRepository
     Task<ThreadRun> CreateRunAsync(string threadId, string assistantId);
     Task<ThreadRun> CancelRunAsync(string threadId, string runId);
     Task<ThreadRun> WaitForRunCompletedAsync(string threadId, string runId);
-    Task<ThreadRun> SubmitFunctionOutputsAsync(string threadId, string runId, IEnumerable<(string toolCallId, string value)> outputs)
+    Task<ThreadRun> SubmitFunctionOutputsAsync(string threadId, string runId, IEnumerable<(string toolCallId, string value)> outputs);
     Task<ThreadMessage> CreateMessageAsync(string threadId, MessageRole role, params string[] contents);
     Task<List<ThreadMessage>> GetMessagesAsync(string threadId);
     Task<ThreadMessage?> GetLatestMessageAsync(string threadId);
@@ -72,7 +73,15 @@ public class AssistantRepository(string apiKey) : IAssistantRepository
 
     public async Task<ThreadRun> CreateRunAsync(string threadId, string assistantId)
     {
-        var run = await Client.CreateRunAsync(threadId, assistantId);
+        var options = new RunCreationOptions()
+        {
+            AdditionalInstructions = $"""
+必要に応じて、以下のパラメータを使ってください。
+- 今日: {DateTime.Now:yyyy/MM/dd}
+- 時間: {DateTime.Now:HH/mm}
+"""
+        };
+        var run = await Client.CreateRunAsync(threadId, assistantId, options);
         return run.Value;
     }
 

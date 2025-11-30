@@ -90,6 +90,30 @@ public class ConversationService
         _logger = logger;
     }
 
+    public async Task<IEnumerable<(Kotonoha? sister, string message)>> GetAllMessages_()
+    {
+        var threadId = await GetThreadIdAsync();
+        var messages = await _assistantRepository.GetMessagesAsync(threadId);
+        var result = new List<(Kotonoha? sister, string message)>();
+        foreach (var message in messages)
+        {
+            if (message.Role == MessageRole.User && message.Content[0].Text.StartsWith("私:"))
+            {
+                result.Add((null, message.Content[0].Text.Replace("私: ", string.Empty)));
+            }
+
+            if (message.Role == MessageRole.Assistant &&
+                message.Content.Any())
+            {
+                var (sister, _, messageText) = ParseMessage(message.Content[0].Text);
+                result.Add((sister, messageText));
+            }
+        }
+
+        result.Reverse();
+        return result;
+    }
+
     public IEnumerable<(Kotonoha? sister, string message)> GetAllMessages()
     {
         foreach (var message in _state.ChatMessages.Skip(5)) // CreateNewConversationAsyncで追加した生成参考用の会話をスキップ
@@ -136,11 +160,13 @@ public class ConversationService
         catch (Exception ex)
         {
             _logger.LogError(ex);
-            throw;
+            var assistant = await _assistantRepository.CreateAssistantAsync("gpt-4o-mini", name, instruction, _functions.Values);
+            await _assistantDataRepository.InsertAssistantDataAsync(assistant.Id, name);
+            return assistant.Id;
         }
     }
 
-    private async Task<string> CreateNewThreadAsync()
+    public async Task<string> CreateNewThreadAsync()
     {
         try
         {
@@ -430,9 +456,9 @@ public class ConversationService
 
         // 関数実行
         var functions = new List<ConversationFunction>();
-        var outputs = new List<(string toolCallId, string output)>();
-        while (run.RequiredActions.Any())
+        if (run.RequiredActions.Any())
         {
+            var outputs = new List<(string toolCallId, string output)>();
             foreach (var action in run.RequiredActions)
             {
                 using var doc = JsonDocument.Parse(action.FunctionArguments);
@@ -455,11 +481,11 @@ public class ConversationService
                     Result = result
                 });
             }
+
+            run = await _assistantRepository.SubmitFunctionOutputsAsync(run.ThreadId, run.Id, outputs);
         }
 
-        run = await _assistantRepository.SubmitFunctionOutputsAsync(run.ThreadId, run.Id, outputs);
         run = await _assistantRepository.WaitForRunCompletedAsync(_currentThreadId, run.Id);
-
         message = await _assistantRepository.GetLatestMessageAsync(_currentThreadId);
 
         {
@@ -688,40 +714,6 @@ public class ConversationService
         return (sisterType, emotionType, message);
     }
 
-    private async Task InvokeFunctions(ThreadRun run)
-    {
-        var invokedFunctions = new List<ConversationFunction>();
-
-        var outputs = new List<(string toolCallId, string output)>();
-        while (run.RequiredActions.Any())
-        {
-            foreach (var action in run.RequiredActions)
-            {
-                using var doc = JsonDocument.Parse(action.FunctionArguments);
-                if (!_functions.TryGetValue(action.FunctionName, out var function) || function is null)
-                {
-                    continue;
-                }
-
-                if (!function.TryParseArguments(doc, out var arguments))
-                {
-                    continue;
-                }
-
-                var result = await function.Invoke(arguments, _state);
-                outputs.Add((action.ToolCallId, result));
-                invokedFunctions.Add(new ConversationFunction
-                {
-                    Name = action.FunctionName,
-                    Arguments = arguments,
-                    Result = result
-                });
-            }
-        }
-
-        run = await _assistantRepository.SubmitFunctionOutputsAsync(run.ThreadId, run.Id, outputs);
-    }
-
     /// <summary>
     /// Function callingで呼び出された関数の実行を行います
     /// </summary>
@@ -840,7 +832,7 @@ public class ConversationService
         }
 
         // 4回以上同じ方にお願いすると怠ける
-        if (_state.PatienceCount > 3)
+        if (_state.PatienceCount > 1)
         {
             return true;
         }

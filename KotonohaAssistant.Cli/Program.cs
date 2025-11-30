@@ -63,7 +63,7 @@ var service = new ConversationService(
 
 alarmService.Start();
 
-foreach (var (sister, message) in service.GetAllMessages())
+foreach (var (sister, message) in await service.GetAllMessages_())
 {
     var name = sister?.ToDisplayName() ?? "私";
     Console.WriteLine($"{name}: {message}");

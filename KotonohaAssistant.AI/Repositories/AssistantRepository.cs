@@ -7,13 +7,16 @@ namespace KotonohaAssistant.AI.Repositories;
 
 public interface IAssistantRepository
 {
-    Task<Assistant> RegisterAssistantAsync(string model, string assistantName, string instructions, IEnumerable<ToolFunction> functions);
+    Task<Assistant> CreateAssistantAsync(string model, string assistantName, string instructions, IEnumerable<ToolFunction> functions);
     IAsyncEnumerable<Assistant> GetAssistantsAsync();
+    Task<Assistant> GetAssistantAsync(string id);
     Task<AssistantThread> CreateThreadAsync(IList<(MessageRole role, string content)> initialMessages);
     Task<ThreadRun> CreateRunAsync(string threadId, string assistantId);
+    Task<ThreadRun> CancelRunAsync(string threadId, string runId);
     Task<ThreadRun> WaitForRunCompletedAsync(string threadId, string runId);
-    Task<ThreadRun> SubmitFunctionOutputAsync(string threadId, string runId, string toolCallId, string value);
-    Task<ThreadMessage> CreateUserMessageAsync(string threadId, string content);
+    Task<ThreadRun> SubmitFunctionOutputsAsync(string threadId, string runId, IEnumerable<(string toolCallId, string value)> outputs)
+    Task<ThreadMessage> CreateMessageAsync(string threadId, MessageRole role, params string[] contents);
+    Task<List<ThreadMessage>> GetMessagesAsync(string threadId);
     Task<ThreadMessage?> GetLatestMessageAsync(string threadId);
     Task<bool> DeleteMessageAsync(string threadId, string messageId);
 }
@@ -23,7 +26,7 @@ public class AssistantRepository(string apiKey) : IAssistantRepository
     private readonly OpenAIClient _client = new(apiKey);
     private AssistantClient Client => _client.GetAssistantClient();
 
-    public async Task<Assistant> RegisterAssistantAsync(string model, string assistantName, string instructions, IEnumerable<ToolFunction> functions)
+    public async Task<Assistant> CreateAssistantAsync(string model, string assistantName, string instructions, IEnumerable<ToolFunction> functions)
     {
         var options = new AssistantCreationOptions
         {
@@ -48,6 +51,12 @@ public class AssistantRepository(string apiKey) : IAssistantRepository
         }
     }
 
+    public async Task<Assistant> GetAssistantAsync(string id)
+    {
+        var assistant = await Client.GetAssistantAsync(id);
+        return assistant.Value;
+    }
+
     public async Task<AssistantThread> CreateThreadAsync(IList<(MessageRole role, string content)> initialMessages)
     {
         var options = new ThreadCreationOptions();
@@ -64,9 +73,15 @@ public class AssistantRepository(string apiKey) : IAssistantRepository
     public async Task<ThreadRun> CreateRunAsync(string threadId, string assistantId)
     {
         var run = await Client.CreateRunAsync(threadId, assistantId);
-
-        return await WaitForRunCompletedAsync(threadId, run.Value.Id);
+        return run.Value;
     }
+
+    public async Task<ThreadRun> CancelRunAsync(string threadId, string runId)
+    {
+        var run = await Client.CancelRunAsync(threadId, runId);
+        return run.Value;
+    }
+
 
     public async Task<ThreadRun> WaitForRunCompletedAsync(string threadId, string runId)
     {
@@ -81,23 +96,37 @@ public class AssistantRepository(string apiKey) : IAssistantRepository
         return run.Value;
     }
 
-    public async Task<ThreadRun> SubmitFunctionOutputAsync(string threadId, string runId, string toolCallId, string value)
+    public async Task<ThreadRun> SubmitFunctionOutputsAsync(string threadId, string runId, IEnumerable<(string toolCallId, string value)> outputs)
     {
-        return await Client.SubmitToolOutputsToRunAsync(threadId, runId, [
-            new ToolOutput{
-                ToolCallId = toolCallId,
-                Output = value,
-            }]);
+        return await Client.SubmitToolOutputsToRunAsync(
+            threadId,
+            runId,
+            outputs.Select(output => new ToolOutput
+            {
+                ToolCallId = output.toolCallId,
+                Output = output.value
+            }));
     }
 
-    public async Task<ThreadMessage> CreateUserMessageAsync(string threadId, string content)
+    public async Task<ThreadMessage> CreateMessageAsync(string threadId, MessageRole role, params string[] contents)
     {
         var message = await Client.CreateMessageAsync(
             threadId,
-            MessageRole.User,
-            [MessageContent.FromText(content)]);
+            role,
+            [.. contents.Select(content => MessageContent.FromText(content))]);
 
         return message.Value;
+    }
+
+    public async Task<List<ThreadMessage>> GetMessagesAsync(string threadId)
+    {
+        var messages = new List<ThreadMessage>();
+        await foreach (var message in Client.GetMessagesAsync(threadId))
+        {
+            messages.Add(message);
+        }
+
+        return messages;
     }
 
     public async Task<ThreadMessage?> GetLatestMessageAsync(string threadId)

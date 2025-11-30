@@ -82,7 +82,7 @@ try
             continue;
         }
 
-        await foreach (var result in service.TalkWithKotonohaSisters(input))
+        await foreach (var result in service.TalkWithKotonohaSisters_(input))
         {
             if (result.Functions is not null)
             {

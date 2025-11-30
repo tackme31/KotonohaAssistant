@@ -48,10 +48,14 @@ var functions = new List<ToolFunction>
 
 var chatMessageRepository = new ChatMessageRepository(dbPath);
 var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
+var assistantDataRepository = new AssistantDataRepository(dbPath);
+var assistantRepository = new AssistantRepository(openAiApiKey);
 
 var service = new ConversationService(
     chatMessageRepository,
     chatCompletionRepository,
+    assistantDataRepository,
+    assistantRepository,
     functions,
     logger,
     akaneBehaviour: Behaviour.Default,

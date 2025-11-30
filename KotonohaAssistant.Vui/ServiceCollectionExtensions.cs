@@ -36,6 +36,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
         services.AddSingleton<IChatMessageRepository>(new ChatMessageRepository(DBPath));
         services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
+        services.AddSingleton<IAssistantDataRepository>(new AssistantDataRepository(DBPath));
+        services.AddSingleton<IAssistantRepository>(new AssistantRepository(OpenAIApiKey));
         services.AddSingleton<IAlarmService>(sp => new AlarmService(sp.GetRequiredService<IAlarmRepository>(), AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
         services.AddSingleton<ITimerService>(sp => new TimerService(AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
 
@@ -46,6 +48,8 @@ public static class ServiceCollectionExtensions
             var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
             var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
             var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
+            var assistantDataRepository = sp.GetRequiredService<IAssistantDataRepository>();
+            var assistantRepository = sp.GetRequiredService<IAssistantRepository>();
             var alarmService = sp.GetRequiredService<IAlarmService>();
             var timerService = sp.GetRequiredService<ITimerService>();
 
@@ -65,6 +69,8 @@ public static class ServiceCollectionExtensions
             return  new ConversationService(
                 chatMessageRepository,
                 chatCompletionRepository,
+                assistantDataRepository,
+                assistantRepository,
                 functions,
                 logger,
                 akaneBehaviour: Behaviour.Default,

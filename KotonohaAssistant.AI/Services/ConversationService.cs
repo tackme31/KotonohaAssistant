@@ -27,6 +27,8 @@ public class ConversationService
 
     private readonly IChatMessageRepository _chatMessageRepositoriy;
     private readonly IChatCompletionRepository _chatCompletionRepository;
+    private readonly IAssistantDataRepository _assistantDataRepository;
+    private readonly IAssistantRepository _assistantRepository;
     private readonly ILogger _logger;
 
     private long? _currentConversationId = null;
@@ -36,6 +38,8 @@ public class ConversationService
     public ConversationService(
         IChatMessageRepository chatMessageRepository,
         IChatCompletionRepository chatCompletionRepository,
+        IAssistantDataRepository assistantDataRepository,
+        IAssistantRepository assistantRepository,
         IList<ToolFunction> availableFunctions,
         ILogger logger,
         Kotonoha defaultSister = Kotonoha.Akane,
@@ -64,6 +68,8 @@ public class ConversationService
 
         _chatMessageRepositoriy = chatMessageRepository;
         _chatCompletionRepository = chatCompletionRepository;
+        _assistantDataRepository = assistantDataRepository;
+        _assistantRepository = assistantRepository;
         _logger = logger;
     }
 

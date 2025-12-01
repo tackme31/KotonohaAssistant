@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using KotonohaAssistant.Alarm.ViewModels;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -14,9 +15,9 @@ namespace KotonohaAssistant.Alarm
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MainWindow
     {
-        public MainWindow()
+        public MainWindow(RootViewModel viewModel)
         {
             InitializeComponent();
         }

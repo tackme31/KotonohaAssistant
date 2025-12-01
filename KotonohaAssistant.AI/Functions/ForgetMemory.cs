@@ -1,4 +1,4 @@
-using KotonohaAssistant.AI.Utils;
+using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 

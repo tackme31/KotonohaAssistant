@@ -1,7 +1,7 @@
 using KotonohaAssistant.AI.Extensions;
 using System.Text.Json;
-using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.AI.Repositories;
+using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;

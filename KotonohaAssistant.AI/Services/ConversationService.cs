@@ -1,15 +1,12 @@
 ﻿using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
-using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace KotonohaAssistant.AI.Services;
 
@@ -25,14 +22,11 @@ public class ConversationService
     /// 最後に保存したメッセージ
     /// </summary>
     private ChatMessage? _lastSavedMessage;
+    private long? _currentConversationId = null;
 
     private readonly IChatMessageRepository _chatMessageRepositoriy;
     private readonly IChatCompletionRepository _chatCompletionRepository;
     private readonly ILogger _logger;
-
-    private long? _currentConversationId = null;
-
-    public IReadOnlyConversationState State => _state;
 
     public ConversationService(
         IChatMessageRepository chatMessageRepository,
@@ -101,34 +95,11 @@ public class ConversationService
         _state.ClearChatMessages();
 
         // 生成時の参考のためにあらかじめ会話を入れておく
-        _state.AddMessage(new ChatResponse
-        {
-            Assistant = Kotonoha.Aoi,
-            Text = "はじめまして、マスター。私は琴葉葵。こっちは姉の茜。",
-            Emotion = Emotion.Calm
-        });
-        _state.AddMessage(new ChatResponse
-        {
-            Assistant = Kotonoha.Akane,
-            Text = "今日からうちらがマスターのことサポートするで。",
-            Emotion = Emotion.Calm
-        });
-        _state.AddMessage(new ChatResponse
-        {
-            Assistant = Kotonoha.Aoi,
-            Text = "これから一緒に過ごすことになるけど、気軽に声をかけてね。",
-            Emotion = Emotion.Joy
-        });
-        _state.AddMessage(new ChatResponse
-        {
-            Assistant = Kotonoha.Akane,
-            Text = "せやな！これからいっぱい思い出作っていこな。",
-            Emotion = Emotion.Joy
-        });
-        _state.AddMessage(new ChatRequest
-        {
-            Text = "うん。よろしくね。",
-        });
+        _state.AddAssistantMessage(Kotonoha.Aoi, "はじめまして、マスター。私は琴葉葵。こっちは姉の茜。", Emotion.Calm);
+        _state.AddAssistantMessage(Kotonoha.Akane, "今日からうちらがマスターのことサポートするで。", Emotion.Calm);
+        _state.AddAssistantMessage(Kotonoha.Aoi, "これから一緒に過ごすことになるけど、気軽に声をかけてね。", Emotion.Joy);
+        _state.AddAssistantMessage(Kotonoha.Akane, "せやな！これからいっぱい思い出作っていこな。", Emotion.Joy);
+        _state.AddUserMessage("うん。よろしくね。");
 
         _lastSavedMessage = null;
 
@@ -248,30 +219,18 @@ public class ConversationService
         {
             case Kotonoha.Akane when _state.CurrentSister == Kotonoha.Aoi:
                 _state.CurrentSister = Kotonoha.Akane;
-                _state.AddMessage(new ChatRequest
-                {
-                    InputType = ChatInputType.Instruction,
-                    Text = Instruction.SwitchSisterTo(Kotonoha.Akane)
-                });
+                _state.AddInstruction(Instruction.SwitchSisterTo(Kotonoha.Akane));
                 break;
             case Kotonoha.Aoi when _state.CurrentSister == Kotonoha.Akane:
                 _state.CurrentSister = Kotonoha.Aoi;
-                _state.AddMessage(new ChatRequest
-                {
-                    InputType = ChatInputType.Instruction,
-                    Text = Instruction.SwitchSisterTo(Kotonoha.Aoi),
-                });
+                _state.AddInstruction(Instruction.SwitchSisterTo(Kotonoha.Aoi));
                 break;
             default:
                 break;
         }
 
         // 返信を生成
-        _state.AddMessage(new ChatRequest
-        {
-            InputType = ChatInputType.User,
-            Text = input,
-        });
+        _state.AddUserMessage(input);
         var completion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
         if (completion is null)
         {
@@ -304,11 +263,7 @@ public class ConversationService
             // それでも関数呼び出しされることがあるのでチェック
             if (completion is null || completion.FinishReason == ChatFinishReason.ToolCalls)
             {
-                _state.AddMessage(new ChatRequest
-                {
-                    InputType = ChatInputType.Instruction,
-                    Text = Instruction.CancelLazyMode
-                });
+                _state.AddInstruction(Instruction.CancelLazyMode);
             }
             // 実際に怠けた場合の処理
             else
@@ -324,17 +279,13 @@ public class ConversationService
                     };
                 }
 
-                _state.AddMessage(completion);
+                _state.AddAssistantMessage(completion);
 
                 EndLazyMode();
 
                 // 姉妹を切り替えて、再度呼び出し
                 _state.CurrentSister = _state.CurrentSister.Switch();
-                _state.AddMessage(new ChatRequest
-                {
-                    InputType = ChatInputType.Instruction,
-                    Text = Instruction.SwitchSisterTo(_state.CurrentSister)
-                });
+                _state.AddInstruction(Instruction.SwitchSisterTo(_state.CurrentSister));
 
                 completion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
 
@@ -347,7 +298,7 @@ public class ConversationService
         {
             yield break;
         }
-        _state.AddMessage(completion);
+        _state.AddAssistantMessage(completion);
 
         // 関数の実行
         List<ConversationFunction> functions;
@@ -383,11 +334,11 @@ public class ConversationService
                 Kotonoha.Aoi => Instruction.BeginLazyModeAoi,
                 _ => null
             };
-            _state.AddMessage(new ChatRequest
+
+            if (instruction is not null)
             {
-                InputType = ChatInputType.Instruction,
-                Text = instruction,
-            });
+                _state.AddInstruction(instruction);
+            }
         }
 
         void EndLazyMode()
@@ -398,11 +349,11 @@ public class ConversationService
                 Kotonoha.Aoi => Instruction.EndLazyModeAoi,
                 _ => null
             };
-            _state.AddMessage(new ChatRequest
+
+            if (instruction is not null)
             {
-                InputType = ChatInputType.Instruction,
-                Text = instruction,
-            });
+                _state.AddInstruction(instruction);
+            }
         }
     }
 
@@ -449,7 +400,7 @@ public class ConversationService
             }
 
             completion = nextCompletion;
-            _state.AddMessage(completion);
+            _state.AddAssistantMessage(completion);
         }
 
         return (completion, invokedFunctions);

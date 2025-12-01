@@ -1,7 +1,6 @@
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
-using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core.Utils;
 using SQLitePCL;
 using System.Text.Json;

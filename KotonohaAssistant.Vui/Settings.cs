@@ -1,6 +1,4 @@
-﻿using KotonohaAssistant.AI.Prompts;
-
-namespace KotonohaAssistant.Vui;
+﻿namespace KotonohaAssistant.Vui;
 
 public class Settings
 {

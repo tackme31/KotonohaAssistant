@@ -1,6 +1,5 @@
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Services;
-using KotonohaAssistant.AI.Utils;
 using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 

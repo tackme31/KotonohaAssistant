@@ -186,7 +186,8 @@ public class ConversationService
     {
         try
         {
-            return await _chatCompletionRepository.CompleteChatAsync(_state.ChatMessagesWithSystemMessage, _options);
+            var trimmed = messages.TakeLast(300); // コンテキストウィンドウ対策
+            return await _chatCompletionRepository.CompleteChatAsync(messages, _options);
         }
         catch (Exception ex)
         {

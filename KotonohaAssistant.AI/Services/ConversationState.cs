@@ -1,6 +1,8 @@
 ﻿using OpenAI.Chat;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.AI.Prompts;
+using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.Core.Models;
 
 namespace KotonohaAssistant.AI.Utils;
 
@@ -72,24 +74,19 @@ public class ConversationState() : IReadOnlyConversationState
         _chatMessages = chatMessages.ToList();
     }
 
-    public void AddAssistantMessage(string message)
-    {
-        _chatMessages.Add(new AssistantChatMessage(message));
-    }
-
-    public void AddAssistantMessage(ChatCompletion completion)
+    public void AddMessage(ChatCompletion completion)
     {
         _chatMessages.Add(new AssistantChatMessage(completion));
     }
 
-    public void AddUserMessage(string message)
+    public void AddMessage(ChatResponse response)
     {
-        _chatMessages.Add(new UserChatMessage(message));
+        _chatMessages.Add(new AssistantChatMessage(response.ToJson()));
     }
 
-    public void AddHint(string hint)
+    public void AddMessage(ChatRequest request)
     {
-        _chatMessages.Add(new UserChatMessage($"[Hint]: {hint}"));
+        _chatMessages.Add(new UserChatMessage(request.ToJson()));
     }
 
     public void AddToolMessage(string id, string result)

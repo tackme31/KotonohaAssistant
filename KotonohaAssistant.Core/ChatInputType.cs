@@ -4,8 +4,8 @@ using Newtonsoft.Json.Converters;
 namespace KotonohaAssistant.Core;
 
 [JsonConverter(typeof(StringEnumConverter))]
-public enum Kotonoha
+public enum ChatInputType
 {
-    Akane = 0,
-    Aoi = 1
+    User,
+    Instruction
 }

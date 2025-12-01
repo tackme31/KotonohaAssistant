@@ -3,7 +3,7 @@ using KotonohaAssistant.Core;
 
 namespace KotonohaAssistant.AI.Prompts;
 
-static class Hint
+static class Instruction
 {
     public static readonly string BeginLazyModeAkane = """
 **関数を呼び出さずに**、タスクを葵に押し付けてください

@@ -66,9 +66,7 @@ public static class ServiceCollectionExtensions
                 chatMessageRepository,
                 chatCompletionRepository,
                 functions,
-                logger,
-                akaneBehaviour: Behaviour.Default,
-                aoiBehaviour: Behaviour.Default);
+                logger);
         });
     }
 

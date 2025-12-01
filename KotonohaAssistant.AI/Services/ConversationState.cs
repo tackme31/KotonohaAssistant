@@ -6,9 +6,6 @@ namespace KotonohaAssistant.AI.Utils;
 
 public interface IReadOnlyConversationState
 {
-    public string? AkaneBehaviour { get; }
-
-    public string? AoiBehaviour { get; }
 
     public int PatienceCount { get; }
 
@@ -23,16 +20,6 @@ public interface IReadOnlyConversationState
 
 public class ConversationState() : IReadOnlyConversationState
 {
-    /// <summary>
-    /// 茜の追加の振る舞い
-    /// </summary>
-    public string? AkaneBehaviour { get; set; }
-
-    /// <summary>
-    /// 葵の追加の振る舞い
-    /// </summary>
-    public string? AoiBehaviour { get; set; }
-
     /// <summary>
     /// 同じ方に連続してお願いした回数。忍耐値。
     /// </summary>
@@ -58,8 +45,8 @@ public class ConversationState() : IReadOnlyConversationState
             var now = DateTime.Now;
             return CurrentSister switch
             {
-                Kotonoha.Akane => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane(now, AkaneBehaviour))),
-                Kotonoha.Aoi => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi(now, AoiBehaviour))),
+                Kotonoha.Akane => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane(now))),
+                Kotonoha.Aoi => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi(now))),
                 _ => throw new NotSupportedException()
             };
         }

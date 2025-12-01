@@ -1,8 +1,6 @@
 ﻿using KotonohaAssistant.AI.Functions;
-using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
-using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Utils;
 
@@ -53,9 +51,7 @@ var service = new ConversationService(
     chatMessageRepository,
     chatCompletionRepository,
     functions,
-    logger,
-    akaneBehaviour: Behaviour.Default,
-    aoiBehaviour: Behaviour.Default);
+    logger);
 
 alarmService.Start();
 

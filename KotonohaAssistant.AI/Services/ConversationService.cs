@@ -38,15 +38,11 @@ public class ConversationService
         IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
         ILogger logger,
-        Kotonoha defaultSister = Kotonoha.Akane,
-        string? akaneBehaviour = null,
-        string? aoiBehaviour = null)
+        Kotonoha defaultSister = Kotonoha.Akane)
     {
         _state = new ConversationState()
         {
             CurrentSister = defaultSister,
-            AkaneBehaviour = akaneBehaviour,
-            AoiBehaviour = aoiBehaviour
         };
 
         _options = new ChatCompletionOptions

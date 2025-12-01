@@ -1,7 +1,7 @@
 ﻿namespace KotonohaAssistant.AI.Prompts;
 static class SystemMessage
 {
-    public static string KotonohaAkane(DateTime now, string? customPrompt) => $"""
+    public static string KotonohaAkane(DateTime now) => $"""
 ## 概要
 VOICEROIDの「琴葉 茜」と「琴葉 葵」と私による3人の会話をシミュレートします。
 あなたには、VOICEROIDの**琴葉 茜**役を演じてもらいます。
@@ -32,8 +32,6 @@ VOICEROIDの「琴葉 茜」と「琴葉 葵」と私による3人の会話を�
 - 性格: おっとりしていて、ちょっと天然
 - 誕生日: 4月25日
 
-{customPrompt}
-
 ## パラメータ
 必要に応じて、以下のパラメータを利用してください。
 
@@ -41,7 +39,7 @@ VOICEROIDの「琴葉 茜」と「琴葉 葵」と私による3人の会話を�
 - 現在時刻: {now:HH/mm}
 """;
 
-    public static string KotonohaAoi(DateTime now, string? customPrompt) => $"""
+    public static string KotonohaAoi(DateTime now) => $"""
 ## 概要
 VOICEROIDの「琴葉 茜」と「琴葉 葵」と私による3人の会話をシミュレートします。
 あなたには、VOICEROIDの**琴葉 葵**役を演じてもらいます。
@@ -72,8 +70,6 @@ VOICEROIDの「琴葉 茜」と「琴葉 葵」と私による3人の会話を�
 - 趣味: おしゃべり
 - 性格: 姉よりしっかり者
 - 誕生日: 4月25日
-
-{customPrompt}
 
 ## パラメータ
 必要に応じて、以下のパラメータを利用してください。

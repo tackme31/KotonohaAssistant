@@ -150,13 +150,13 @@ public class ConversationService
         }
 
         var lastText = _lastSavedMessage.Content.FirstOrDefault()?.Text ?? "";
-        if (lastText.StartsWith("茜"))
+        if (ChatResponse.TryParse(lastText, out var response) && response is not null)
+        {
+            _state.CurrentSister = response.Assistant;
+        }
+        else
         {
             _state.CurrentSister = Kotonoha.Akane;
-        }
-        if (lastText.StartsWith("葵"))
-        {
-            _state.CurrentSister = Kotonoha.Aoi;
         }
     }
 

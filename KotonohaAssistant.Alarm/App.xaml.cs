@@ -39,6 +39,7 @@ public partial class App : Application
 
             // Pages
             _ = services.AddSingleton<AlarmListPage>();
+            _ = services.AddSingleton<AlarmListViewModel>();
             _ = services.AddSingleton<TimerPage>();
 
             // Repositories
@@ -48,8 +49,6 @@ public partial class App : Application
                 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
                 return new AlarmRepository(alarmDBPath);
             });
-
-
         })
         .Build();
 

@@ -1,17 +1,14 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Controls;
 
 namespace KotonohaAssistant.Alarm.ViewModels;
 
 public partial class RootViewModel : ObservableObject
 {
-    public RootViewModel()
+    public AlarmListViewModel AlarmList { get; }
+
+    public RootViewModel(AlarmListViewModel alarmListViewModel)
     {
+        AlarmList = alarmListViewModel;
     }
 
     [ObservableProperty]
@@ -23,6 +20,8 @@ public partial class RootViewModel : ObservableObject
         {
             return;
         }
+
+        AlarmList.OnApplicationLoaded();
 
         IsApplicationLoaded = true;
     }

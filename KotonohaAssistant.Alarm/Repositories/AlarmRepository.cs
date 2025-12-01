@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using KotonohaAssistant.Alarm.Models;
 using Microsoft.Data.Sqlite;
 using System.Data;
 

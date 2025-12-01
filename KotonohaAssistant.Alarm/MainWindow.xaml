@@ -7,22 +7,24 @@
     xmlns:local="clr-namespace:KotonohaAssistant.Alarm"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:page="clr-namespace:KotonohaAssistant.Alarm.Pages"
+    xmlns:vm="clr-namespace:KotonohaAssistant.Alarm.ViewModels"
     mc:Ignorable="d"
-    d:DataContext="{d:DesignInstance local:MainWindow, IsDesignTimeCreatable=False}"
+    d:DataContext="{d:DesignInstance vm:RootViewModel, IsDesignTimeCreatable=False}"
     Title="MainWindow" Height="800" Width="400">
     <Grid>
         <ui:NavigationView x:Name="Menu"
                            MinHeight="300"
                            Margin="0,50,0,0"
                            PaneDisplayMode="LeftFluent"
-                           PaneTitle="Pane Title">
+                           PaneTitle="Pane Title"
+                           Navigated="Menu_Navigated">
             <ui:NavigationView.MenuItems>
                 <ui:NavigationViewItem Content="Alarm"
                                        Icon="{ui:SymbolIcon ClockAlarm20}"
-                                       TargetPageType="{x:Type page:AlarmListPage}" />
+                                       TargetPageType="{x:Type page:AlarmListPage}"/>
                 <ui:NavigationViewItem Content="Timer"
                                        Icon="{ui:SymbolIcon Timer24}"
-                                       TargetPageType="{x:Type page:TimerPage}" />
+                                       TargetPageType="{x:Type page:TimerPage}"/>
             </ui:NavigationView.MenuItems>
         </ui:NavigationView>
         <ui:TitleBar

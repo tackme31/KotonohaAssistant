@@ -4,11 +4,52 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:KotonohaAssistant.Alarm.Pages"
+      xmlns:vm="clr-namespace:KotonohaAssistant.Alarm.ViewModels"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:models="clr-namespace:KotonohaAssistant.Alarm.Models"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
-      Title="AlarmListPage">
+      Title="AlarmListPage"
+      d:DataContext="{d:DesignInstance vm:AlarmListViewModel, IsDesignTimeCreatable=True}">
 
     <Grid>
-        <TextBlock Text="Alarm list" Background="White" Foreground="Black"/>
+        <ui:ListView ItemsSource="{Binding AlarmSettings, Mode=TwoWay}">
+            <ui:ListView.ItemTemplate>
+                <DataTemplate DataType="{x:Type models:AlarmSetting}">
+                    <Grid Margin="8,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="60" />
+                        </Grid.ColumnDefinitions>
+                        <Ellipse
+                                    x:Name="Ellipse"
+                                    Grid.RowSpan="2"
+                                    Width="32"
+                                    Height="32"
+                                    Margin="6"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Fill="{ui:ThemeResource ControlStrongStrokeColorDefaultBrush}" />
+                        <ui:TextBlock
+                                    Grid.Row="0"
+                                    Grid.Column="1"
+                                    Margin="12,6,0,0"
+                                    FontWeight="Bold"
+                                    Text="{Binding TimeInSeconds, Converter={StaticResource TotalSecondsToDisplayTimeConverter}, Mode=OneWay}" />
+                        <ui:TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    Margin="12,0,0,6"
+                                    Text="{Binding VoicePath, Mode=OneWay}" />
+                        <ui:ToggleSwitch Grid.RowSpan="2" Grid.Column="2" />
+                    </Grid>
+                </DataTemplate>
+            </ui:ListView.ItemTemplate>
+        </ui:ListView>
     </Grid>
 </Page>

@@ -6,20 +6,29 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:local="clr-namespace:KotonohaAssistant.Alarm"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:page="clr-namespace:KotonohaAssistant.Alarm.Pages"
     mc:Ignorable="d"
     d:DataContext="{d:DesignInstance local:MainWindow, IsDesignTimeCreatable=False}"
     Title="MainWindow" Height="800" Width="400">
     <Grid>
-        <Grid>
-            <ui:Button>Foo</ui:Button>
-        </Grid>
+        <ui:NavigationView x:Name="Menu"
+                           MinHeight="300"
+                           Margin="0,50,0,0"
+                           PaneDisplayMode="LeftFluent"
+                           PaneTitle="Pane Title">
+            <ui:NavigationView.MenuItems>
+                <ui:NavigationViewItem Content="Alarm"
+                                       Icon="{ui:SymbolIcon ClockAlarm20}"
+                                       TargetPageType="{x:Type page:AlarmListPage}" />
+                <ui:NavigationViewItem Content="Timer"
+                                       Icon="{ui:SymbolIcon Timer24}"
+                                       TargetPageType="{x:Type page:TimerPage}" />
+            </ui:NavigationView.MenuItems>
+        </ui:NavigationView>
         <ui:TitleBar
             x:Name="TitleBar"
             Title="Alarm app"
             Margin="4">
-            <ui:TitleBar.Icon>
-                <ui:SymbolIcon Symbol="ClockAlarm16" />
-            </ui:TitleBar.Icon>
         </ui:TitleBar>
     </Grid>
 </ui:FluentWindow>

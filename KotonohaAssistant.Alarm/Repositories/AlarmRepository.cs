@@ -36,7 +36,8 @@ public class AlarmRepository(string dbPath) : IAlarmRepository
 CREATE TABLE IF NOT EXISTS AlarmSetting (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     TimeInSeconds INTEGER NOT NULL,
-    VoicePath TEXT NOT NULL
+    VoicePath TEXT NOT NULL,
+    IsEnabled INTEGER NOT NULL
 );
 ";
         await connection.ExecuteAsync(createTableQuery);

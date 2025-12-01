@@ -26,27 +26,30 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="60" />
                         </Grid.ColumnDefinitions>
-                        <Ellipse
-                                    x:Name="Ellipse"
-                                    Grid.RowSpan="2"
-                                    Width="32"
-                                    Height="32"
-                                    Margin="6"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Fill="{ui:ThemeResource ControlStrongStrokeColorDefaultBrush}" />
-                        <ui:TextBlock
-                                    Grid.Row="0"
-                                    Grid.Column="1"
-                                    Margin="12,6,0,0"
-                                    FontWeight="Bold"
-                                    Text="{Binding TimeInSeconds, Converter={StaticResource TotalSecondsToDisplayTimeConverter}, Mode=OneWay}" />
-                        <ui:TextBlock
-                                    Grid.Row="1"
-                                    Grid.Column="1"
-                                    Margin="12,0,0,6"
-                                    Text="{Binding VoicePath, Mode=OneWay}" />
-                        <ui:ToggleSwitch Grid.RowSpan="2" Grid.Column="2" />
+                        <Ellipse x:Name="Ellipse"
+                                 Grid.RowSpan="2"
+                                 Width="32"
+                                 Height="32"
+                                 Margin="6"
+                                 HorizontalAlignment="Center"
+                                 VerticalAlignment="Center"
+                                 Fill="{ui:ThemeResource ControlStrongStrokeColorDefaultBrush}">
+                        </Ellipse>
+                        <ui:SymbolIcon Symbol="ClockAlarm20"
+                                       FontSize="20"
+                                       Grid.RowSpan="2"/>
+                        <ui:TextBlock Grid.Row="0"
+                                      Grid.Column="1"
+                                      Margin="12,6,0,0"
+                                      FontWeight="Bold"
+                                      Text="{Binding TimeInSeconds, Converter={StaticResource TotalSecondsToDisplayTimeConverter}, Mode=OneWay}" />
+                        <ui:TextBlock Grid.Row="1"
+                                      Grid.Column="1"
+                                      Margin="12,0,0,6"
+                                      Text="{Binding VoicePath, Mode=OneWay}" />
+                        <ui:ToggleSwitch Grid.RowSpan="2"
+                                         Grid.Column="2"
+                                         IsChecked="{Binding IsEnabled, Mode=TwoWay}"/>
                     </Grid>
                 </DataTemplate>
             </ui:ListView.ItemTemplate>

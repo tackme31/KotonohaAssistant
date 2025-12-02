@@ -37,7 +37,7 @@ namespace KotonohaAssistant.Alarm
                     alarmList.DataContext = vm.AlarmList;
                     break;
                 case TimerPage timer:
-                    //timer.DataContext = vm.Timer;
+                    timer.DataContext = vm.Timer;
                     break;
             }
         }

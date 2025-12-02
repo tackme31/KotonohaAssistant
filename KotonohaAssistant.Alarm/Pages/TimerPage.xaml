@@ -4,11 +4,48 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:KotonohaAssistant.Alarm.Pages"
+      xmlns:vm="clr-namespace:KotonohaAssistant.Alarm.ViewModels"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      xmlns:models="clr-namespace:KotonohaAssistant.Alarm.Models"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
-      Title="TimerPage">
+      Title="TimerPage"
+      d:DataContext="{d:DesignInstance vm:TimerViewModel, IsDesignTimeCreatable=True}">
 
-    <Grid>
-        <TextBlock Text="Timer" Background="White" Foreground="Black"/>
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- 残り秒数 -->
+        <ui:TextBlock Grid.Row="0"
+                      FontSize="48"
+                      FontWeight="Bold"
+                      Margin="0 20 0 20"
+                      HorizontalAlignment="Center"
+                      Text="{Binding RemainingSeconds}" />
+
+        <!-- ボタン -->
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Center">
+            <ui:NumberBox Width="120"
+                          Minimum="0"
+                          MaxDecimalPlaces="0"
+                          Value="{Binding InputSeconds}"/>
+            <ui:Button Content="Start"
+                       Margin="10"
+                       FontSize="16"
+                       Padding="10 5"
+                       Command="{Binding StartCommand}"/>
+            <ui:Button Content="Stop"
+                       Margin="10"
+                       FontSize="16"
+                       Padding="10 5"
+                       Command="{Binding StopCommand}"
+                       IsEnabled="{Binding IsRunning}"/>
+        </StackPanel>
     </Grid>
 </Page>

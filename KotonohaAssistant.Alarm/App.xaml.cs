@@ -50,6 +50,7 @@ public partial class App : Application
             _ = services.AddSingleton<AlarmListPage>();
             _ = services.AddSingleton<AlarmListViewModel>();
             _ = services.AddSingleton<TimerPage>();
+            _ = services.AddSingleton<TimerViewModel>();
 
             // Repositories/Services
             _ = services.AddSingleton<IDialogService, DialogService>();
@@ -66,6 +67,12 @@ public partial class App : Application
             {
                 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
                 return new AlarmRepository(alarmDBPath);
+            });
+            _ = services.AddSingleton<ITimerService>(sp =>
+            {
+                var logger = sp.GetRequiredService<ILogger>();
+                var alarmSoundFile = config["ALARM_SOUND_FILE"] ?? throw new Exception();
+                return new TimerService(alarmSoundFile, logger);
             });
         })
         .Build();

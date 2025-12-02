@@ -4,6 +4,8 @@ using KotonohaAssistant.Alarm.Models;
 using KotonohaAssistant.Alarm.Repositories;
 using KotonohaAssistant.Alarm.Services;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Windows;
 
 namespace KotonohaAssistant.Alarm.ViewModels;
@@ -30,7 +32,13 @@ public partial class AlarmListViewModel : ObservableObject
         var settings = await _alarmRepository.GetAlarmSettingsAsync(TimeSpan.MinValue, TimeSpan.MaxValue);
         var sorted = new ObservableCollection<AlarmSetting>(settings.OrderBy(s => s.TimeInSeconds));
 
+        foreach (var s in sorted)
+        {
+            s.PropertyChanged += AlarmSetting_PropertyChanged;
+        }
+
         AlarmSettings = sorted;
+        AlarmSettings.CollectionChanged += AlarmSettings_CollectionChanged;
     }
 
     [ObservableProperty]
@@ -80,6 +88,7 @@ public partial class AlarmListViewModel : ObservableObject
         {
             index++;
         }
+
         AlarmSettings.Insert(index, setting);
     }
 
@@ -92,6 +101,7 @@ public partial class AlarmListViewModel : ObservableObject
             {
                 index++;
             }
+
             AlarmSettings.Insert(index, setting);
         });
     }
@@ -117,5 +127,42 @@ public partial class AlarmListViewModel : ObservableObject
             _alarmService.StopAlarm();
             setting.IsEnabled = false;
         });
+    }
+
+    private async void AlarmSetting_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not AlarmSetting alarm)
+            return;
+
+        if (e.PropertyName == nameof(AlarmSetting.IsEnabled))
+        {
+            try
+            {
+                await _alarmRepository.UpdateIsEnabledAsync(alarm.Id, alarm.IsEnabled);
+            }
+            catch (Exception ex)
+            {
+                // 必要に応じてエラーハンドリング
+            }
+        }
+    }
+
+    private void AlarmSettings_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.NewItems != null)
+        {
+            foreach (AlarmSetting newItem in e.NewItems)
+            {
+                newItem.PropertyChanged += AlarmSetting_PropertyChanged;
+            }
+        }
+
+        if (e.OldItems != null)
+        {
+            foreach (AlarmSetting oldItem in e.OldItems)
+            {
+                oldItem.PropertyChanged -= AlarmSetting_PropertyChanged;
+            }
+        }
     }
 }

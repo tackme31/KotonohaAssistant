@@ -4,6 +4,7 @@ using KotonohaAssistant.Alarm.Models;
 using KotonohaAssistant.Alarm.Repositories;
 using KotonohaAssistant.Alarm.Services;
 using System.Collections.ObjectModel;
+using System.Windows;
 
 namespace KotonohaAssistant.Alarm.ViewModels;
 
@@ -82,23 +83,39 @@ public partial class AlarmListViewModel : ObservableObject
         AlarmSettings.Insert(index, setting);
     }
 
+    public void AddAlarm(AlarmSetting setting)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            int index = 0;
+            while (index < AlarmSettings.Count && AlarmSettings[index].TimeInSeconds <= setting.TimeInSeconds)
+            {
+                index++;
+            }
+            AlarmSettings.Insert(index, setting);
+        });
+    }
+
     public IRelayCommand StopCommand => new RelayCommand(StopAlarm);
 
-    private void StopAlarm()
+    public void StopAlarm()
     {
-        var id = _alarmService.GetCurrentAlarmId();
-        if (id is null)
+        Application.Current.Dispatcher.Invoke(() =>
         {
-            return;
-        }
+            var id = _alarmService.GetCurrentAlarmId();
+            if (id is null)
+            {
+                return;
+            }
 
-        var setting = AlarmSettings.FirstOrDefault(s => s.Id == id);
-        if (setting is null)
-        {
-            return;
-        }
+            var setting = AlarmSettings.FirstOrDefault(s => s.Id == id);
+            if (setting is null)
+            {
+                return;
+            }
 
-        _alarmService.StopAlarm();
-        setting.IsEnabled = false;
+            _alarmService.StopAlarm();
+            setting.IsEnabled = false;
+        });
     }
 }

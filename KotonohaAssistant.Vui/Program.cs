@@ -27,10 +27,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 {
-    // アラームをスタート
     using var scope = app.Services.CreateScope();
-    var alarmService = scope.ServiceProvider.GetRequiredService<IAlarmService>();
-    alarmService.Start();
 }
 
 app.UseHttpsRedirection();

@@ -19,6 +19,7 @@ var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFol
 var dbPath = Path.Combine(appDirectory, "app.cli.db");
 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
 var logPath = Path.Combine(appDirectory, "log.cli.txt");
+var voicePath = Path.Combine(appDirectory, "alarm voice");
 
 // DBの保存先
 if (!Directory.Exists(appDirectory))
@@ -29,13 +30,12 @@ if (!Directory.Exists(appDirectory))
 // 利用可能な関数
 var logger = new Logger(logPath, isConsoleLoggingEnabled: true);
 var timerService = new TimerService(alarmSoundFile, logger);
-var alarmService = new AlarmService(new AlarmRepository(alarmDBPath), alarmSoundFile, logger);
 var calendarRepository = new CalendarEventRepository(googleApiKey, calendarId);
 using var weatherRepository = new WeatherRepository(owmApiKey);
 var functions = new List<ToolFunction>
 {
-    new CallMaster(alarmService, logger),
-    new StopAlarm(alarmService, logger),
+    new CallMaster(voicePath, logger),
+    new StopAlarm(logger),
     new StartTimer(timerService, logger),
     new StopTimer(timerService, logger),
     new CreateCalendarEvent(calendarRepository, logger),
@@ -52,8 +52,6 @@ var service = new ConversationService(
     chatCompletionRepository,
     functions,
     logger);
-
-alarmService.Start();
 
 foreach (var (sister, message) in service.GetAllMessages())
 {

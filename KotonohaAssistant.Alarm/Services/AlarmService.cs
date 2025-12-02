@@ -1,10 +1,11 @@
-﻿using KotonohaAssistant.AI.Repositories;
+﻿using KotonohaAssistant.Alarm.Models;
+using KotonohaAssistant.Alarm.Repositories;
 using KotonohaAssistant.Core.Utils;
 using NAudio.Wave;
-using SQLitePCL;
+using System.IO;
 using System.Timers;
 
-namespace KotonohaAssistant.AI.Services;
+namespace KotonohaAssistant.Alarm.Services;
 
 public interface IAlarmService
 {
@@ -12,6 +13,7 @@ public interface IAlarmService
     public void Stop();
     public void StopAlarm();
     public Task<bool> SetAlarm(AlarmSetting setting);
+    public long? GetCurrentAlarmId();
 }
 
 public class AlarmService : IDisposable, IAlarmService
@@ -24,15 +26,15 @@ public class AlarmService : IDisposable, IAlarmService
     /// <summary>
     /// タイマーのチェック間隔
     /// </summary>
-    public static readonly TimeSpan TimerCheckInterval = TimeSpan.FromSeconds(30);
+    public static readonly TimeSpan TimerCheckInterval = TimeSpan.FromSeconds(15);
 
-    private readonly VoiceClient _voiceClient;
     private readonly System.Timers.Timer _timer;
     private readonly ElapsedEventHandler _onTimeElapsed;
     private readonly IAlarmRepository _alarmRepository;
     private readonly string _alarmSoundFile;
     private readonly ILogger _logger;
     private bool _calling = false;
+    private long? _currentAlabrmId = null;
 
     /// <summary>
     /// 処理中のアラームのキャンセルトークン
@@ -41,7 +43,6 @@ public class AlarmService : IDisposable, IAlarmService
 
     public AlarmService(IAlarmRepository alarmRepository, string alarmSoundFile, ILogger logger)
     {
-        _voiceClient = new VoiceClient();
         _alarmRepository = alarmRepository;
         _alarmSoundFile = alarmSoundFile;
         _logger = logger;
@@ -85,7 +86,7 @@ public class AlarmService : IDisposable, IAlarmService
     {
         try
         {
-            await _alarmRepository.InsertAlarmSetting(setting);
+            await _alarmRepository.InsertAlarmSettingAsync(setting);
             return true;
         }
         catch (Exception ex)
@@ -107,21 +108,22 @@ public class AlarmService : IDisposable, IAlarmService
         List<AlarmSetting>? settings = null;
         try
         {
-            settings = await _alarmRepository.GetAlarmSettingsAsync(startTime.TimeOfDay - MaxCallingTime, startTime.TimeOfDay);
+            settings = await _alarmRepository.GetAlarmSettingsAsync(startTime.TimeOfDay - TimeSpan.FromMinutes(1), startTime.TimeOfDay);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex);
         }
 
-        if (settings is null or [])
+        var enabledSettings = settings?.Where(s => s.IsEnabled).ToList();
+        if (enabledSettings is null or [])
         {
             return;
         }
 
         // 複数設定があっても1個だけしか使わない
-        var alarm = settings[0];
-        if (string.IsNullOrWhiteSpace(alarm.Message))
+        var alarm = enabledSettings[0];
+        if (!File.Exists(alarm.VoicePath))
         {
             return;
         }
@@ -130,21 +132,24 @@ public class AlarmService : IDisposable, IAlarmService
         _cts.CancelAfter(MaxCallingTime);
 
         _calling = true;
+        _currentAlabrmId = alarm.Id;
         try
         {
-            // アラーム音声3秒 + 読み上げ
-            await PlayAlarmSoundAsync(TimeSpan.FromSeconds(3), _cts.Token);
-            await _voiceClient.SpeakAsync(alarm.Sister, Core.Emotion.Calm, alarm.Message);
+            // アラーム音声3秒
+            await PlayAlarmSoundAsync(_alarmSoundFile, TimeSpan.FromSeconds(3), _cts.Token);
+
+            // ボイス音声読み上げ
+            await PlayAlarmSoundAsync(alarm.VoicePath, TimeSpan.FromSeconds(10), _cts.Token);
 
             // 残りはアラーム音声の繰り返し
             var end = startTime + MaxCallingTime;
             while (DateTime.Now < end && !_cts.Token.IsCancellationRequested)
             {
-                await PlayAlarmSoundAsync(TimeSpan.FromSeconds(5), _cts.Token);
+                await PlayAlarmSoundAsync(_alarmSoundFile, TimeSpan.FromSeconds(5), _cts.Token);
                 await Task.Delay(TimeSpan.FromSeconds(1));
             }
         }
-        catch(OperationCanceledException)
+        catch (OperationCanceledException)
         {
             // キャンセル時の処理
             _logger.LogInformation("タイマーを停止しました");
@@ -152,13 +157,14 @@ public class AlarmService : IDisposable, IAlarmService
         finally
         {
             _calling = false;
+            _currentAlabrmId = null;
             _cts.Dispose();
             _cts = null;
         }
 
         try
         {
-            await _alarmRepository.DeleteAlarmSettingsAsync(settings.Select(s => s.Id));
+            await _alarmRepository.UpdateIsEnabledAsync(alarm.Id, isEnabled: false);
         }
         catch (Exception ex)
         {
@@ -166,20 +172,32 @@ public class AlarmService : IDisposable, IAlarmService
         }
     }
 
-    async Task PlayAlarmSoundAsync(TimeSpan playingTime, CancellationToken token)
+    async Task PlayAlarmSoundAsync(string audioFilePath, TimeSpan playingTime, CancellationToken token)
     {
-        using var audioFile = new AudioFileReader(_alarmSoundFile);
+        using var audioFile = new AudioFileReader(audioFilePath);
         using var outputDevice = new WaveOutEvent();
+
+        var tcs = new TaskCompletionSource();
+        outputDevice.PlaybackStopped += (s, e) =>
+        {
+            tcs.TrySetResult();
+        };
 
         try
         {
             outputDevice.Init(audioFile);
-
             outputDevice.Play();
 
-            await Task.Delay(playingTime, token);
+            var delayTask = Task.Delay(playingTime, token);
+            var completedTask = await Task.WhenAny(tcs.Task, delayTask);
+            if (completedTask == delayTask)
+            {
+                outputDevice.Stop();
+            }
+
+            token.ThrowIfCancellationRequested();
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             _logger.LogError(ex);
             outputDevice.Stop();
@@ -188,9 +206,10 @@ public class AlarmService : IDisposable, IAlarmService
 
     public void Dispose()
     {
-        _voiceClient.Dispose();
         _timer.Elapsed -= _onTimeElapsed;
         _timer.Dispose();
         _cts?.Dispose();
     }
+
+    public long? GetCurrentAlarmId() => _currentAlabrmId;
 }

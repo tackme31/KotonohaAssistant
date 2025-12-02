@@ -1,17 +1,18 @@
-﻿using AI.Talk.Editor.Api;
-using AI.Talk;
+﻿using AI.Talk;
+using AI.Talk.Editor.Api;
 using CoreAudio;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Models;
+using KotonohaAssistant.Core.Utils;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Security.Policy;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.VoiceServer
 {
@@ -128,11 +129,15 @@ namespace KotonohaAssistant.VoiceServer
                 switch (command)
                 {
                     case "SPEAK":
-                        var request = JsonConvert.DeserializeObject<SpeakRequest>(payload);
-                        await SpeakAsync(request.SisterType, request.Emotion, request.Message);
+                        var speakRequest = JsonConvert.DeserializeObject<SpeakRequest>(payload);
+                        await SpeakAsync(speakRequest.SisterType, speakRequest.Emotion, speakRequest.Message);
                         break;
                     case "STOP":
                         await StopAsync();
+                        break;
+                    case "EXPORT":
+                        var exportRequest = JsonConvert.DeserializeObject<ExportVoiceRequest>(payload);
+                        await ExportVoiceAsync(exportRequest);
                         break;
                 }
             }
@@ -196,7 +201,7 @@ namespace KotonohaAssistant.VoiceServer
             {
                 await WaitForStatusAsync(HostStatus.Idle);
 
-                var presetName = GetPresetName();
+                var presetName = GetPresetName(sister);
                 TtsControl.CurrentVoicePresetName = presetName;
                 ChangeStyle(presetName, emotion);
 
@@ -211,19 +216,6 @@ namespace KotonohaAssistant.VoiceServer
             }
 
             ResetChannelVolumeLevels();
-
-            string GetPresetName()
-            {
-                switch (sister)
-                {
-                    case Kotonoha.Akane:
-                        return "琴葉 茜";
-                    case Kotonoha.Aoi:
-                        return "琴葉 葵";
-                    default:
-                        return TtsControl.CurrentVoicePresetName;
-                }
-            }
         }
 
         public static async Task StopAsync()
@@ -245,6 +237,38 @@ namespace KotonohaAssistant.VoiceServer
             {
                 Logger.LogError(ex);
             }
+        }
+
+        public static async Task ExportVoiceAsync(ExportVoiceRequest request)
+        {
+            EnsureEditorConnected();
+            SwitchSpeakerChannelVolumeLevels(request.SisterType);
+
+            try
+            {
+                await WaitForStatusAsync(HostStatus.Idle);
+
+                var presetName = GetPresetName(request.SisterType);
+                TtsControl.CurrentVoicePresetName = presetName;
+                ChangeStyle(presetName, request.Emotion);
+
+                var dir = Path.GetDirectoryName(request.SavePath);
+                if (!Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                TtsControl.Text = request.Message;
+                TtsControl.SaveAudioToFile(request.SavePath);
+
+                await WaitForStatusAsync(HostStatus.Idle);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex);
+            }
+
+            ResetChannelVolumeLevels();
         }
 
         private static async Task WaitForStatusAsync(HostStatus status)
@@ -339,6 +363,19 @@ namespace KotonohaAssistant.VoiceServer
             catch (Exception ex)
             {
                 Logger.LogError(ex);
+            }
+        }
+
+        private static string GetPresetName(Kotonoha sister)
+        {
+            switch (sister)
+            {
+                case Kotonoha.Akane:
+                    return "琴葉 茜";
+                case Kotonoha.Aoi:
+                    return "琴葉 葵";
+                default:
+                    return TtsControl.CurrentVoicePresetName;
             }
         }
     }

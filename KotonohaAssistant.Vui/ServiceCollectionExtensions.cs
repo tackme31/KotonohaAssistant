@@ -13,6 +13,7 @@ public static class ServiceCollectionExtensions
     private static readonly string DBPath = Path.Combine(AppFolder, "app.db");
     private static readonly string AlarmDBPath = Path.Combine(AppFolder, "alarm.db");
     private static readonly string LogPath = Path.Combine(AppFolder, "log.txt");
+    private static readonly string VoicePath = Path.Combine(AppFolder, "alarm voice");
 
     private static string OpenAIApiKey => GetEnvVar("OPENAI_API_KEY");
     private static string OpenAIModel = GetEnvVar("OPENAI_MODEL");
@@ -36,7 +37,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
         services.AddSingleton<IChatMessageRepository>(new ChatMessageRepository(DBPath));
         services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
-        services.AddSingleton<IAlarmService>(sp => new AlarmService(sp.GetRequiredService<IAlarmRepository>(), AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
         services.AddSingleton<ITimerService>(sp => new TimerService(AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
 
         services.AddSingleton(sp =>
@@ -46,14 +46,13 @@ public static class ServiceCollectionExtensions
             var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
             var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
             var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
-            var alarmService = sp.GetRequiredService<IAlarmService>();
             var timerService = sp.GetRequiredService<ITimerService>();
 
             // 利用する関数一覧
             var functions = new ToolFunction[]
             {
-                new CallMaster(alarmService, logger),
-                new StopAlarm(alarmService, logger),
+                new CallMaster(VoicePath, logger),
+                new StopAlarm(logger),
                 new StartTimer(timerService, logger),
                 new StopTimer(timerService, logger),
                 new CreateCalendarEvent(calendarRepository, logger),

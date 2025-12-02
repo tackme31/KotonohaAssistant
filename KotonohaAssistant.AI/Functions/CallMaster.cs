@@ -1,13 +1,11 @@
 using KotonohaAssistant.AI.Extensions;
-using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
-using SQLitePCL;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CallMaster(IAlarmService service, ILogger logger) : ToolFunction(logger)
+public class CallMaster(string voiceDirectory, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、指定された時間に「呼びかける」または「知らせる」依頼を受けた場合に呼び出されます。
@@ -17,6 +15,7 @@ public class CallMaster(IAlarmService service, ILogger logger) : ToolFunction(lo
 - 「◯◯の時間になったら呼んでほしい」
 - 「明日の朝◯◯時に起こしてくれる？」
 - 「◯◯の10分前に知らせてほしい」
+- 「◯◯時にアラームを設定して」
 
 ## 時間設定に関する注意点
 
@@ -66,8 +65,6 @@ public class CallMaster(IAlarmService service, ILogger logger) : ToolFunction(lo
 }
 """;
 
-    private readonly IAlarmService _alarmService = service;
-
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
     {
         arguments = new Dictionary<string, object>();
@@ -95,16 +92,15 @@ public class CallMaster(IAlarmService service, ILogger logger) : ToolFunction(lo
     {
         var time = (TimeSpan)arguments["timeToCall"];
         var message = (string)arguments["messageForCallingWhenTheTimeComes"];
-        var setting = new AlarmSetting
-        {
-            TimeInSeconds = time.TotalSeconds,
-            Sister = state.CurrentSister,
-            Message = message
-        };
+        var savePath = Path.Combine(voiceDirectory, message);
 
         try
         {
-            await _alarmService.SetAlarm(setting);
+            using var voiceClient = new VoiceClient();
+            using var alarmClient = new AlarmClient();
+
+            await voiceClient.ExportVoiceAsync(state.CurrentSister, Core.Emotion.Calm, message, savePath);
+            await alarmClient.AddAlarm(time, savePath + ".wav", isRepeated: false);
         }
         catch(Exception ex)
         {

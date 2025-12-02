@@ -1,6 +1,7 @@
 ﻿using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.Cli;
 using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Utils;
 
@@ -20,30 +21,46 @@ var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
 var logPath = Path.Combine(appDirectory, "log.cli.txt");
 var voicePath = Path.Combine(appDirectory, "alarm voice");
 
+var enableCalendarFunction = EnvUtils.GetBooleanValueOrDefault("ENABLE_CALENDAR_FUNCTION", false);
+var enableWeatherFunction = EnvUtils.GetBooleanValueOrDefault("ENABLE_WEATHER_FUNCTION", false);
+
 // DBの保存先
 if (!Directory.Exists(appDirectory))
 {
     Directory.CreateDirectory(appDirectory);
 }
 
-// 利用可能な関数
+// リポジトリ周り
 var logger = new Logger(logPath, isConsoleLoggingEnabled: true);
 var calendarRepository = new CalendarEventRepository(googleApiKey, calendarId);
 using var weatherRepository = new WeatherRepository(owmApiKey);
+var chatMessageRepository = new ChatMessageRepository(dbPath);
+var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
+
+// 利用可能な関数
 var functions = new List<ToolFunction>
 {
     new CallMaster(voicePath, logger),
     new StopAlarm(logger),
     new StartTimer(logger),
     new StopTimer(logger),
-    new CreateCalendarEvent(calendarRepository, logger),
-    new GetCalendarEvent(calendarRepository, logger),
-    new GetWeather(weatherRepository, (owmLat, owmLon), logger),
-    new ForgetMemory(logger),
+    new ForgetMemory(logger)
 };
 
-var chatMessageRepository = new ChatMessageRepository(dbPath);
-var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
+if (enableCalendarFunction)
+{
+    functions.AddRange([
+        new CreateCalendarEvent(calendarRepository, logger),
+        new GetCalendarEvent(calendarRepository, logger)
+    ]);
+}
+
+if (enableWeatherFunction)
+{
+    functions.AddRange([
+        new GetWeather(weatherRepository, (owmLat, owmLon), logger)
+    ]);
+}
 
 var service = new ConversationService(
     chatMessageRepository,

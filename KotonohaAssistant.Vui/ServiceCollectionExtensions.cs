@@ -23,6 +23,9 @@ public static class ServiceCollectionExtensions
     private static double OwmLat => double.TryParse(GetEnvVar("OWM_LAT"), out var owmLat) ? owmLat : throw new FormatException($"無効な環境変数です: 'OWM_LAT'");
     private static double OwmLon => double.TryParse(GetEnvVar("OWM_LON"), out var owmLon) ? owmLon : throw new FormatException($"無効な環境変数です: 'OWM_LON'");
 
+    private static bool EnableCalendarFunction => GetBoolVarOrDefault("ENABLE_CALENDAR_FUNCTION", false);
+    private static bool EnableWeatherFunction => GetBoolVarOrDefault("ENABLE_WEATHER_FUNCTION", false);
+
     public static void AddConversationService(this IServiceCollection services)
     {
         if (!Directory.Exists(AppFolder))
@@ -46,19 +49,31 @@ public static class ServiceCollectionExtensions
             var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
 
             // 利用する関数一覧
-            var functions = new ToolFunction[]
+            var functions = new List<ToolFunction>
             {
                 new CallMaster(VoicePath, logger),
                 new StopAlarm(logger),
                 new StartTimer(logger),
                 new StopTimer(logger),
-                new CreateCalendarEvent(calendarRepository, logger),
-                new GetCalendarEvent(calendarRepository, logger),
-                new GetWeather(weatherRepository, (OwmLat, OwmLon), logger),
                 new ForgetMemory(logger),
             };
 
-            return  new ConversationService(
+            if (EnableCalendarFunction)
+            {
+                functions.AddRange([
+                    new CreateCalendarEvent(calendarRepository, logger),
+                    new GetCalendarEvent(calendarRepository, logger)
+                ]);
+            }
+
+            if (EnableWeatherFunction)
+            {
+                functions.AddRange([
+                    new GetWeather(weatherRepository, (OwmLat, OwmLon), logger)
+                ]);
+            }
+
+            return new ConversationService(
                 chatMessageRepository,
                 chatCompletionRepository,
                 functions,
@@ -67,4 +82,13 @@ public static class ServiceCollectionExtensions
     }
 
     private static string GetEnvVar(string name) => Environment.GetEnvironmentVariable(name) ?? throw new Exception($"環境変数'{name}'が見つかりません。");
+    private static bool GetBoolVarOrDefault(string key, bool defaultValue)
+    {
+        var value = Environment.GetEnvironmentVariable(key);
+        if (bool.TryParse(value, out bool result))
+        {
+            return result;
+        }
+        return defaultValue;
+    }
 }

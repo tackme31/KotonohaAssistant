@@ -63,10 +63,11 @@ public partial class App : Application
                 var alarmSoundFile = config["ALARM_SOUND_FILE"] ?? throw new Exception();
                 return new AlarmService(alarmRepository, alarmSoundFile, logger);
             });
-            _ = services.AddSingleton<IAlarmRepository>(_ =>
+            _ = services.AddSingleton<IAlarmRepository>(sp =>
             {
+                var logger = sp.GetRequiredService<ILogger>();
                 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
-                return new AlarmRepository(alarmDBPath);
+                return new AlarmRepository(alarmDBPath, logger);
             });
             _ = services.AddSingleton<ITimerService>(sp =>
             {

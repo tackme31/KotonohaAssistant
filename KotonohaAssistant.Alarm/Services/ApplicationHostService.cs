@@ -4,6 +4,7 @@ using KotonohaAssistant.Alarm.Repositories;
 using KotonohaAssistant.Alarm.ViewModels;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Models;
+using KotonohaAssistant.Core.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
@@ -59,6 +60,7 @@ internal class ApplicationHostService : IHostedService
 
     private async Task RunNamedPipeServer(CancellationToken token)
     {
+        var logger = _serviceProvider.GetRequiredService<ILogger>();
         var vm = _serviceProvider.GetRequiredService<AlarmListViewModel>();
         var repository = _serviceProvider.GetRequiredService<IAlarmRepository>();
         var navicationService = _serviceProvider.GetRequiredService<INavigationService>();
@@ -80,9 +82,9 @@ internal class ApplicationHostService : IHostedService
                 // 接続エラー処理
                 // reader/writerのdisposeの関係で毎回発生するため一旦無視する
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // log
+                logger.LogError(ex);
             }
         }
 
@@ -105,6 +107,7 @@ internal class ApplicationHostService : IHostedService
                     catch (Exception ex)
                     {
                         await writer.WriteLineAsync("ERROR: " + ex.Message);
+                        logger.LogError(ex);
                     }
                 }
             }

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using KotonohaAssistant.Alarm.Models;
 using KotonohaAssistant.Alarm.Repositories;
 using KotonohaAssistant.Alarm.Services;
+using KotonohaAssistant.Core.Utils;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -15,12 +16,18 @@ public partial class AlarmListViewModel : ObservableObject
     private readonly IAlarmRepository _alarmRepository;
     private readonly IAlarmService _alarmService;
     private readonly IDialogService _dialogService;
+    private readonly ILogger _logger;
 
-    public AlarmListViewModel(IAlarmRepository alarmRepository, IAlarmService alarmService, IDialogService dialogService)
+    public AlarmListViewModel(
+        IAlarmRepository alarmRepository,
+        IAlarmService alarmService,
+        IDialogService dialogService,
+        ILogger logger)
     {
         _alarmRepository = alarmRepository;
         _alarmService = alarmService;
         _dialogService = dialogService;
+        _logger = logger;
     }
 
     public async Task InitializeAsync()
@@ -62,7 +69,7 @@ public partial class AlarmListViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            // log
+            _logger.LogError(ex);
         }
     }
 
@@ -138,7 +145,7 @@ public partial class AlarmListViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                // 必要に応じてエラーハンドリング
+                _logger.LogError(ex);
             }
         }
     }

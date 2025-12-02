@@ -1,5 +1,6 @@
 ﻿using Dapper;
 using KotonohaAssistant.Alarm.Models;
+using KotonohaAssistant.Core.Utils;
 using Microsoft.Data.Sqlite;
 using System.Data;
 
@@ -15,7 +16,7 @@ public interface IAlarmRepository
     Task UpdateIsEnabledAsync(long id, bool isEnabled);
 }
 
-public class AlarmRepository(string dbPath) : IAlarmRepository
+public class AlarmRepository(string dbPath, ILogger logger) : IAlarmRepository
 {
     private bool _isInitialized = false;
 
@@ -71,7 +72,7 @@ WHERE @From < TimeInSeconds
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            logger.LogError(ex);
             return [];
         }
     }
@@ -90,7 +91,7 @@ WHERE @From < TimeInSeconds
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            logger.LogError(ex);
         }
     }
 
@@ -117,7 +118,7 @@ SELECT last_insert_rowid();
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            logger.LogError(ex);
             return -1;
         }
     }
@@ -142,7 +143,7 @@ SELECT last_insert_rowid();
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            logger.LogError(ex);
         }
     }
 }

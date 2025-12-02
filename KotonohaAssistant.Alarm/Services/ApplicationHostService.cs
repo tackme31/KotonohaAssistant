@@ -61,7 +61,8 @@ internal class ApplicationHostService : IHostedService
     private async Task RunNamedPipeServer(CancellationToken token)
     {
         var logger = _serviceProvider.GetRequiredService<ILogger>();
-        var vm = _serviceProvider.GetRequiredService<AlarmListViewModel>();
+        var alarmListVm = _serviceProvider.GetRequiredService<AlarmListViewModel>();
+        var timerVm = _serviceProvider.GetRequiredService<TimerViewModel>();
         var repository = _serviceProvider.GetRequiredService<IAlarmRepository>();
         var navicationService = _serviceProvider.GetRequiredService<INavigationService>();
         var tasks = new List<Task>();
@@ -124,22 +125,31 @@ internal class ApplicationHostService : IHostedService
                 case "ADD_ALARM":
                     navicationService.Navigate(typeof(AlarmListPage));
 
-                    var request = JsonConvert.DeserializeObject<AddAlarmRequest>(payload);
+                    var addAlarmRequest = JsonConvert.DeserializeObject<AddAlarmRequest>(payload);
                     var setting = new AlarmSetting
                     {
-                        TimeInSeconds = request!.TimeInSeconds,
-                        VoicePath = request!.VoicePath,
-                        IsRepeated = request!.IsRepeated,
+                        TimeInSeconds = addAlarmRequest!.TimeInSeconds,
+                        VoicePath = addAlarmRequest!.VoicePath,
+                        IsRepeated = addAlarmRequest!.IsRepeated,
                         IsEnabled = true,
                     };
                     var id = await repository.InsertAlarmSettingAsync(setting);
                     setting.Id = id;
-                    vm.AddAlarm(setting);
+                    alarmListVm.AddAlarm(setting);
                     break;
                 case "STOP_ALARM":
                     navicationService.Navigate(typeof(AlarmListPage));
 
-                    vm.StopAlarm();
+                    alarmListVm.StopAlarm();
+                    break;
+                case "START_TIMER":
+                    navicationService.Navigate(typeof(TimerPage));
+                    var startTimerRequest = JsonConvert.DeserializeObject<StartTimerRequest>(payload);
+                    timerVm.Start(startTimerRequest!.Time);
+                    break;
+                case "STOP_TIMER":
+                    navicationService.Navigate(typeof(TimerPage));
+                    timerVm.Stop();
                     break;
             }
         }

@@ -49,10 +49,16 @@ public partial class TimerViewModel : ObservableObject
         _timerService.Start();
     }
 
+    public void Start(TimeSpan time)
+    {
+        InputSeconds = (int)time.TotalSeconds;
+        Start();
+    }
+
     private bool CanStart() => !IsRunning;
 
     [RelayCommand(CanExecute = nameof(CanStop))]
-    private void Stop()
+    public void Stop()
     {
         _timerService.Stop();
         IsRunning = false;

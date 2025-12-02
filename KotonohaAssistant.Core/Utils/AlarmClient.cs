@@ -80,6 +80,53 @@ public class AlarmClient : IDisposable
         }
     }
 
+    public async Task StartTimer(TimeSpan time)
+    {
+        await ConnectToServerAsync();
+
+        if (_writer is null || _reader is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var request = new StartTimerRequest()
+            {
+                Time = time,
+            };
+            var serialized = JsonConvert.SerializeObject(request, Formatting.None);
+            await _writer.WriteLineAsync("START_TIMER:" + serialized);
+
+            await _reader.ReadLineAsync();
+        }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException("An error occurred while communicating with the server.", ex);
+        }
+    }
+
+    public async Task StopTimer()
+    {
+        await ConnectToServerAsync();
+
+        if (_writer is null || _reader is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _writer.WriteLineAsync("STOP_TIMER");
+
+            await _reader.ReadLineAsync();
+        }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException("An error occurred while communicating with the server.", ex);
+        }
+    }
+
     public void Dispose()
     {
         _writer?.Dispose();

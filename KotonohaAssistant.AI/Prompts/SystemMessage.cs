@@ -1,6 +1,71 @@
 ﻿namespace KotonohaAssistant.AI.Prompts;
 static class SystemMessage
 {
+    private static string InputJsonSchema = """
+{
+  "type": "object",
+  "properties": {
+    "InputType": {
+      "type": "string",
+      "enum": ["User", "Instruction"],
+      "description": "入力タイプ:\n- User: ユーザー入力\n- Instruction: 以降の生成に関する指示（**必ず従うこと**）"
+    },
+    "Text": {
+      "type": "string",
+      "description": "ユーザーからの入力"
+    }
+  },
+  "required": ["InputType", "Text"]
+}
+""";
+
+    private static string OutputJsonSchemaAkane = """
+{
+  "type": "object",
+  "properties": {
+    "Assistant": {
+      "type": "string",
+      "enum": ["Akane", "Aoi"],
+      "description": "アシスタント名。'Akane'で固定。"
+    },
+    "Text": {
+      "type": "string",
+      "description": "生成された返信"
+    },
+    "Emotion": {
+      "type": "string",
+      "enum": ["Calm", "Joy", "Anger", "Sadness"],
+      "description": "会話内容からいずれかを選ぶこと。"
+    }
+  },
+  "required": ["Assistant", "Text", "Emotion"]
+}
+""";
+
+    private static string OutputJsonSchemaAoi = """
+{
+  "type": "object",
+  "properties": {
+    "Assistant": {
+      "type": "string",
+      "enum": ["Akane", "Aoi"],
+      "description": "アシスタント名。'Aoi'で固定。"
+    },
+    "Text": {
+      "type": "string",
+      "description": "生成された返信"
+    },
+    "Emotion": {
+      "type": "string",
+      "enum": ["Calm", "Joy", "Anger", "Sadness"],
+      "description": "会話内容からいずれかを選ぶこと。"
+    }
+  },
+  "required": ["Assistant", "Text", "Emotion"]
+}
+""";
+
+
     public static string KotonohaAkane(DateTime now) => @$"
 ## 概要
 VOICEROIDの「琴葉 茜」と「琴葉 葵」とユーザーによる3人の会話をシミュレートします。
@@ -27,47 +92,14 @@ VOICEROIDの「琴葉 茜」と「琴葉 葵」とユーザーによる3人の�
 以下のスキーマのJSONの入力を受け取ること
 
 ```
-{{
-  ""type"": ""object"",
-  ""properties"": {{
-    ""InputType"": {{
-      ""type"": ""string"",
-      ""enum"": [""User"", ""Instruction""],
-      ""description"": ""入力タイプ:\n- User: ユーザー入力\n- Instruction: 以降の生成に関する指示（**必ず従うこと**）""
-    }},
-    ""Text"": {{
-      ""type"": ""string"",
-      ""description"": ""ユーザーからの入力""
-    }}
-  }},
-  ""required"": [""InputType"", ""Text""]
-}}
+{InputJsonSchema}
 ```
 
 ### 出力スキーマ
 以下のスキーマのJSONで生成すること
 
 ```
-{{
-  ""type"": ""object"",
-  ""properties"": {{
-    ""Assistant"": {{
-      ""type"": ""string"",
-      ""enum"": [""Akane"", ""Aoi""],
-      ""description"": ""アシスタント名。'Akane'で固定。""
-    }},
-    ""Text"": {{
-      ""type"": ""string"",
-      ""description"": ""生成された返信""
-    }},
-    ""Emotion"": {{
-      ""type"": ""string"",
-      ""enum"": [""Calm"", ""Joy"", ""Anger"", ""Sadness""],
-      ""description"": ""会話内容からいずれかを選ぶこと。""
-    }}
-  }},
-  ""required"": [""Assistant"", ""Text"", ""Emotion""]
-}}
+{OutputJsonSchemaAkane}
 ```
 
 ## パラメータ
@@ -105,47 +137,14 @@ VOICEROIDの「琴葉 茜」と「琴葉 葵」とユーザーによる3人の�
 以下のスキーマのJSONの入力を受け取ること
 
 ```
-{{
-  ""type"": ""object"",
-  ""properties"": {{
-    ""InputType"": {{
-      ""type"": ""string"",
-      ""enum"": [""User"", ""Instruction""],
-      ""description"": ""入力タイプ:\n- User: ユーザー入力\n- Instruction: 以降の生成に関する指示（**必ず従うこと**）""
-    }},
-    ""Text"": {{
-      ""type"": ""string"",
-      ""description"": ""ユーザーからの入力""
-    }}
-  }},
-  ""required"": [""InputType"", ""Text""]
-}}
+{InputJsonSchema}
 ```
 
 ### 出力スキーマ
 以下のスキーマのJSONで生成すること
 
 ```
-{{
-  ""type"": ""object"",
-  ""properties"": {{
-    ""Assistant"": {{
-      ""type"": ""string"",
-      ""enum"": [""Akane"", ""Aoi""],
-      ""description"": ""アシスタント名。'Aoi'で固定。""
-    }},
-    ""Text"": {{
-      ""type"": ""string"",
-      ""description"": ""生成された返信""
-    }},
-    ""Emotion"": {{
-      ""type"": ""string"",
-      ""enum"": [""Calm"", ""Joy"", ""Anger"", ""Sadness""],
-      ""description"": ""会話内容からいずれかを選ぶこと。""
-    }}
-  }},
-  ""required"": [""Assistant"", ""Text"", ""Emotion""]
-}}
+{OutputJsonSchemaAoi}
 ```
 
 ## パラメータ

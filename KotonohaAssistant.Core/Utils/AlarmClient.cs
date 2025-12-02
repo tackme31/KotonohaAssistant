@@ -44,7 +44,7 @@ public class AlarmClient : IDisposable
         {
             var request = new AddAlarmRequest()
             {
-                TimeInSeconds = time.TotalSeconds,
+                TimeInSeconds = (long)time.TotalSeconds,
                 VoicePath = voicePath,
                 IsRepeated = isRepeated
             };

@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopAlarm(IAlarmService service, ILogger logger) : ToolFunction(logger)
+public class StopAlarm(ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、再生中のアラームを停止するために呼び出されます。アラーム停止の依頼があった際に実行されます。
@@ -28,8 +28,6 @@ public class StopAlarm(IAlarmService service, ILogger logger) : ToolFunction(log
 }
 """;
 
-    private readonly IAlarmService _alarmService = service;
-
     public override bool CanBeLazy => false;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
@@ -38,18 +36,19 @@ public class StopAlarm(IAlarmService service, ILogger logger) : ToolFunction(log
         return true;
     }
 
-    public override Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         try
         {
-            _alarmService.StopAlarm();
+            using var alarmClient = new AlarmClient();
+            await alarmClient.StopAlarm();
 
-            return Task.FromResult("アラームを停止しました");
+            return "アラームを停止しました";
         }
         catch (Exception ex)
         {
             Logger.LogError(ex);
-            return Task.FromResult("アラームの停止に失敗しました");
+            return "アラームの停止に失敗しました";
         }
     }
 }

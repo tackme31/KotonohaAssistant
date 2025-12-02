@@ -7,7 +7,7 @@ public class TotalSecondsToDisplayTimeConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is not double totalSeconds)
+        if (value is not long totalSeconds)
         {
             return "00時00分";
         }

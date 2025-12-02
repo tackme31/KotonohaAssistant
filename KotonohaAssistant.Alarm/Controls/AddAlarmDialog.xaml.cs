@@ -67,7 +67,7 @@ namespace KotonohaAssistant.Alarm.Controls
         public AlarmSetting AlarmSetting => new()
         {
             Id = -1,
-            TimeInSeconds = AlarmTime.TotalSeconds,
+            TimeInSeconds = (long)AlarmTime.TotalSeconds,
             VoicePath = FilePath.Text,
             IsRepeated = IsRepeated.IsChecked ?? false,
             IsEnabled = true

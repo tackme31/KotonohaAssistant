@@ -8,7 +8,7 @@ public partial class AlarmSetting : ObservableObject
     private long _id;
 
     [ObservableProperty]
-    private double _timeInSeconds;
+    private long _timeInSeconds;
 
     [ObservableProperty]
     private string? _voicePath;

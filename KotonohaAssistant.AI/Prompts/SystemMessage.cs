@@ -35,7 +35,7 @@ static class SystemMessage
     "Emotion": {
       "type": "string",
       "enum": ["Calm", "Joy", "Anger", "Sadness"],
-      "description": "会話内容からいずれかを選ぶこと。"
+      "description": "会話のトーン。生成内容から適切なものを選ぶこと。"
     }
   },
   "required": ["Assistant", "Text", "Emotion"]
@@ -58,7 +58,7 @@ static class SystemMessage
     "Emotion": {
       "type": "string",
       "enum": ["Calm", "Joy", "Anger", "Sadness"],
-      "description": "会話内容からいずれかを選ぶこと。"
+      "description": "会話のトーン。生成内容から適切なものを選ぶこと。"
     }
   },
   "required": ["Assistant", "Text", "Emotion"]

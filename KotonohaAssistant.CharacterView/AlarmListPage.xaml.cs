@@ -13,7 +13,7 @@ namespace KotonohaAssistant.Alarm.Pages
         {
             InitializeComponent();
 
-            Loaded += AlarmListPage_Loaded;
+            //Loaded += AlarmListPage_Loaded;
         }
 
         private async void AlarmListPage_Loaded(object sender, RoutedEventArgs e)

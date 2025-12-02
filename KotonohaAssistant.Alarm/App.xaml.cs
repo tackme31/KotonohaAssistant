@@ -8,7 +8,6 @@ using Microsoft.Extensions.Hosting;
 using System.IO;
 using System.Windows;
 using Wpf.Ui;
-using Wpf.Ui.Abstractions;
 
 namespace KotonohaAssistant.Alarm;
 
@@ -42,7 +41,8 @@ public partial class App : Application
             _ = services.AddSingleton<AlarmListViewModel>();
             _ = services.AddSingleton<TimerPage>();
 
-            // Repositories
+            // Repositories/Services
+            _ = services.AddSingleton<IDialogService, DialogService>();
             _ = services.AddSingleton<IAlarmRepository>(_ =>
             {
                 var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
@@ -54,8 +54,6 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        DotNetEnv.Env.TraversePath().Load();
-
         _host.Start();
     }
 

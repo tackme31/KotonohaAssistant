@@ -11,7 +11,7 @@ public interface IAlarmRepository
 
     Task DeleteAlarmSettingsAsync(IEnumerable<long> ids);
 
-    Task InsertAlarmSetting(AlarmSetting setting);
+    Task<int> InsertAlarmSetting(AlarmSetting setting);
 }
 
 public class AlarmRepository(string dbPath) : IAlarmRepository
@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS AlarmSetting (
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     TimeInSeconds INTEGER NOT NULL,
     VoicePath TEXT NOT NULL,
-    IsEnabled INTEGER NOT NULL
+    IsEnabled INTEGER NOT NULL,
+    IsRepeated INTEGER NOT NULL
 );
 ";
         await connection.ExecuteAsync(createTableQuery);
@@ -92,15 +93,15 @@ WHERE @From < TimeInSeconds
         }
     }
 
-    public async Task InsertAlarmSetting(AlarmSetting setting)
+    public async Task<int> InsertAlarmSetting(AlarmSetting setting)
     {
         await InitializeDatabaseAsync();
 
         var sql = @"
 INSERT INTO AlarmSetting
-    (TimeInSeconds, Sister, Message)
+    (TimeInSeconds, VoicePath, IsEnabled, IsRepeated)
 VALUES
-    (@TimeInSeconds, @Sister, @Message)
+    (@TimeInSeconds, @VoicePath, @IsEnabled, @IsRepeated)
 ";
 
         try
@@ -108,11 +109,13 @@ VALUES
             using var connection = Connection;
             connection.Open();
 
-            _ = await connection.ExecuteAsync(sql, setting);
+            var result = await connection.ExecuteAsync(sql, setting);
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
+            return -1;
         }
     }
 }

@@ -12,6 +12,7 @@
             </ResourceDictionary.MergedDictionaries>
 
             <converter:TotalSecondsToDisplayTimeConverter x:Key="TotalSecondsToDisplayTimeConverter" />
+            <converter:FilePathToFileNameConverter x:Key="FilePathToFileNameConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -8,4 +8,5 @@ public class AlarmSetting
     public double TimeInSeconds { get; set; }
     public string? VoicePath { get; set; }
     public bool IsEnabled { get; set; }
+    public bool IsRepeated { get; set; }
 }

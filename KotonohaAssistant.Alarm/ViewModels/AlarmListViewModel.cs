@@ -1,6 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using KotonohaAssistant.Alarm.Controls;
 using KotonohaAssistant.Alarm.Models;
 using KotonohaAssistant.Alarm.Repositories;
 using KotonohaAssistant.Alarm.Services;
@@ -11,11 +10,13 @@ namespace KotonohaAssistant.Alarm.ViewModels;
 public partial class AlarmListViewModel : ObservableObject
 {
     private readonly IAlarmRepository _alarmRepository;
+    private readonly IAlarmService _alarmService;
     private readonly IDialogService _dialogService;
 
-    public AlarmListViewModel(IAlarmRepository alarmRepository, IDialogService dialogService)
+    public AlarmListViewModel(IAlarmRepository alarmRepository, IAlarmService alarmService, IDialogService dialogService)
     {
         _alarmRepository = alarmRepository;
+        _alarmService = alarmService;
         _dialogService = dialogService;
     }
 
@@ -41,7 +42,8 @@ public partial class AlarmListViewModel : ObservableObject
 
     private async void DeleteSelectedAlarm()
     {
-        if (AlarmSettings.Count <= SelectedAlarmIndex)
+        if (SelectedAlarmIndex < 0 ||
+            AlarmSettings.Count <= SelectedAlarmIndex)
         {
             return;
         }
@@ -69,7 +71,7 @@ public partial class AlarmListViewModel : ObservableObject
             return;
         }
 
-        var id = await _alarmRepository.InsertAlarmSetting(setting);
+        var id = await _alarmRepository.InsertAlarmSettingAsync(setting);
         setting.Id = id;
 
         int index = 0;
@@ -78,5 +80,25 @@ public partial class AlarmListViewModel : ObservableObject
             index++;
         }
         AlarmSettings.Insert(index, setting);
+    }
+
+    public IRelayCommand StopCommand => new RelayCommand(StopAlarm);
+
+    private void StopAlarm()
+    {
+        var id = _alarmService.GetCurrentAlarmId();
+        if (id is null)
+        {
+            return;
+        }
+
+        var setting = AlarmSettings.FirstOrDefault(s => s.Id == id);
+        if (setting is null)
+        {
+            return;
+        }
+
+        _alarmService.StopAlarm();
+        setting.IsEnabled = false;
     }
 }

@@ -16,6 +16,9 @@ internal class ApplicationHostService : IHostedService
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        var alarmService = _serviceProvider.GetRequiredService<IAlarmService>();
+        alarmService.Start();
+
         var window = _serviceProvider.GetRequiredService<MainWindow>();
         var viewModel = _serviceProvider.GetRequiredService<RootViewModel>();
 
@@ -28,6 +31,9 @@ internal class ApplicationHostService : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        var alarmService = _serviceProvider.GetRequiredService<IAlarmService>();
+        alarmService.Stop();
+
         return Task.CompletedTask;
     }
 }

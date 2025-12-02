@@ -1,12 +1,22 @@
-﻿using KotonohaAssistant.Core;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace KotonohaAssistant.Alarm.Models;
 
-public class AlarmSetting
+public partial class AlarmSetting : ObservableObject
 {
-    public long Id { get; set; }
-    public double TimeInSeconds { get; set; }
-    public string? VoicePath { get; set; }
-    public bool IsEnabled { get; set; }
-    public bool IsRepeated { get; set; }
+    [ObservableProperty]
+    private long _id;
+
+    [ObservableProperty]
+    private double _timeInSeconds;
+
+    [ObservableProperty]
+    private string? _voicePath;
+
+    [ObservableProperty]
+
+    private bool _isEnabled;
+
+    [ObservableProperty]
+    private bool _isRepeated;
 }

@@ -2,6 +2,7 @@
 using KotonohaAssistant.Alarm.Repositories;
 using KotonohaAssistant.Alarm.Services;
 using KotonohaAssistant.Alarm.ViewModels;
+using KotonohaAssistant.Core.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -28,9 +29,17 @@ public partial class App : Application
         {
             var config = hostContext.Configuration;
             var alarmSoundFile = config["ALARM_SOUND_FILE"] ?? throw new Exception();
+            var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
 
             // App Host
             _ = services.AddHostedService<ApplicationHostService>();
+
+            // Logger
+            _ = services.AddSingleton<ILogger>(_ =>
+            {
+                var logPath = Path.Combine(appDirectory, "log.cli.txt");
+                return new Logger(logPath, isConsoleLoggingEnabled: false);
+            });
 
             // Main Window
             _ = services.AddSingleton<MainWindow>();
@@ -43,9 +52,15 @@ public partial class App : Application
 
             // Repositories/Services
             _ = services.AddSingleton<IDialogService, DialogService>();
+            _ = services.AddSingleton<IAlarmService>(sp =>
+            {
+                var alarmRepository = sp.GetRequiredService<IAlarmRepository>();
+                var logger = sp.GetRequiredService<ILogger>();
+                var alarmSoundFile = config["ALARM_SOUND_FILE"] ?? throw new Exception();
+                return new AlarmService(alarmRepository, alarmSoundFile, logger);
+            });
             _ = services.AddSingleton<IAlarmRepository>(_ =>
             {
-                var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
                 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
                 return new AlarmRepository(alarmDBPath);
             });

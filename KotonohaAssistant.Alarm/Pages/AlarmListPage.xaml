@@ -64,6 +64,12 @@
                     Margin="10,0"
                     Orientation="Horizontal"
                     HorizontalAlignment="Right">
+            <ui:Button x:Name="StopButton"
+                       HorizontalAlignment="Right"
+                       Margin="10,0"
+                       Command="{Binding StopCommand}">
+                Stop
+            </ui:Button>
             <ui:Button x:Name="AddButton"
                        HorizontalAlignment="Right"
                        Margin="10,0"

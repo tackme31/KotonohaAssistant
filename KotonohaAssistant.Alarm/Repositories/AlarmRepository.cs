@@ -11,7 +11,8 @@ public interface IAlarmRepository
 
     Task DeleteAlarmSettingsAsync(IEnumerable<long> ids);
 
-    Task<int> InsertAlarmSetting(AlarmSetting setting);
+    Task<long> InsertAlarmSettingAsync(AlarmSetting setting);
+    Task UpdateIsEnabledAsync(long id, bool isEnabled);
 }
 
 public class AlarmRepository(string dbPath) : IAlarmRepository
@@ -93,7 +94,7 @@ WHERE @From < TimeInSeconds
         }
     }
 
-    public async Task<int> InsertAlarmSetting(AlarmSetting setting)
+    public async Task<long> InsertAlarmSettingAsync(AlarmSetting setting)
     {
         await InitializeDatabaseAsync();
 
@@ -101,7 +102,9 @@ WHERE @From < TimeInSeconds
 INSERT INTO AlarmSetting
     (TimeInSeconds, VoicePath, IsEnabled, IsRepeated)
 VALUES
-    (@TimeInSeconds, @VoicePath, @IsEnabled, @IsRepeated)
+    (@TimeInSeconds, @VoicePath, @IsEnabled, @IsRepeated);
+
+SELECT last_insert_rowid();
 ";
 
         try
@@ -109,13 +112,37 @@ VALUES
             using var connection = Connection;
             connection.Open();
 
-            var result = await connection.ExecuteAsync(sql, setting);
-            return result;
+            var id = await connection.QuerySingleAsync<long>(sql, setting);
+            return id;
         }
         catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
             return -1;
+        }
+    }
+
+
+    public async Task UpdateIsEnabledAsync(long id, bool isEnabled)
+    {
+        await InitializeDatabaseAsync();
+
+        var sql = "UPDATE AlarmSetting SET IsEnabled = @IsEnabled WHERE Id = @Id";
+
+        try
+        {
+            using var connection = Connection;
+            connection.Open();
+
+            _ = await connection.ExecuteAsync(sql, new
+            {
+                IsEnabled = isEnabled,
+                Id = id
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
         }
     }
 }

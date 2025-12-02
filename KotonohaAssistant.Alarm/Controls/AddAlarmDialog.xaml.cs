@@ -2,7 +2,6 @@
 using Microsoft.Win32;
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace KotonohaAssistant.Alarm.Controls
 {
@@ -20,18 +19,15 @@ namespace KotonohaAssistant.Alarm.Controls
 
         private void AddAlarmDialog_Loaded(object sender, RoutedEventArgs e)
         {
-            var hours = Enumerable.Range(0, 12);
-            var minutes = Enumerable.Range(0, 12).Select(m => m * 5);
+            var hours = Enumerable.Range(0, 23);
 
             Hour.ItemsSource = hours;
-            Minute.ItemsSource = minutes;
         }
 
-        private void OKButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void OKButton_Click(object sender, RoutedEventArgs e)
         {
-            if (AMPM.SelectedValue is null ||
-                Hour.SelectedValue is null ||
-                Minute.SelectedValue is null ||
+            if (Hour.SelectedValue is null ||
+                Minute.Value is null ||
                 string.IsNullOrWhiteSpace(FilePath.Text))
             {
                 return;
@@ -40,7 +36,7 @@ namespace KotonohaAssistant.Alarm.Controls
             DialogResult = true;
         }
 
-        private void CancelButton_Click(object sender, System.Windows.RoutedEventArgs e)
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
             DialogResult = false;
         }
@@ -65,26 +61,10 @@ namespace KotonohaAssistant.Alarm.Controls
             FilePath.Text = dialog.FileName;
         }
 
-        public TimeSpan AlarmTime
-        {
-            get
-            {
-                var hour = (int)Hour.SelectedValue;
-                int hour24;
-                if (AMPM.Text == "AM")
-                {
-                    hour24 = (hour == 12) ? 0 : hour;
-                }
-                else
-                {
-                    hour24 = (hour == 12) ? 12 : hour + 12;
-                }
+        private TimeSpan AlarmTime => new ((int) Hour.SelectedValue, (int)(Minute.Value ?? 0), 0);
 
-                return new TimeSpan(hour24, (int)Minute.SelectedValue, 0);
-            }
-        }
 
-        public AlarmSetting AlarmSetting => new AlarmSetting
+        public AlarmSetting AlarmSetting => new()
         {
             Id = -1,
             TimeInSeconds = AlarmTime.TotalSeconds,

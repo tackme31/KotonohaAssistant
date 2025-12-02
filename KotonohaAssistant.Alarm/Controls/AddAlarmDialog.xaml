@@ -16,11 +16,7 @@
         </Grid.RowDefinitions>
         <StackPanel Grid.Row="0" Orientation="Horizontal">
             <ComboBox x:Name="Hour" Width="100" Margin="10"/>
-            <ComboBox x:Name="Minute" Width="100" Margin="10"/>
-            <ComboBox x:Name="AMPM" Width="100" Margin="10">
-                <ComboBoxItem Content="AM" IsSelected="True"/>
-                <ComboBoxItem Content="PM"/>
-            </ComboBox>
+            <ui:NumberBox x:Name="Minute" Width="200" Minimum="0" Maximum="59" MaxDecimalPlaces="0" />
         </StackPanel>
         <StackPanel Grid.Row="1" Orientation="Horizontal">
             <ui:Button x:Name="VoiceFile" Click="VoiceFile_Click" VerticalAlignment="Center" Margin="10">Open...</ui:Button>

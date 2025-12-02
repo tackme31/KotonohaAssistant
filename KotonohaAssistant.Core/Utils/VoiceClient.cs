@@ -83,6 +83,35 @@ public class VoiceClient : IDisposable
         }
     }
 
+    public async Task ExportVoiceAsync(Kotonoha sister, Emotion emotion, string message, string path)
+    {
+        await ConnectToServerAsync();
+
+        if (_writer is null || _reader is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var request = new ExportVoiceRequest()
+            {
+                SisterType = sister,
+                Emotion = emotion,
+                Message = message,
+                SavePath = path
+            };
+            var serialized = JsonConvert.SerializeObject(request, Formatting.None);
+            await _writer.WriteLineAsync("EXPORT:" + serialized);
+
+            await _reader.ReadLineAsync();
+        }
+        catch (IOException ex)
+        {
+            throw new InvalidOperationException("An error occurred while communicating with the server.", ex);
+        }
+    }
+
     public void Dispose()
     {
         _writer?.Dispose();

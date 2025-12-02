@@ -45,7 +45,7 @@ namespace KotonohaAssistant.Alarm.Controls
         {
             var dialog = new OpenFileDialog
             {
-                Filter = "Audio files (*.mp3)|*.mp3"
+                Filter = "Audio files (*.mp3, *.wav)|*.mp3;*.wav"
             };
 
             if (dialog.ShowDialog() != true)

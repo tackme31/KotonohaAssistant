@@ -39,7 +39,6 @@ internal class ApplicationHostService : IHostedService
         var viewModel = _serviceProvider.GetRequiredService<RootViewModel>();
 
         window.DataContext = viewModel;
-        window.Loaded += (sender, arg) => viewModel.OnApplicationLoaded();
         window.Show();
 
         return Task.CompletedTask;

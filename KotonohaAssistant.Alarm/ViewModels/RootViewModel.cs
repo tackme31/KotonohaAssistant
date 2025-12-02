@@ -10,19 +10,4 @@ public partial class RootViewModel : ObservableObject
     {
         AlarmList = alarmListViewModel;
     }
-
-    [ObservableProperty]
-    private bool _isApplicationLoaded;
-
-    internal void OnApplicationLoaded()
-    {
-        if (IsApplicationLoaded)
-        {
-            return;
-        }
-
-        AlarmList.OnApplicationLoaded();
-
-        IsApplicationLoaded = true;
-    }
 }

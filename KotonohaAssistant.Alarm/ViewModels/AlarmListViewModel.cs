@@ -23,10 +23,6 @@ public partial class AlarmListViewModel : ObservableObject
         _dialogService = dialogService;
     }
 
-    internal void OnApplicationLoaded()
-    {
-    }
-
     public async Task InitializeAsync()
     {
         var settings = await _alarmRepository.GetAlarmSettingsAsync(TimeSpan.MinValue, TimeSpan.MaxValue);

@@ -1,4 +1,5 @@
 ﻿using KotonohaAssistant.Alarm.Models;
+using KotonohaAssistant.Alarm.Pages;
 using KotonohaAssistant.Alarm.Repositories;
 using KotonohaAssistant.Alarm.ViewModels;
 using KotonohaAssistant.Core;
@@ -9,7 +10,7 @@ using Newtonsoft.Json;
 using System.IO;
 using System.IO.Pipes;
 using System.Text.RegularExpressions;
-using System.Windows;
+using Wpf.Ui;
 
 namespace KotonohaAssistant.Alarm.Services;
 
@@ -60,6 +61,7 @@ internal class ApplicationHostService : IHostedService
     {
         var vm = _serviceProvider.GetRequiredService<AlarmListViewModel>();
         var repository = _serviceProvider.GetRequiredService<IAlarmRepository>();
+        var navicationService = _serviceProvider.GetRequiredService<INavigationService>();
         var tasks = new List<Task>();
         while (!token.IsCancellationRequested)
         {
@@ -117,6 +119,8 @@ internal class ApplicationHostService : IHostedService
             switch (command)
             {
                 case "ADD_ALARM":
+                    navicationService.Navigate(typeof(AlarmListPage));
+
                     var request = JsonConvert.DeserializeObject<AddAlarmRequest>(payload);
                     var setting = new AlarmSetting
                     {
@@ -130,6 +134,8 @@ internal class ApplicationHostService : IHostedService
                     vm.AddAlarm(setting);
                     break;
                 case "STOP_ALARM":
+                    navicationService.Navigate(typeof(AlarmListPage));
+
                     vm.StopAlarm();
                     break;
             }

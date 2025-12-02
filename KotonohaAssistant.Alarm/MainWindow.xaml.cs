@@ -11,16 +11,21 @@ namespace KotonohaAssistant.Alarm
     /// </summary>
     public partial class MainWindow
     {
-        public MainWindow()
+        private readonly INavigationService _navigationService;
+
+        public MainWindow(INavigationService navigationService)
         {
             InitializeComponent();
+
+            _navigationService = navigationService;
 
             Loaded += MainWindow_Loaded;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            Menu.Navigate(typeof(AlarmListPage));
+            _navigationService.SetNavigationControl(Menu);
+            _navigationService.Navigate(typeof(AlarmListPage));
         }
 
         private void Menu_Navigated(NavigationView sender, NavigatedEventArgs args)

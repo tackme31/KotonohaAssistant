@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using System.IO;
 using System.Windows;
 using Wpf.Ui;
+using Wpf.Ui.Abstractions;
 
 namespace KotonohaAssistant.Alarm;
 
@@ -52,6 +53,8 @@ public partial class App : Application
 
             // Repositories/Services
             _ = services.AddSingleton<IDialogService, DialogService>();
+            _ = services.AddSingleton<INavigationViewPageProvider, DependencyInjectionNavigationViewPageProvider>();
+            _ = services.AddSingleton<INavigationService, NavigationService>();
             _ = services.AddSingleton<IAlarmService>(sp =>
             {
                 var alarmRepository = sp.GetRequiredService<IAlarmRepository>();

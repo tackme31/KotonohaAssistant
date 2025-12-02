@@ -22,7 +22,6 @@ public static class ServiceCollectionExtensions
     private static string OwmApiKey => GetEnvVar("OWM_API_KEY");
     private static double OwmLat => double.TryParse(GetEnvVar("OWM_LAT"), out var owmLat) ? owmLat : throw new FormatException($"無効な環境変数です: 'OWM_LAT'");
     private static double OwmLon => double.TryParse(GetEnvVar("OWM_LON"), out var owmLon) ? owmLon : throw new FormatException($"無効な環境変数です: 'OWM_LON'");
-    private static string AlarmSoundFile => GetEnvVar("ALARM_SOUND_FILE");
 
     public static void AddConversationService(this IServiceCollection services)
     {
@@ -37,7 +36,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
         services.AddSingleton<IChatMessageRepository>(new ChatMessageRepository(DBPath));
         services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
-        services.AddSingleton<ITimerService>(sp => new TimerService(AlarmSoundFile, sp.GetRequiredService<Core.Utils.ILogger>()));
 
         services.AddSingleton(sp =>
         {
@@ -46,15 +44,14 @@ public static class ServiceCollectionExtensions
             var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
             var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
             var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
-            var timerService = sp.GetRequiredService<ITimerService>();
 
             // 利用する関数一覧
             var functions = new ToolFunction[]
             {
                 new CallMaster(VoicePath, logger),
                 new StopAlarm(logger),
-                new StartTimer(timerService, logger),
-                new StopTimer(timerService, logger),
+                new StartTimer(logger),
+                new StopTimer(logger),
                 new CreateCalendarEvent(calendarRepository, logger),
                 new GetCalendarEvent(calendarRepository, logger),
                 new GetWeather(weatherRepository, (OwmLat, OwmLon), logger),

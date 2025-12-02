@@ -14,7 +14,6 @@ var calendarId = Environment.GetEnvironmentVariable("CALENDAR_ID") ?? throw new 
 var owmApiKey = Environment.GetEnvironmentVariable("OWM_API_KEY") ?? throw new Exception();
 _ = double.TryParse(Environment.GetEnvironmentVariable("OWM_LAT"), out var owmLat) ? true : throw new Exception();
 _ = double.TryParse(Environment.GetEnvironmentVariable("OWM_LON"), out var owmLon) ? true : throw new Exception();
-var alarmSoundFile = Environment.GetEnvironmentVariable("ALARM_SOUND_FILE") ?? throw new Exception();
 var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
 var dbPath = Path.Combine(appDirectory, "app.cli.db");
 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
@@ -29,15 +28,14 @@ if (!Directory.Exists(appDirectory))
 
 // 利用可能な関数
 var logger = new Logger(logPath, isConsoleLoggingEnabled: true);
-var timerService = new TimerService(alarmSoundFile, logger);
 var calendarRepository = new CalendarEventRepository(googleApiKey, calendarId);
 using var weatherRepository = new WeatherRepository(owmApiKey);
 var functions = new List<ToolFunction>
 {
     new CallMaster(voicePath, logger),
     new StopAlarm(logger),
-    new StartTimer(timerService, logger),
-    new StopTimer(timerService, logger),
+    new StartTimer(logger),
+    new StopTimer(logger),
     new CreateCalendarEvent(calendarRepository, logger),
     new GetCalendarEvent(calendarRepository, logger),
     new GetWeather(weatherRepository, (owmLat, owmLon), logger),

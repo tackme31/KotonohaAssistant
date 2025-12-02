@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopTimer(ITimerService timerRepository, ILogger logger) : ToolFunction(logger)
+public class StopTimer(ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、タイマーの停止を依頼されたときに呼び出されます。タイマー停止の依頼があった際に実行されます。
@@ -28,8 +28,6 @@ public class StopTimer(ITimerService timerRepository, ILogger logger) : ToolFunc
 }
 """;
 
-    private readonly ITimerService _timerRepository = timerRepository;
-
     public override bool CanBeLazy => false;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
@@ -38,18 +36,19 @@ public class StopTimer(ITimerService timerRepository, ILogger logger) : ToolFunc
         return true;
     }
 
-    public override Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         try
         {
-            _timerRepository.StopAllTimers();
+            using var client = new AlarmClient();
+            await client.StopTimer();
         }
         catch (Exception ex)
         {
             Logger.LogError(ex);
-            return Task.FromResult("タイマーの停止に失敗しました。");
+            return "タイマーの停止に失敗しました。";
         }
 
-        return Task.FromResult("タイマーを停止しました。");
+        return "タイマーを停止しました。";
     }
 }

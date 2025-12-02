@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StartTimer(ITimerService timerRepository, ILogger logger) : ToolFunction(logger)
+public class StartTimer(ILogger logger) : ToolFunction(logger)
 {
     public override string Description => """
 この関数は、タイマーの設定を依頼されたときに呼び出されます。依頼内容に応じてタイマーを開始します。
@@ -37,8 +37,6 @@ public class StartTimer(ITimerService timerRepository, ILogger logger) : ToolFun
 }
 """;
 
-    private readonly ITimerService _timerRepository = timerRepository;
-
     public override bool CanBeLazy => false;
 
     public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
@@ -56,11 +54,22 @@ public class StartTimer(ITimerService timerRepository, ILogger logger) : ToolFun
         return true;
     }
 
-    public override Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
     {
         var seconds = (int)arguments["seconds"];
-        _timerRepository.SetTimer(seconds);
 
-        return Task.FromResult("タイマーを開始しました。");
+        try
+        {
+            using var client = new AlarmClient();
+
+            await client.StartTimer(TimeSpan.FromSeconds(seconds));
+
+            return "タイマーを開始しました。";
+        }
+        catch(Exception ex)
+        {
+            logger.LogError(ex);
+            return "タイマーの開始に失敗しました。";
+        }
     }
 }

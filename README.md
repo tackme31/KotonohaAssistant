@@ -1,46 +1,163 @@
 # Kotonoha Assistant
-琴葉姉妹があなたの生活をサポートします。
 
-## Requirements
+
+**NOTE:**
+このプロジェクトは個人用に作成したものです。利用は自己責任でお願いします。
+
+## 機能一覧
+トリガーワード（AIアシスタントの起動ワード）は以下の通りです。
+
+- 「ねえ茜ちゃん」
+- 「ねえ葵ちゃん」
+- 「茜ちゃんいる？」
+- 「葵ちゃんいる？」
+
+また、こちらの入力に「あおい」が入っていれば琴葉葵に、「あかね」が入っていた場合琴葉茜に切り替わります。
+
+
+### アラーム機能
+アラームの設定ができます。
+
+- 「明日9時半に起こして」
+- 「10時になったら教えて」
+- 「アラームを15時に設定」
+
+時刻になったら、文脈に応じたボイスが読み上げられ、その後アラーム音が再生されます。
+アラームを停止する旨を伝えることで、停止できます。
+
+### タイマー機能
+タイマーの開始・停止ができます。
+
+- 「タイマー3分」
+- 「30秒数えて」
+- 「タイマーを止めて」
+
+### 予定の取得・作成 (オプション)
+Googleカレンダーからの予定の取得・作成ができます。
+
+- 「今日の予定を教えて」
+- 「明日の午前中、空いてる時間ある？」
+
+### 天気の取得
+Open Weatherから天気を取得できます。
+
+- 「明日の天気を教えて」
+- 「今日の午後から雨降りそう？」
+
+### 怠け癖について
+以下の条件を満たすことで、琴葉姉妹はもう一方にタスクを押し付けます。
+
+- 1/10の確率でランダムに発生
+- 姉妹のうち一方に、連続で4回お願いを頼んだ場合に発生
+
+怠け癖が発動した場合、姉妹が切り替わります。
+ただし、以下の機能では怠け癖が起こりません。
+
+- アラームの停止
+- タイマーの開始
+- タイマーの終了
+
+## セットアップ
+WIP
+
+### 必要要件
 - [A.I. VOICE 琴葉 茜・葵](https://aivoice.jp/product/kotonoha/)
-  - **A.I VOICE2は不可です。**
+  - **A.I VOICE2はAPIが提供されていないため使用できません。**
 - Open AI APIのAPIキー
-- .NET Framework 4.8.1 SDK
-- .NET 8.0 SDK
+- .NET Framework 4.8.1 Runtime
+- .NET 9.0 Runtime
 
-## Setup
+### 手順
 WIP
 
 1. A.I. VOICEをインストールし、琴葉 茜・琴葉 葵の両キャラクターを追加
-1. `%PROGRAMFILES%/AI/AIVoice/AIVoiceEditor`内の以下のDLLファイルを、本リポジトリの`/lib`フォルダにコピー
+1. Releaseページから以下の3つをダウンロード
+    - KotonohaAssistant.VoiceServer.zip
+    - KotonohaAssistant.Alarm.zip
+    - KotonohaAssistant.Vui.zip
+1. 適当なフォルダを作成し、任意のフォルダに解凍する
+1. `%PROGRAMFILES%/AI/AIVoice/AIVoiceEditor`内の以下のDLLファイルを、`KotonohaAssistant.VoiceServer.exe`と同じフォルダにコピー
     - AI.Talk.dll
     - AI.Talk.Editor.Api.dll
     - AI.Framework.dll
-1. `.env.example`ファイルをコピーして`.env`ファイルを作成
+1. `.env.example`ファイルを`KotonohaAssistant.Vui`のフォルダにコピーし、`.env`にリネーム
 1. `.env`ファイルの`OPENAI_API_KEY`にOpen AI APIのAPIキーを設定
+1. 以下をのアプリケーションを実行
+    - A.I. VOICE Eitor
+    - KotonohaAssistant.VoiceServer.exe
+    - KotonohaAssistant.Alarm.exe
+1. KotonohaAssistant.Vui.exe
+    - マイクのアクセスを許可してください
 
-ChromeよりもEdgeの方が音声認識の精度が良好なので、Edgeを使うことを推奨します。
+もしCLIでのやり取りがしたい場合、代わりに`KotonohaAssistant.Cli.exe`を使うこともできます。
 
 ## Option
-### カレンダーの予定取得・作成
-GOOGLE_API_KEY: シークレットファイルのパス
-CALENDAR_ID: カレンダーのメールアドレス
+.envを設定することで以下の機能を有効化できます。
 
-Google CloudでGoogleカレンダーのシークレットファイルを作成
-サービスアカウントを作成
-予定を取得したいアカウントで「共有と設定 > 特定のユーザーまたはグループと共有する」に、サービスアカウントのメールアドレスを追加
-権限は「予定の変更」
+- `ENABLE_CALENDAR_FUNCTION`
+  - Googleカレンダーからの予定の取得・作成
+- `ENABLE_WEATHER_FUNCTION`
+  - Open Weatherからの天気の取得
+
+### カレンダーの予定取得・作成
+Googleカレンダーへアクセスするために、認証情報が必要です。
+またサービスアカウントとcredentials.jsonの作成が必要です。
+以下を参考に、作成してください。
+
+- [アクセス認証情報を作成する  |  Google Workspace  |  Google for Developers](https://developers.google.com/workspace/guides/create-credentials?hl=ja)
+
+作成後、予定を取得したいGoogleアカウントでGoogleカレンダーを開き、以下の設定をしてください。
+
+- マイカレンダー > ユーザー名の⋮から「設定と共有」を開く
+- 共有する相手に、先程作成したサービスアカウントのメールアドレスを追加
+- アクセス権限を「予定の変更」に設定
+
+設定完了後、`.env`の以下の値を設定してください。
+
+- `GOOGLE_API_KEY`: シークレットファイル（credentials.json）のパス
+- `CALENDAR_ID`: 予定を取得するカレンダーのメールアドレス
 
 ### 天気の取得
-Open Weather MapのAPI
+[Open Weather Map](https://openweathermap.org/)のAPIが必要です。
+アカウントを作成・ログイン後、"API eys"からAPIキーを生成し、`.env`の以下の値を設定してください。
+
+- `OWM_API_KEY`: Open WeatherのAPI Key
+- `OWM_LAT`, `OWM_LON`: 天気を取得する緯度経度
 
 ### 姉妹の音声再生をスピーカー左右で分ける
+使用しているスピーカーにチャネルが2つある場合、琴葉茜・琴葉葵のそれぞれで異なるチャネルから音声を再生できます。
+有効化するには、`.env`の`ENABLE_CHANNEL_SWITCHING`をtrueに設定してください。
+
+**読み上げ中にプログラムを終了すると一方のチャネルの音量が0のままになるので注意してください**
+
+## 開発
+WIP
+
+### スタートアップ構成
+
+- CLI App: Voiceサーバー、アラームアプリ、コンソールアプリを起動
+- VUI APp: VOICEサーバー、アラームアプリ、MAUIアプリを起動
+
+### プロジェクト構成
+
+| プロジェクト名                 | 説明 |
+|-------------------------------|------|
+| KotonohaAssistant\.AI | AIに関する処理 |
+| KotonohaAssistant\.Alarm | アラーム・タイマー用のWPFアプリ (+Named Pipeサーバー) |
+| KotonohaAssistant\.CharacterView | 会話中の琴葉姉妹を移すためのWPFアプリ |
+| KotonohaAssistant\.Cli | CLIによるコミュニケーション用のコンソールアプリ |
+| KotonohaAssistant\.Core | 共通処理 |
+| KotonohaAssistant\.VoiceServer | A.I.Voice Editorを呼び出すためのNamed Pipeサーバー |
+| KotonohaAssistant\.Vui | 音声認識によりコミュニケーションするMAUI+Blazorアプリ |
+
 
 ## Author
 - Takumi Yamada
 
 ## Credits
-- アラーム音提供: [OtoLogic](https://otologic.jp)
+アラーム音提供
+
+- [Clock-Alarm02-1(Loop).mp3](https://github.com/tackme31/KotonohaAssistant/blob/main/assets/Clock-Alarm02-1(Loop).mp3): [OtoLogic](https://otologic.jp)様
 
 ## LICENSE
 WIP

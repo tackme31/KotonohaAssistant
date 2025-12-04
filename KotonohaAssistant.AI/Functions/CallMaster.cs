@@ -106,9 +106,9 @@ public class CallMaster(string voiceDirectory, ILogger logger) : ToolFunction(lo
         {
             Logger.LogError(ex);
 
-            return "FAILED";
+            return "ERROR";
         }
 
-        return "SUCCESS";
+        return "OK";
     }
 }

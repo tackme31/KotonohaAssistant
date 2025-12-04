@@ -64,12 +64,12 @@ public class StartTimer(ILogger logger) : ToolFunction(logger)
 
             await client.StartTimer(TimeSpan.FromSeconds(seconds));
 
-            return "タイマーを開始しました。";
+            return "成功";
         }
         catch(Exception ex)
         {
             logger.LogError(ex);
-            return "タイマーの開始に失敗しました。";
+            return "失敗";
         }
     }
 }

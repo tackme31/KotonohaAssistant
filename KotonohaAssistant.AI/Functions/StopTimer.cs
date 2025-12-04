@@ -46,9 +46,9 @@ public class StopTimer(ILogger logger) : ToolFunction(logger)
         catch (Exception ex)
         {
             Logger.LogError(ex);
-            return "タイマーの停止に失敗しました。";
+            return "ERROR";
         }
 
-        return "タイマーを停止しました。";
+        return "OK";
     }
 }

@@ -62,15 +62,22 @@ public class ConversationService
     {
         foreach (var message in _state.ChatMessages.Skip(5)) // CreateNewConversationAsyncで追加した生成参考用の会話をスキップ
         {
-            if (ChatRequest.TryParse(message.Content[0].Text, out var request) &&
-                request?.InputType == ChatInputType.User)
+            if (!message.Content.Any())
             {
-                yield return (null, request?.Text ?? string.Empty);
+                continue;
             }
 
-            if (ChatResponse.TryParse(message.Content[0].Text, out var response))
+            var content = message.Content[0].Text;
+            switch (message)
             {
-                yield return (response?.Assistant, response?.Text ?? string.Empty);
+                case AssistantChatMessage assistant when ChatResponse.TryParse(content, out var response):
+                    yield return (response?.Assistant, response?.Text ?? string.Empty);
+                    continue;
+                case UserChatMessage user when ChatRequest.TryParse(content, out var request):
+                    yield return (null, request?.Text ?? string.Empty);
+                    continue;
+                case ToolChatMessage tool:
+                    continue;
             }
         }
     }

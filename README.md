@@ -130,29 +130,8 @@ Googleカレンダーへアクセスするために、認証情報が必要で�
 
 **読み上げ中にプログラムを終了すると一方のチャネルの音量が0のままになるので注意してください**
 
-## 開発
-WIP
-
-### スタートアップ構成
-
-- CLI App: Voiceサーバー、アラームアプリ、コンソールアプリを起動
-- VUI APp: VOICEサーバー、アラームアプリ、MAUIアプリを起動
-
-### プロジェクト構成
-
-| プロジェクト名                 | 説明 |
-|-------------------------------|------|
-| KotonohaAssistant\.AI | AIに関する処理 |
-| KotonohaAssistant\.Alarm | アラーム・タイマー用のWPFアプリ (+Named Pipeサーバー) |
-| KotonohaAssistant\.CharacterView | 会話中の琴葉姉妹を移すためのWPFアプリ |
-| KotonohaAssistant\.Cli | CLIによるコミュニケーション用のコンソールアプリ |
-| KotonohaAssistant\.Core | 共通処理 |
-| KotonohaAssistant\.VoiceServer | A.I.Voice Editorを呼び出すためのNamed Pipeサーバー |
-| KotonohaAssistant\.Vui | 音声認識によりコミュニケーションするMAUI+Blazorアプリ |
-
-
 ## Author
-- Takumi Yamada
+- Takumi Yamada ([@tackme31](https://x.com/tackme31))
 
 ## Credits
 アラーム音提供

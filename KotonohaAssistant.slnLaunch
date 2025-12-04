@@ -20,16 +20,17 @@
     "Name": "VUI App",
     "Projects": [
       {
-        "Path": "KotonohaAssistant.VoiceServer\\KotonohaAssistant.VoiceServer.csproj",
-        "Action": "Start"
+        "Path": "KotonohaAssistant.Vui\\KotonohaAssistant.Vui.csproj",
+        "Action": "Start",
+        "DebugTarget": "Windows Machine"
       },
       {
-        "Path": "KotonohaAssistant.Vui\\KotonohaAssistant.Vui.csproj",
-        "Action": "Start"
+        "Path": "KotonohaAssistant.VoiceServer\\KotonohaAssistant.VoiceServer.csproj",
+        "Action": "StartWithoutDebugging"
       },
       {
         "Path": "KotonohaAssistant.Alarm\\KotonohaAssistant.Alarm.csproj",
-        "Action": "Start"
+        "Action": "StartWithoutDebugging"
       }
     ]
   }

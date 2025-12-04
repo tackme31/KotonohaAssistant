@@ -1,4 +1,4 @@
-﻿function scrollToEnd(elementId) {
+function scrollToEnd(elementId) {
     console.log(elementId);
     var element = document.getElementById(elementId);
     if (element) {

@@ -1,5 +1,6 @@
 ﻿using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Models;
 using OpenAI.Chat;
 
@@ -115,5 +116,85 @@ public class ConversationState() : IReadOnlyConversationState
     public void AddToolMessage(string id, string result)
     {
         _chatMessages.Add(new ToolChatMessage(id, result));
+    }
+
+    /// <summary>
+    /// 関数呼び出しを記録し、忍耐値を更新します
+    /// </summary>
+    /// <param name="sister">関数を呼び出した姉妹</param>
+    public void RecordToolCall(Kotonoha sister)
+    {
+        if (LastToolCallSister == sister)
+        {
+            PatienceCount++;
+        }
+        else
+        {
+            PatienceCount = 1;
+        }
+        LastToolCallSister = sister;
+    }
+
+    /// <summary>
+    /// 忍耐値をリセットします
+    /// </summary>
+    public void ResetPatienceCount()
+    {
+        PatienceCount = 1;
+    }
+
+    /// <summary>
+    /// 指定した姉妹に切り替えます
+    /// </summary>
+    /// <param name="sister">切り替え先の姉妹</param>
+    public void SwitchToSister(Kotonoha sister)
+    {
+        CurrentSister = sister;
+        AddInstruction(Instruction.SwitchSisterTo(sister));
+    }
+
+    /// <summary>
+    /// もう一方の姉妹に切り替えます
+    /// </summary>
+    public void SwitchToOtherSister()
+    {
+        var nextSister = CurrentSister.Switch();
+        SwitchToSister(nextSister);
+    }
+
+    /// <summary>
+    /// 怠け癖モード開始の指示を追加します
+    /// </summary>
+    public void AddLazyModeInstruction()
+    {
+        var instruction = CurrentSister switch
+        {
+            Kotonoha.Akane => Instruction.BeginLazyModeAkane,
+            Kotonoha.Aoi => Instruction.BeginLazyModeAoi,
+            _ => null
+        };
+
+        if (instruction is not null)
+        {
+            AddInstruction(instruction);
+        }
+    }
+
+    /// <summary>
+    /// 怠け癖モード終了の指示を追加します
+    /// </summary>
+    public void AddEndLazyModeInstruction()
+    {
+        var instruction = CurrentSister switch
+        {
+            Kotonoha.Akane => Instruction.EndLazyModeAkane,
+            Kotonoha.Aoi => Instruction.EndLazyModeAoi,
+            _ => null
+        };
+
+        if (instruction is not null)
+        {
+            AddInstruction(instruction);
+        }
     }
 }

@@ -62,10 +62,15 @@ if (enableWeatherFunction)
     ]);
 }
 
+var sisterSwitchingService = new SisterSwitchingService();
+var functionsDictionary = functions.ToDictionary(f => f.GetType().Name);
+var lazyModeHandler = new LazyModeHandler(functionsDictionary, logger);
 var service = new ConversationService(
     chatMessageRepository,
     chatCompletionRepository,
     functions,
+    sisterSwitchingService,
+    lazyModeHandler,
     logger);
 
 foreach (var (sister, message) in service.GetAllMessages())

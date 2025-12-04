@@ -2,7 +2,6 @@
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.Core;
-using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
@@ -13,9 +12,7 @@ namespace KotonohaAssistant.AI.Services;
 public class ConversationService
 {
     private readonly ConversationState _state;
-    private readonly IDictionary<string, ToolFunction> _functions;
-    private readonly Random _r = new();
-
+    private readonly Dictionary<string, ToolFunction> _functions;
     private readonly ChatCompletionOptions _options;
 
     /// <summary>
@@ -26,12 +23,16 @@ public class ConversationService
 
     private readonly IChatMessageRepository _chatMessageRepositoriy;
     private readonly IChatCompletionRepository _chatCompletionRepository;
+    private readonly ISisterSwitchingService _sisterSwitchingService;
+    private readonly ILazyModeHandler _lazyModeHandler;
     private readonly ILogger _logger;
 
     public ConversationService(
         IChatMessageRepository chatMessageRepository,
         IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
+        ISisterSwitchingService sisterSwitchingService,
+        ILazyModeHandler lazyModeHandler,
         ILogger logger,
         Kotonoha defaultSister = Kotonoha.Akane)
     {
@@ -55,12 +56,14 @@ public class ConversationService
 
         _chatMessageRepositoriy = chatMessageRepository;
         _chatCompletionRepository = chatCompletionRepository;
+        _sisterSwitchingService = sisterSwitchingService;
+        _lazyModeHandler = lazyModeHandler;
         _logger = logger;
     }
 
     public IEnumerable<(Kotonoha? sister, string message)> GetAllMessages()
     {
-        foreach (var message in _state.ChatMessages.Skip(5)) // CreateNewConversationAsyncで追加した生成参考用の会話をスキップ
+        foreach (var message in _state.ChatMessages.Skip(InitialConversation.Count)) // CreateNewConversationAsyncで追加した生成参考用の会話をスキップ
         {
             if (!message.Content.Any())
             {
@@ -70,13 +73,13 @@ public class ConversationService
             var content = message.Content[0].Text;
             switch (message)
             {
-                case AssistantChatMessage assistant when ChatResponse.TryParse(content, out var response):
+                case AssistantChatMessage when ChatResponse.TryParse(content, out var response):
                     yield return (response?.Assistant, response?.Text ?? string.Empty);
                     continue;
-                case UserChatMessage user when ChatRequest.TryParse(content, out var request):
+                case UserChatMessage when ChatRequest.TryParse(content, out var request):
                     yield return (null, request?.Text ?? string.Empty);
                     continue;
-                case ToolChatMessage tool:
+                case ToolChatMessage:
                     continue;
             }
         }
@@ -102,11 +105,17 @@ public class ConversationService
         _state.ClearChatMessages();
 
         // 生成時の参考のためにあらかじめ会話を入れておく
-        _state.AddAssistantMessage(Kotonoha.Aoi, "はじめまして、マスター。私は琴葉葵。こっちは姉の茜。", Emotion.Calm);
-        _state.AddAssistantMessage(Kotonoha.Akane, "今日からうちらがマスターのことサポートするで。", Emotion.Calm);
-        _state.AddAssistantMessage(Kotonoha.Aoi, "これから一緒に過ごすことになるけど、気軽に声をかけてね。", Emotion.Joy);
-        _state.AddAssistantMessage(Kotonoha.Akane, "せやな！これからいっぱい思い出作っていこな。", Emotion.Joy);
-        _state.AddUserMessage("うん。よろしくね。");
+        foreach (var message in InitialConversation.Messages)
+        {
+            if (message.Sister.HasValue)
+            {
+                _state.AddAssistantMessage(message.Sister.Value, message.Text, message.Emotion);
+            }
+            else
+            {
+                _state.AddUserMessage(message.Text);
+            }
+        }
 
         _lastSavedMessage = null;
 
@@ -216,26 +225,10 @@ public class ConversationService
             yield break;
         }
 
-        if (_currentConversationId is null)
-        {
-            _currentConversationId = await CreateNewConversationAsync();
-        }
+        await EnsureConversationExistsAsync();
 
         // 姉妹切り替え
-        var nextSister = GuessTargetSister(input);
-        switch (nextSister)
-        {
-            case Kotonoha.Akane when _state.CurrentSister == Kotonoha.Aoi:
-                _state.CurrentSister = Kotonoha.Akane;
-                _state.AddInstruction(Instruction.SwitchSisterTo(Kotonoha.Akane));
-                break;
-            case Kotonoha.Aoi when _state.CurrentSister == Kotonoha.Akane:
-                _state.CurrentSister = Kotonoha.Aoi;
-                _state.AddInstruction(Instruction.SwitchSisterTo(Kotonoha.Aoi));
-                break;
-            default:
-                break;
-        }
+        _sisterSwitchingService.TrySwitchSister(input, _state);
 
         // 返信を生成
         _state.AddUserMessage(input);
@@ -246,62 +239,22 @@ public class ConversationService
         }
 
         // 忍耐値の処理
-        if (completion.FinishReason == ChatFinishReason.ToolCalls)
-        {
-            // 連続して同じ方にお願いした場合
-            if (_state.LastToolCallSister == _state.CurrentSister)
-            {
-                _state.PatienceCount++;
-            }
-            else
-            {
-                _state.PatienceCount = 1;
-            }
+        UpdatePatienceCounter(completion);
 
-            _state.LastToolCallSister = _state.CurrentSister;
+        // 怠け癖モード処理
+        var lazyResult = await _lazyModeHandler.HandleLazyModeAsync(
+            completion,
+            _state,
+            () => CompleteChatAsync(_state.ChatMessagesWithSystemMessage));
+
+        // 怠け癖時のタスク押し付け応答を返す
+        if (lazyResult.LazyResponse is not null)
+        {
+            yield return lazyResult.LazyResponse;
         }
 
-        // 怠け癖発動
-        if (ShouldBeLazy(completion))
-        {
-            BeginLazyMode();
-
-            // 再度返信を生成
-            completion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
-            // それでも関数呼び出しされることがあるのでチェック
-            if (completion is null || completion.FinishReason == ChatFinishReason.ToolCalls)
-            {
-                _state.AddInstruction(Instruction.CancelLazyMode);
-            }
-            // 実際に怠けた場合の処理
-            else
-            {
-                // フロントに生成テキストを送信
-                if (ChatResponse.TryParse(completion.Content[0].Text, out var response))
-                {
-                    yield return new ConversationResult
-                    {
-                        Message = response?.Text ?? string.Empty,
-                        Emotion = response?.Emotion ?? Emotion.Calm,
-                        Sister = response?.Assistant ?? _state.CurrentSister
-                    };
-                }
-
-                _state.AddAssistantMessage(completion);
-
-                EndLazyMode();
-
-                // 姉妹を切り替えて、再度呼び出し
-                _state.CurrentSister = _state.CurrentSister.Switch();
-                _state.AddInstruction(Instruction.SwitchSisterTo(_state.CurrentSister));
-
-                completion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
-
-                // 怠けると姉妹が入れ替わるのでカウンターをリセット
-                _state.PatienceCount = 1;
-            }
-        }
-
+        // 最終的な完了結果を使用
+        completion = lazyResult.FinalCompletion;
         if (completion is null)
         {
             yield break;
@@ -327,41 +280,41 @@ public class ConversationService
         }
 
         // 記憶削除時は新しい会話にする
-        if (functions.Any(f => f.Name == nameof(ForgetMemory) && f.Result == ForgetMemory.SuccessMessage))
+        await HandleMemoryDeletionAsync(functions);
+
+        await SaveState();
+    }
+
+    /// <summary>
+    /// 会話が存在しない場合は新規作成します
+    /// </summary>
+    private async Task EnsureConversationExistsAsync()
+    {
+        if (_currentConversationId is null)
         {
             _currentConversationId = await CreateNewConversationAsync();
         }
+    }
 
-        await SaveState();
-
-        void BeginLazyMode()
+    /// <summary>
+    /// 忍耐値を更新します
+    /// </summary>
+    private void UpdatePatienceCounter(ChatCompletion completion)
+    {
+        if (completion.FinishReason == ChatFinishReason.ToolCalls)
         {
-            var instruction = _state.CurrentSister switch
-            {
-                Kotonoha.Akane => Instruction.BeginLazyModeAkane,
-                Kotonoha.Aoi => Instruction.BeginLazyModeAoi,
-                _ => null
-            };
-
-            if (instruction is not null)
-            {
-                _state.AddInstruction(instruction);
-            }
+            _state.RecordToolCall(_state.CurrentSister);
         }
+    }
 
-        void EndLazyMode()
+    /// <summary>
+    /// 記憶削除時は新しい会話を作成します
+    /// </summary>
+    private async Task HandleMemoryDeletionAsync(List<ConversationFunction> functions)
+    {
+        if (functions.Any(f => f.Name == nameof(ForgetMemory) && f.Result == ForgetMemory.SuccessMessage))
         {
-            var instruction = _state.CurrentSister switch
-            {
-                Kotonoha.Akane => Instruction.EndLazyModeAkane,
-                Kotonoha.Aoi => Instruction.EndLazyModeAoi,
-                _ => null
-            };
-
-            if (instruction is not null)
-            {
-                _state.AddInstruction(instruction);
-            }
+            _currentConversationId = await CreateNewConversationAsync();
         }
     }
 
@@ -412,57 +365,5 @@ public class ConversationService
         }
 
         return (completion, invokedFunctions);
-    }
-
-    /// <summary>
-    /// 会話対象の姉妹を取得します。
-    /// 両方含まれていた場合、最初にヒットした方を返します。
-    /// </summary>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    private Kotonoha? GuessTargetSister(string input)
-    {
-        var namePairs = new (string search, Kotonoha? sister)[]
-        {
-            ("茜ちゃん", Kotonoha.Akane),
-            ("あかねちゃん", Kotonoha.Akane),
-            ("葵ちゃん", Kotonoha.Aoi),
-            ("あおいちゃん", Kotonoha.Aoi)
-        };
-
-        return namePairs
-            .Select(name => (name.sister, index: input.IndexOf(name.search)))
-            .Where(r => r.index >= 0)
-            .OrderBy(r => r.index)
-            .Select(r => r.sister)
-            .FirstOrDefault();
-    }
-
-    private bool ShouldBeLazy(ChatCompletion completionValue)
-    {
-        // 関数呼び出し以外は怠けない
-        if (completionValue.FinishReason != ChatFinishReason.ToolCalls)
-        {
-            return false;
-        }
-
-        // 怠け癖対象外の関数が含まれていたら怠けない
-        var targetFunctions = completionValue.ToolCalls
-            .Where(toolCall => _functions.ContainsKey(toolCall.FunctionName))
-            .Select(toolCall => _functions[toolCall.FunctionName]);
-        if (targetFunctions.Any(func => !func.CanBeLazy))
-        {
-            return false;
-        }
-
-        // 4回以上同じ方にお願いすると怠ける
-        if (_state.PatienceCount > 3)
-        {
-            return true;
-        }
-
-        // 1/10の確率で怠け癖発動
-        var lazy = _r.NextDouble() < 1d / 10d;
-        return lazy;
     }
 }

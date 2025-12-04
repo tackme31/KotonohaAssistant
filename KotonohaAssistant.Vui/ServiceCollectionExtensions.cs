@@ -39,14 +39,16 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
         services.AddSingleton<IChatMessageRepository>(new ChatMessageRepository(DBPath));
         services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
+        services.AddSingleton<ISisterSwitchingService, SisterSwitchingService>();
 
-        services.AddSingleton(sp =>
+        services.AddSingleton<ConversationService>(sp =>
         {
             var logger = sp.GetRequiredService<Core.Utils.ILogger>();
             var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
             var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
             var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
             var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
+            var sisterSwitchingService = sp.GetRequiredService<ISisterSwitchingService>();
 
             // 利用する関数一覧
             var functions = new List<ToolFunction>
@@ -73,10 +75,16 @@ public static class ServiceCollectionExtensions
                 ]);
             }
 
+            // LazyModeHandlerの作成（関数辞書が必要）
+            var functionsDictionary = functions.ToDictionary(f => f.GetType().Name);
+            var lazyModeHandler = new LazyModeHandler(functionsDictionary, logger);
+
             return new ConversationService(
                 chatMessageRepository,
                 chatCompletionRepository,
                 functions,
+                sisterSwitchingService,
+                lazyModeHandler,
                 logger);
         });
     }

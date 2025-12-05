@@ -1,5 +1,4 @@
 ﻿using KotonohaAssistant.AI.Functions;
-using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
@@ -9,7 +8,7 @@ namespace KotonohaAssistant.Vui;
 public static class ServiceCollectionExtensions
 {
     private static readonly string AppName = "Kotonoha Assistant";
-    private static readonly string AppFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
+    private static readonly string AppFolder = EnvVarUtils.TraverseEnvFileFolder(AppContext.BaseDirectory) ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppName);
     private static readonly string DBPath = Path.Combine(AppFolder, "app.db");
     private static readonly string AlarmDBPath = Path.Combine(AppFolder, "alarm.db");
     private static readonly string LogPath = Path.Combine(AppFolder, "log.txt");

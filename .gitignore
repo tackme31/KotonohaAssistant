@@ -360,4 +360,7 @@ build/tools/
 /lib/*.dll
 
 # DB
-/db/app.db
+/app.db
+/app.cli.db
+/alarm.db
+alarm voice/

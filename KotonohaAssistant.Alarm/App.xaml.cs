@@ -30,7 +30,7 @@ public partial class App : Application
         {
             var config = hostContext.Configuration;
             var alarmSoundFile = config["ALARM_SOUND_FILE"] ?? throw new Exception();
-            var appDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
+            var appDirectory = EnvVarUtils.TraverseEnvFileFolder(AppContext.BaseDirectory) ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
 
             // App Host
             _ = services.AddHostedService<ApplicationHostService>();

@@ -79,7 +79,7 @@ public class ConversationService
                 case AssistantChatMessage when ChatResponse.TryParse(content, out var response):
                     yield return (response?.Assistant, response?.Text ?? string.Empty);
                     continue;
-                case UserChatMessage when ChatRequest.TryParse(content, out var request):
+                case UserChatMessage when ChatRequest.TryParse(content, out var request) && request?.InputType == ChatInputType.User:
                     yield return (null, request?.Text ?? string.Empty);
                     continue;
                 case ToolChatMessage:

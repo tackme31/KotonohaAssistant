@@ -32,8 +32,6 @@ if (!Directory.Exists(appDirectory))
 
 // リポジトリ周り
 var logger = new Logger(logPath, isConsoleLoggingEnabled: true);
-var calendarRepository = new CalendarEventRepository(googleApiKey, calendarId);
-using var weatherRepository = new WeatherRepository(owmApiKey);
 var chatMessageRepository = new ChatMessageRepository(dbPath);
 var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
 
@@ -49,6 +47,7 @@ var functions = new List<ToolFunction>
 
 if (enableCalendarFunction)
 {
+    var calendarRepository = new CalendarEventRepository(googleApiKey, calendarId);
     functions.AddRange([
         new CreateCalendarEvent(calendarRepository, logger),
         new GetCalendarEvent(calendarRepository, logger)
@@ -57,6 +56,7 @@ if (enableCalendarFunction)
 
 if (enableWeatherFunction)
 {
+    var weatherRepository = new WeatherRepository(owmApiKey);
     functions.AddRange([
         new GetWeather(weatherRepository, (owmLat, owmLon), logger)
     ]);

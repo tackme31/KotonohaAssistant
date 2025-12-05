@@ -16,7 +16,7 @@ var owmApiKey = Environment.GetEnvironmentVariable("OWM_API_KEY") ?? throw new E
 _ = double.TryParse(Environment.GetEnvironmentVariable("OWM_LAT"), out var owmLat) ? true : throw new Exception();
 _ = double.TryParse(Environment.GetEnvironmentVariable("OWM_LON"), out var owmLon) ? true : throw new Exception();
 var appDirectory = EnvVarUtils.TraverseEnvFileFolder(AppContext.BaseDirectory) ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
-var dbPath = Path.Combine(appDirectory, "app.cli.db");
+var dbPath = Path.Combine(appDirectory, "app.db");
 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
 var logPath = Path.Combine(appDirectory, "log.cli.txt");
 var voicePath = Path.Combine(appDirectory, "alarm voice");
@@ -73,6 +73,7 @@ var service = new ConversationService(
     lazyModeHandler,
     logger);
 
+await service.LoadLatestConversation();
 foreach (var (sister, message) in service.GetAllMessages())
 {
     var name = sister?.ToDisplayName() ?? "私";

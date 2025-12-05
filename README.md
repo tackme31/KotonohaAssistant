@@ -87,7 +87,7 @@ Open Weatherから天気を取得できます。
 1. A.I. VOICE Eitorを起動
 1. `start.bat`を実行
 
-もしCLIでのやり取りがしたい場合、`KotonohaAssistant.Cli.exe`を使用してください。
+もしCLIでのやり取りがしたい場合、`start-cli.bat`を使用してください。
 
 ## Option
 .envを設定することで以下の機能を有効化できます。

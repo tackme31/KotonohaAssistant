@@ -211,6 +211,7 @@ foreach ($project in $projects) {
 Write-Host "`nCopying additional files..." -ForegroundColor Cyan
 Copy-FileToVersion -SourceFile ".env.example" -DestinationName ".env"
 Copy-FileToVersion -SourceFile "start.bat" -DestinationName "start.bat"
+Copy-FileToVersion -SourceFile "start-cli.bat" -DestinationName "start-cli.bat"
 Copy-FileToVersion -SourceFile "README.md" -DestinationName "README.md"
 Copy-FileToVersion -SourceFile "LICENSE" -DestinationName "LICENSE"
 Copy-FileToVersion -SourceFile "THIRD-PARTY-NOTICES" -DestinationName "THIRD-PARTY-NOTICES"

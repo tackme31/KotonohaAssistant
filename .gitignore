@@ -364,3 +364,7 @@ build/tools/
 /app.cli.db
 /alarm.db
 alarm voice/
+
+# Logs
+log.txt
+log.*.txt

@@ -1,7 +1,9 @@
 ﻿using KotonohaAssistant.AI.Functions;
+using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KotonohaAssistant.Vui;
 
@@ -13,6 +15,7 @@ public static class ServiceCollectionExtensions
     private static readonly string AlarmDBPath = Path.Combine(AppFolder, "alarm.db");
     private static readonly string LogPath = Path.Combine(AppFolder, "log.txt");
     private static readonly string VoicePath = Path.Combine(AppFolder, "alarm voice");
+    private static readonly string PromptPath = Path.Combine(AppFolder, "prompts");
 
     private static string OpenAIApiKey => GetEnvVar("OPENAI_API_KEY");
     private static string OpenAIModel = GetEnvVar("OPENAI_MODEL");
@@ -38,11 +41,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IWeatherRepository>(_ => new WeatherRepository(OwmApiKey));
         services.AddSingleton<IChatMessageRepository>(_ => new ChatMessageRepository(DBPath));
         services.AddSingleton<IChatCompletionRepository>(_ => new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
+        services.AddSingleton<IPromptRepository>(_ => new PromptRepository(PromptPath));
         services.AddSingleton<ISisterSwitchingService, SisterSwitchingService>();
 
         services.AddSingleton(sp =>
         {
-            var logger = sp.GetRequiredService<Core.Utils.ILogger>();
+            var logger = sp.GetRequiredService<ILogger>();
+            var promptRepository = sp.GetRequiredService<IPromptRepository>();
             var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
             var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
             var sisterSwitchingService = sp.GetRequiredService<ISisterSwitchingService>();
@@ -50,19 +55,19 @@ public static class ServiceCollectionExtensions
             // 利用する関数一覧
             var functions = new List<ToolFunction>
             {
-                new CallMaster(VoicePath, logger),
-                new StopAlarm(logger),
-                new StartTimer(logger),
-                new StopTimer(logger),
-                new ForgetMemory(logger),
+                new CallMaster(promptRepository, VoicePath, logger),
+                new StopAlarm(promptRepository, logger),
+                new StartTimer(promptRepository, logger),
+                new StopTimer(promptRepository, logger),
+                new ForgetMemory(promptRepository, logger),
             };
 
             if (EnableCalendarFunction)
             {
                 var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
                 functions.AddRange([
-                    new CreateCalendarEvent(calendarRepository, logger),
-                    new GetCalendarEvent(calendarRepository, logger)
+                    new CreateCalendarEvent(promptRepository, calendarRepository, logger),
+                    new GetCalendarEvent(promptRepository, calendarRepository, logger)
                 ]);
             }
 
@@ -70,7 +75,7 @@ public static class ServiceCollectionExtensions
             {
                 var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
                 functions.AddRange([
-                    new GetWeather(weatherRepository, (OwmLat, OwmLon), logger)
+                    new GetWeather(promptRepository, weatherRepository, (OwmLat, OwmLon), logger)
                 ]);
             }
 
@@ -79,6 +84,7 @@ public static class ServiceCollectionExtensions
             var lazyModeHandler = new LazyModeHandler(functionsDictionary, logger);
 
             return new ConversationService(
+                promptRepository,
                 chatMessageRepository,
                 chatCompletionRepository,
                 functions,

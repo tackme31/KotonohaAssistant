@@ -28,6 +28,7 @@ public class ConversationService
     private readonly ILogger _logger;
 
     public ConversationService(
+        IPromptRepository promptRepository,
         IChatMessageRepository chatMessageRepository,
         IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
@@ -39,6 +40,8 @@ public class ConversationService
         _state = new ConversationState()
         {
             CurrentSister = defaultSister,
+            CharacterPromptAkane = promptRepository.GetCharacterPrompt(Kotonoha.Akane),
+            CharacterPromptAoi = promptRepository.GetCharacterPrompt(Kotonoha.Aoi)
         };
 
         _options = new ChatCompletionOptions

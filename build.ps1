@@ -108,11 +108,18 @@ function Copy-FileToVersion {
     if (-not (Test-Path $destFolder)) {
         New-Item -Path $destFolder -ItemType Directory | Out-Null
     }
-
     if (Test-Path $SourceFile) {
-        Copy-Item -Path $SourceFile -Destination $destPath
-        Write-Host "  ✓ $DestinationName copied" -ForegroundColor Green
-    } else {
+
+        if ((Get-Item $SourceFile).PSIsContainer) {
+            Copy-Item -Path $SourceFile -Destination $destPath -Recurse -Force
+            Write-Host "  ✓ Folder $DestinationName copied" -ForegroundColor Green
+        }
+        else {
+            Copy-Item -Path $SourceFile -Destination $destPath -Force
+            Write-Host "  ✓ File $DestinationName copied" -ForegroundColor Green
+        }
+    }
+    else {
         Write-Host "  Warning: $SourceFile not found, skipping" -ForegroundColor Yellow
     }
 }
@@ -215,7 +222,8 @@ Copy-FileToVersion -SourceFile "start-cli.bat" -DestinationName "start-cli.bat"
 Copy-FileToVersion -SourceFile "README.md" -DestinationName "README.md"
 Copy-FileToVersion -SourceFile "LICENSE" -DestinationName "LICENSE"
 Copy-FileToVersion -SourceFile "THIRD-PARTY-NOTICES" -DestinationName "THIRD-PARTY-NOTICES"
-Copy-FileToVersion -SourceFile "assets\Clock-Alarm02-1(Loop).mp3" -DestinationName "assets\Clock-Alarm02-1(Loop).mp3"
+Copy-FileToVersion -SourceFile "assets" -DestinationName "assets"
+Copy-FileToVersion -SourceFile "prompts" -DestinationName "prompts"
 
 # Summary
 Write-Host "`n========================================" -ForegroundColor Green

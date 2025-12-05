@@ -1,23 +1,13 @@
+using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopTimer(ILogger logger) : ToolFunction(logger)
+public class StopTimer(IPromptRepository promptRepository, ILogger logger) : ToolFunction(logger)
 {
-    public override string Description => """
-この関数は、タイマーの停止を依頼されたときに呼び出されます。タイマー停止の依頼があった際に実行されます。
-
-## 呼び出される例
-
-- 「タイマー停止」
-- 「タイマー止めて」
-
-## 呼び出し後のセリフ
-- タイマーを停止したことを**一言で**伝えてください。
-- 「おつかれさま」「どうだった？」などのタイマーの停止とは無関係な発言はしないでください。
-""";
+    public override string Description => promptRepository.StopTimerDescription;
 
     public override string Parameters => """
 {

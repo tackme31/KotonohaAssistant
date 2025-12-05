@@ -17,6 +17,20 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.Alarm", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.Vui", "KotonohaAssistant.Vui\KotonohaAssistant.Vui.csproj", "{A48CA373-9397-B617-DB03-4B746942E1C6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目", "ソリューション項目", "{2022CB0F-8BAF-F49E-0C48-8EF4C96EC109}"
+	ProjectSection(SolutionItems) = preProject
+		prompts\system_akane.md = prompts\system_akane.md
+		prompts\system_aoi.md = prompts\system_aoi.md
+		prompts\tool_call_master.md = prompts\tool_call_master.md
+		prompts\tool_create_calendar_event.md = prompts\tool_create_calendar_event.md
+		prompts\tool_forget_memory.md = prompts\tool_forget_memory.md
+		prompts\tool_get_calendar_event.md = prompts\tool_get_calendar_event.md
+		prompts\tool_get_weather.md = prompts\tool_get_weather.md
+		prompts\tool_start_timer.md = prompts\tool_start_timer.md
+		prompts\tool_stop_alarm.md = prompts\tool_stop_alarm.md
+		prompts\tool_stop_timer.md = prompts\tool_stop_timer.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

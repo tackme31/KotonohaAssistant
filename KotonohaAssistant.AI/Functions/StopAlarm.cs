@@ -1,23 +1,13 @@
+using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopAlarm(ILogger logger) : ToolFunction(logger)
+public class StopAlarm(IPromptRepository promptRepository, ILogger logger) : ToolFunction(logger)
 {
-    public override string Description => """
-この関数は、再生中のアラームを停止するために呼び出されます。アラーム停止の依頼があった際に実行されます。
-
-## 呼び出される例
-
-- 「アラーム停止」
-- 「アラームを止めてくれない？」
-
-## 呼び出し後のセリフ
-- タイマーを停止したことを**一言で**伝えてください。
-- 「おつかれさま」「どうだった？」などのアラームの停止とは無関係な発言はしないでください。
-""";
+    public override string Description => promptRepository.StopAlarmDescription;
 
     public override string Parameters => """
 {

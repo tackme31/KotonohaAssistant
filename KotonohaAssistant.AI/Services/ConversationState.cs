@@ -8,7 +8,6 @@ namespace KotonohaAssistant.AI.Services;
 
 public interface IReadOnlyConversationState
 {
-
     public int PatienceCount { get; }
 
     public Kotonoha LastToolCallSister { get; }
@@ -22,6 +21,9 @@ public interface IReadOnlyConversationState
 
 public class ConversationState() : IReadOnlyConversationState
 {
+    public required string CharacterPromptAkane { get; init; }
+    public required string CharacterPromptAoi { get; init; }
+
     /// <summary>
     /// 同じ方に連続してお願いした回数。忍耐値。
     /// </summary>
@@ -47,8 +49,8 @@ public class ConversationState() : IReadOnlyConversationState
             var now = DateTime.Now;
             return CurrentSister switch
             {
-                Kotonoha.Akane => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane(now))),
-                Kotonoha.Aoi => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi(now))),
+                Kotonoha.Akane => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane(CharacterPromptAkane, now))),
+                Kotonoha.Aoi => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi(CharacterPromptAoi, now))),
                 _ => throw new NotSupportedException()
             };
         }

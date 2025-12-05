@@ -20,6 +20,7 @@ var dbPath = Path.Combine(appDirectory, "app.db");
 var alarmDBPath = Path.Combine(appDirectory, "alarm.db");
 var logPath = Path.Combine(appDirectory, "log.cli.txt");
 var voicePath = Path.Combine(appDirectory, "alarm voice");
+var promptPath = Path.Combine(appDirectory, "prompts");
 
 var enableCalendarFunction = EnvUtils.GetBooleanValueOrDefault("ENABLE_CALENDAR_FUNCTION", false);
 var enableWeatherFunction = EnvUtils.GetBooleanValueOrDefault("ENABLE_WEATHER_FUNCTION", false);
@@ -34,23 +35,24 @@ if (!Directory.Exists(appDirectory))
 var logger = new Logger(logPath, isConsoleLoggingEnabled: true);
 var chatMessageRepository = new ChatMessageRepository(dbPath);
 var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
+var promptRepository = new PromptRepository(promptPath);
 
 // 利用可能な関数
 var functions = new List<ToolFunction>
 {
-    new CallMaster(voicePath, logger),
-    new StopAlarm(logger),
-    new StartTimer(logger),
-    new StopTimer(logger),
-    new ForgetMemory(logger)
+    new CallMaster(promptRepository, voicePath, logger),
+    new StopAlarm(promptRepository, logger),
+    new StartTimer(promptRepository, logger),
+    new StopTimer(promptRepository, logger),
+    new ForgetMemory(promptRepository, logger)
 };
 
 if (enableCalendarFunction)
 {
     var calendarRepository = new CalendarEventRepository(googleApiKey, calendarId);
     functions.AddRange([
-        new CreateCalendarEvent(calendarRepository, logger),
-        new GetCalendarEvent(calendarRepository, logger)
+        new CreateCalendarEvent(promptRepository, calendarRepository, logger),
+        new GetCalendarEvent(promptRepository, calendarRepository, logger)
     ]);
 }
 
@@ -58,7 +60,7 @@ if (enableWeatherFunction)
 {
     var weatherRepository = new WeatherRepository(owmApiKey);
     functions.AddRange([
-        new GetWeather(weatherRepository, (owmLat, owmLon), logger)
+        new GetWeather(promptRepository, weatherRepository, (owmLat, owmLon), logger)
     ]);
 }
 
@@ -66,6 +68,7 @@ var sisterSwitchingService = new SisterSwitchingService();
 var functionsDictionary = functions.ToDictionary(f => f.GetType().Name);
 var lazyModeHandler = new LazyModeHandler(functionsDictionary, logger);
 var service = new ConversationService(
+    promptRepository,
     chatMessageRepository,
     chatCompletionRepository,
     functions,

@@ -7,19 +7,9 @@ using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class GetWeather(IWeatherRepository weatherRepository, (double lat, double lon) location, ILogger logger) : ToolFunction(logger)
+public class GetWeather(IPromptRepository promptRepository, IWeatherRepository weatherRepository, (double lat, double lon) location, ILogger logger) : ToolFunction(logger)
 {
-    public override string Description => """
-この関数は、指定された日の天気を取得するために呼び出されます。
-天気を尋ねられた際に以下のような依頼を受けて実行されます。
-
-## 呼び出される例
-
-- 「今日の天気は？」
-- 「今日は傘必要そう？」
-- 「今って晴れてる？」
-
-""";
+    public override string Description => promptRepository.GetWeatherDescription;
 
     public override string Parameters => """
 {

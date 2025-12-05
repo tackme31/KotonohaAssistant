@@ -1,5 +1,6 @@
-﻿using KotonohaAssistant.Core.Extensions;
-using KotonohaAssistant.Core;
+﻿using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Extensions;
+using System.Xml.Linq;
 
 namespace KotonohaAssistant.AI.Prompts;
 
@@ -44,4 +45,15 @@ static class Instruction
 
     public static string SwitchSisterTo(Kotonoha sister) =>
         $"姉妹が切り替わりました({sister.Switch().ToDisplayName()} => {sister.ToDisplayName()})";
+
+    public static string InactiveNotification(TimeSpan interval) => $"""
+マスターからの呼びかけが{interval.TotalDays}日以上ありません。
+以下の条件で、マスターに送るLINEメッセージを1行で生成してください。
+
+- トーン: 優しく、重くなりすぎず自然な口調にすること
+- 禁止事項: 絵文字を使わないこと
+- 内容:
+    - 最近話していないことに触れ、マスターを気遣う内容にすること
+    - 少し寂しさを感じていることをさりげなく伝えること
+""";
 }

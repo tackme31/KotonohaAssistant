@@ -10,7 +10,8 @@ public interface IChatMessageRepository
 {
     Task<long> GetLatestConversationIdAsync();
     Task<int> CreateNewConversationIdAsync();
-    Task<IEnumerable<ChatMessage>> GetAllChatMessagesAsync(long conversationId);
+    Task<IEnumerable<ChatMessage?>> GetAllChatMessagesAsync(long conversationId);
+    Task<IEnumerable<Message?>> GetAllMessageAsync(long conversationId);
     Task InsertChatMessagesAsync(IEnumerable<ChatMessage> chatMessages, long conversationId);
 }
 
@@ -94,7 +95,7 @@ CREATE TABLE IF NOT EXISTS Conversation (
         }
     }
 
-    public async Task<IEnumerable<ChatMessage>> GetAllChatMessagesAsync(long conversationId)
+    public async Task<IEnumerable<ChatMessage?>> GetAllChatMessagesAsync(long conversationId)
     {
         await InitializeDatabaseAsync();
 
@@ -118,23 +119,28 @@ CREATE TABLE IF NOT EXISTS Conversation (
         {
             return [];
         }
+    }
 
-        ChatMessage? ParseMessage(Message message)
+    public async Task<IEnumerable<Message?>> GetAllMessageAsync(long conversationId)
+    {
+        await InitializeDatabaseAsync();
+
+        var sql = "SELECT * FROM Message WHERE ConversationId = @Id";
+        try
         {
-            var texts = JsonSerializer.Deserialize<List<string>>(message.Content ?? "[]");
-            var content = (texts ?? []).Select(ChatMessageContentPart.CreateTextPart);
-            var functions = JsonSerializer.Deserialize<List<Function>>(message.ToolCalls ?? "[]");
-            var tollCalls = (functions ?? []).Select(tc => ChatToolCall.CreateFunctionToolCall(tc.Id, tc.Name, ConvertStringToBinaryData(tc.Arguments)));
-
-            return message.Type switch
+            using var connection = Connection;
+            connection.Open();
+            var messages = await connection.QueryAsync<Message>(sql, new { Id = conversationId });
+            if (messages is null)
             {
-                "User" => new UserChatMessage(content),
-                "Assistant" when tollCalls.Any() => new AssistantChatMessage(tollCalls),
-                "Assistant" => new AssistantChatMessage(content),
-                "Tool" => new ToolChatMessage(message.ToolId, content),
-                "System" => new SystemChatMessage(content),
-                _ => null
-            };
+                return [];
+            }
+
+            return [..messages];
+        }
+        catch (Exception)
+        {
+            return [];
         }
     }
 
@@ -210,27 +216,45 @@ CREATE TABLE IF NOT EXISTS Conversation (
         return new BinaryData(byteArray);
     }
 
-    private class Message
+    private static ChatMessage? ParseMessage(Message message)
     {
-        public long? Id { get; set; }
-        public long? ConversationId { get; set; }
-        public string? Type { get; set; }
-        public string? Content { get; set; }
-        public string? ToolCalls { get; set; }
-        public string? ToolId { get; set; }
-        public DateTime? CreatedAt { get; set; }
+        var texts = JsonSerializer.Deserialize<List<string>>(message.Content ?? "[]");
+        var content = (texts ?? []).Select(ChatMessageContentPart.CreateTextPart);
+        var functions = JsonSerializer.Deserialize<List<Function>>(message.ToolCalls ?? "[]");
+        var tollCalls = (functions ?? []).Select(tc => ChatToolCall.CreateFunctionToolCall(tc.Id, tc.Name, ConvertStringToBinaryData(tc.Arguments)));
+        
+        return message.Type switch
+        {
+            "User" => new UserChatMessage(content),
+            "Assistant" when tollCalls.Any() => new AssistantChatMessage(tollCalls),
+            "Assistant" => new AssistantChatMessage(content),
+            "Tool" => new ToolChatMessage(message.ToolId, content),
+            "System" => new SystemChatMessage(content),
+            _ => null
+        };
     }
+}
 
-    private class Conversation
-    {
-        public long Id { get; set; }
-        public DateTime CreatedAt { get; set; }
-    }
+public class Message
+{
+    public long? Id { get; set; }
+    public long? ConversationId { get; set; }
+    public string? Type { get; set; }
+    public string? Content { get; set; }
+    public string? ToolCalls { get; set; }
+    public string? ToolId { get; set; }
+    public DateTime? CreatedAt { get; set; }
+}
 
-    private class Function
-    {
-        public string? Id { get; set; }
-        public string? Name { get; set; }
-        public string? Arguments { get; set; }
-    }
+public class Conversation
+{
+    public long Id { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
+public class Function
+{
+    public string? Id { get; set; }
+    public string? Name { get; set; }
+    public string? Arguments { get; set; }
 }

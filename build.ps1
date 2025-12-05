@@ -103,6 +103,11 @@ function Copy-FileToVersion {
     param([string]$SourceFile, [string]$DestinationName)
 
     $destPath = Join-Path $versionPath $DestinationName
+    $destFolder = Split-Path $destPath -Parent
+
+    if (-not (Test-Path $destFolder)) {
+        New-Item -Path $destFolder -ItemType Directory | Out-Null
+    }
 
     if (Test-Path $SourceFile) {
         Copy-Item -Path $SourceFile -Destination $destPath
@@ -206,6 +211,10 @@ foreach ($project in $projects) {
 Write-Host "`nCopying additional files..." -ForegroundColor Cyan
 Copy-FileToVersion -SourceFile ".env.example" -DestinationName ".env"
 Copy-FileToVersion -SourceFile "start.bat" -DestinationName "start.bat"
+Copy-FileToVersion -SourceFile "README.md" -DestinationName "README.md"
+Copy-FileToVersion -SourceFile "LICENSE" -DestinationName "LICENSE"
+Copy-FileToVersion -SourceFile "THIRD-PARTY-NOTICES" -DestinationName "THIRD-PARTY-NOTICES"
+Copy-FileToVersion -SourceFile "assets\Clock-Alarm02-1(Loop).mp3" -DestinationName "assets\Clock-Alarm02-1(Loop).mp3"
 
 # Summary
 Write-Host "`n========================================" -ForegroundColor Green

@@ -123,7 +123,7 @@ The system uses a **multi-process architecture** with Named Pipe IPC:
 | **KotonohaAssistant\.Cli** | .NET 9.0 | Console REPL interface |
 | **KotonohaAssistant\.Vui** | .NET 9.0 MAUI+Blazor | Voice-activated UI with speech recognition |
 | **KotonohaAssistant\.VoiceServer** | .NET Framework 4.8.1 | Named Pipe server wrapping A.I. VOICE Editor API |
-| **KotonohaAssistant\.Alarm** | .NET 8.0 WPF | Alarm/timer management with UI |
+| **KotonohaAssistant\.Alarm** | .NET 9.0 WPF | Alarm/timer management with UI |
 | **KotonohaAssistant\.CharacterView** | .NET Framework 4.8 WPF | Character display window |
 
 ### Why .NET Framework for VoiceServer?

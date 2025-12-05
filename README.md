@@ -71,7 +71,6 @@ Open Weatherから天気を取得できます。
 - 会話履歴の削除
 
 ## セットアップ
-WIP
 
 ### 必要要件
 - Windows 11
@@ -136,6 +135,9 @@ Googleカレンダーへアクセスするために、認証情報が必要で�
 アラーム音提供
 
 - [Clock-Alarm02-1(Loop).mp3](https://github.com/tackme31/KotonohaAssistant/blob/main/assets/Clock-Alarm02-1(Loop).mp3): [OtoLogic](https://otologic.jp)様
+  - ライセンス: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+
+サードパーティアセットのライセンスについては[THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES)をご覧ください。
 
 ## LICENSE
-WIP
+このプロジェクトはMITライセンスのもとで公開されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。

@@ -82,28 +82,13 @@ WIP
 - .NET 9.0 Runtime
 
 ### 手順
-WIP
-
 1. A.I. VOICEをインストールし、琴葉 茜・琴葉 葵の両キャラクターを追加
-1. Releaseページから以下の3つをダウンロード
-    - KotonohaAssistant.VoiceServer.zip
-    - KotonohaAssistant.Alarm.zip
-    - KotonohaAssistant.Vui.zip
-1. 適当なフォルダを作成し、任意のフォルダに解凍する
-1. `%PROGRAMFILES%/AI/AIVoice/AIVoiceEditor`内の以下のDLLファイルを、`KotonohaAssistant.VoiceServer.exe`と同じフォルダにコピー
-    - AI.Talk.dll
-    - AI.Talk.Editor.Api.dll
-    - AI.Framework.dll
-1. `.env.example`ファイルを`KotonohaAssistant.Vui`のフォルダにコピーし、`.env`にリネーム
-1. `.env`ファイルの`OPENAI_API_KEY`にOpen AI APIのAPIキーを設定
-1. 以下をのアプリケーションを実行
-    - A.I. VOICE Eitor
-    - KotonohaAssistant.VoiceServer.exe
-    - KotonohaAssistant.Alarm.exe
-1. KotonohaAssistant.Vui.exe
-    - マイクのアクセスを許可してください
+1. [Release](https://github.com/tackme31/KotonohaAssistant/releases)から`KotonohaAssistant.zip`をダウンロードし、適当なフォルダに展開
+1. `.env`ファイルを編集し`OPENAI_API_KEY`にOpen AI APIのAPIキーを設定
+1. A.I. VOICE Eitorを起動
+1. `start.bat`を実行
 
-もしCLIでのやり取りがしたい場合、代わりに`KotonohaAssistant.Cli.exe`を使うこともできます。
+もしCLIでのやり取りがしたい場合、`KotonohaAssistant.Cli.exe`を使用してください。
 
 ## Option
 .envを設定することで以下の機能を有効化できます。

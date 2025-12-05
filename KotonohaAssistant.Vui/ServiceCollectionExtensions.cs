@@ -33,19 +33,17 @@ public static class ServiceCollectionExtensions
             Directory.CreateDirectory(AppFolder);
         }
 
-        services.AddSingleton<Core.Utils.ILogger>(new Logger(LogPath, isConsoleLoggingEnabled: false));
-        services.AddSingleton<IAlarmRepository>(new AlarmRepository(AlarmDBPath));
-        services.AddSingleton<ICalendarEventRepository>(new CalendarEventRepository(GoogleApiKey, CalendarId));
-        services.AddSingleton<IWeatherRepository>(new WeatherRepository(OwmApiKey));
-        services.AddSingleton<IChatMessageRepository>(new ChatMessageRepository(DBPath));
-        services.AddSingleton<IChatCompletionRepository>(new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
+        services.AddSingleton<ILogger>(new Logger(LogPath, isConsoleLoggingEnabled: false));
+        services.AddSingleton<IAlarmRepository>(_ => new AlarmRepository(AlarmDBPath));
+        services.AddSingleton<ICalendarEventRepository>(_ => new CalendarEventRepository(GoogleApiKey, CalendarId));
+        services.AddSingleton<IWeatherRepository>(_ => new WeatherRepository(OwmApiKey));
+        services.AddSingleton<IChatMessageRepository>(_ => new ChatMessageRepository(DBPath));
+        services.AddSingleton<IChatCompletionRepository>(_ => new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
         services.AddSingleton<ISisterSwitchingService, SisterSwitchingService>();
 
-        services.AddSingleton<ConversationService>(sp =>
+        services.AddSingleton(sp =>
         {
             var logger = sp.GetRequiredService<Core.Utils.ILogger>();
-            var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
-            var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
             var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
             var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
             var sisterSwitchingService = sp.GetRequiredService<ISisterSwitchingService>();
@@ -62,6 +60,7 @@ public static class ServiceCollectionExtensions
 
             if (EnableCalendarFunction)
             {
+                var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
                 functions.AddRange([
                     new CreateCalendarEvent(calendarRepository, logger),
                     new GetCalendarEvent(calendarRepository, logger)
@@ -70,6 +69,7 @@ public static class ServiceCollectionExtensions
 
             if (EnableWeatherFunction)
             {
+                var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
                 functions.AddRange([
                     new GetWeather(weatherRepository, (OwmLat, OwmLon), logger)
                 ]);

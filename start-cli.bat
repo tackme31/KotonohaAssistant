@@ -29,7 +29,6 @@ if not exist "%VOICESERVER_DIR%\AI.Talk.dll" set "COPY_NEEDED=1"
 if not exist "%VOICESERVER_DIR%\AI.Talk.Editor.Api.dll" set "COPY_NEEDED=1"
 if not exist "%VOICESERVER_DIR%\AI.Framework.dll" set "COPY_NEEDED=1"
 if not exist "%VOICESERVER_DIR%\System.Text.Json.dll" set "COPY_NEEDED=1"
-if not exist "%VOICESERVER_DIR%\System.ValueTuple.dll" set "COPY_NEEDED=1"
 
 if %COPY_NEEDED%==1 (
     echo Copying required DLLs...
@@ -38,7 +37,6 @@ if %COPY_NEEDED%==1 (
     copy /Y "%AIVOICE_DIR%\AI.Talk.Editor.Api.dll" "%VOICESERVER_DIR%\" >nul
     copy /Y "%AIVOICE_DIR%\AI.Framework.dll" "%VOICESERVER_DIR%\" >nul
     copy /Y "%AIVOICE_DIR%\System.Text.Json.dll" "%VOICESERVER_DIR%\" >nul
-    copy /Y "%AIVOICE_DIR%\System.ValueTuple.dll" "%VOICESERVER_DIR%\" >nul
 
     if %errorlevel% neq 0 (
         echo [ERROR] Failed to copy DLLs.

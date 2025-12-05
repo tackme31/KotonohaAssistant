@@ -82,7 +82,7 @@ Open Weatherから天気を取得できます。
 
 ### 手順
 1. A.I. VOICEをインストールし、琴葉 茜・琴葉 葵の両キャラクターを追加
-1. [Release](https://github.com/tackme31/KotonohaAssistant/releases)から`KotonohaAssistant.zip`をダウンロードし、適当なフォルダに展開
+1. [Release](https://github.com/tackme31/KotonohaAssistant/releases)から`KotonohaAssistant-{version}.zip`をダウンロードし、適当なフォルダに展開
 1. `.env`ファイルを編集し`OPENAI_API_KEY`にOpen AI APIのAPIキーを設定
 1. A.I. VOICE Eitorを起動
 1. `start.bat`を実行

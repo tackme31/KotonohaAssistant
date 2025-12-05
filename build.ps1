@@ -175,6 +175,23 @@ function Build-ModernProject {
     Write-Host "  ✓ Published successfully" -ForegroundColor Green
 }
 
+function Remove-AIEditorDLLs {
+    $outputPath = Join-Path $versionPath "KotonohaAssistant.VoiceServer"
+    $dllsToRemove = @(
+        "AI.Framework.dll",
+        "AI.Talk.dll",
+        "AI.Talk.Editor.Api.dll",
+        "System.Text.Json.dll"
+    )
+    foreach ($dll in $dllsToRemove) {
+        $dllPath = Join-Path $OutputPath $dll
+        if (Test-Path $dllPath) {
+            Remove-Item $dllPath -Force
+            Write-Host "    Removed: $dll" -ForegroundColor Gray
+        }
+    }
+}
+
 # ========================================
 # Main Build Process
 # ========================================
@@ -212,7 +229,14 @@ foreach ($project in $projects) {
         Write-Host "Error: $_" -ForegroundColor Red
         exit 1
     }
+
+    # Remove pdb files
+    Get-ChildItem -Path $outputPath -Recurse -Filter *.pdb | Remove-Item -Force
 }
+
+# Remove A.I. VOICE Editor DLLs (should not be redistributed)
+Write-Host "  Removing A.I. VOICE Editor DLLs..." -ForegroundColor Yellow
+Remove-AIEditorDLLs
 
 # Copy additional files
 Write-Host "`nCopying additional files..." -ForegroundColor Cyan

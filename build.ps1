@@ -5,39 +5,13 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# Define paths
+# ========================================
+# Configuration
+# ========================================
+
 $publishRoot = "publish"
 $versionPath = Join-Path $publishRoot $Version
 
-# Find MSBuild for .NET Framework projects
-function Find-MSBuild {
-    # Try to find vswhere first
-    $vsWherePath = "${env:ProgramFiles}\Microsoft Visual Studio\2022\Community\Msbuild\Current\Bin\MSBuild.exe"
-
-    if (Test-Path $vsWherePath) {
-        $msbuildPath = & $vsWherePath -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
-        if ($msbuildPath -and (Test-Path $msbuildPath)) {
-            return $msbuildPath
-        }
-    }
-
-    # Fallback: Check common Visual Studio locations
-    $vsEditions = @("Enterprise", "Professional", "Community")
-    $vsYears = @("2022", "2019")
-
-    foreach ($year in $vsYears) {
-        foreach ($edition in $vsEditions) {
-            $msbuildPath = "${env:ProgramFiles}\Microsoft Visual Studio\$year\$edition\MSBuild\Current\Bin\MSBuild.exe"
-            if (Test-Path $msbuildPath) {
-                return $msbuildPath
-            }
-        }
-    }
-
-    throw "MSBuild not found. Please ensure Visual Studio is installed."
-}
-
-# Projects to publish
 $projects = @(
     @{
         Name = "KotonohaAssistant.Alarm"
@@ -62,18 +36,147 @@ $projects = @(
     }
 )
 
+# ========================================
+# Helper Functions
+# ========================================
+
+function Find-MSBuild {
+    Write-Host "Locating MSBuild..." -ForegroundColor Cyan
+
+    # Try vswhere
+    $vswherePath = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswherePath) {
+        $msbuildPath = & $vswherePath -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
+        if ($msbuildPath -and (Test-Path $msbuildPath)) {
+            Write-Host "  Found: $msbuildPath" -ForegroundColor Green
+            return $msbuildPath
+        }
+    }
+
+    # Fallback: Check common Visual Studio locations
+    $vsEditions = @("Enterprise", "Professional", "Community")
+    $vsYears = @("2022", "2019")
+
+    foreach ($year in $vsYears) {
+        foreach ($edition in $vsEditions) {
+            $msbuildPath = "${env:ProgramFiles}\Microsoft Visual Studio\$year\$edition\MSBuild\Current\Bin\MSBuild.exe"
+            if (Test-Path $msbuildPath) {
+                Write-Host "  Found: $msbuildPath" -ForegroundColor Green
+                return $msbuildPath
+            }
+        }
+    }
+
+    throw "MSBuild not found. Please ensure Visual Studio is installed."
+}
+
+function Write-BuildHeader {
+    param([string]$ProjectName, [string]$ProjectPath, [string]$ProjectType, [string]$OutputPath)
+
+    Write-Host "`nPublishing $ProjectName..." -ForegroundColor Cyan
+    Write-Host "  Project: $ProjectPath" -ForegroundColor Gray
+    Write-Host "  Type: $ProjectType" -ForegroundColor Gray
+    Write-Host "  Output: $OutputPath" -ForegroundColor Gray
+}
+
+function Assert-BuildSuccess {
+    param([string]$ProjectName)
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to build $ProjectName"
+    }
+}
+
+function Copy-BuildOutput {
+    param([string]$SourceDir, [string]$OutputPath, [string]$ProjectName)
+
+    if (-not (Test-Path $SourceDir)) {
+        throw "Output directory not found: $SourceDir"
+    }
+
+    New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
+    Copy-Item -Path "$SourceDir\*" -Destination $OutputPath -Recurse -Force
+    Write-Host "  ✓ Built and copied successfully" -ForegroundColor Green
+}
+
+function Copy-FileToVersion {
+    param([string]$SourceFile, [string]$DestinationName)
+
+    $destPath = Join-Path $versionPath $DestinationName
+
+    if (Test-Path $SourceFile) {
+        Copy-Item -Path $SourceFile -Destination $destPath
+        Write-Host "  ✓ $DestinationName copied" -ForegroundColor Green
+    } else {
+        Write-Host "  Warning: $SourceFile not found, skipping" -ForegroundColor Yellow
+    }
+}
+
+function Build-FrameworkProject {
+    param($Project, [string]$OutputPath, [string]$MSBuildPath)
+
+    Write-Host "  Using MSBuild..." -ForegroundColor Gray
+
+    # Restore NuGet packages
+    & $MSBuildPath $Project.Path /t:Restore /v:minimal
+    Assert-BuildSuccess $Project.Name
+
+    # Build
+    & $MSBuildPath $Project.Path /p:Configuration=Release /p:Platform=AnyCPU /t:Build /v:minimal
+    Assert-BuildSuccess $Project.Name
+
+    # Copy output
+    $sourceDir = Join-Path (Split-Path $Project.Path -Parent) "bin\Release"
+    Copy-BuildOutput -SourceDir $sourceDir -OutputPath $OutputPath -ProjectName $Project.Name
+}
+
+function Build-MAUIProject {
+    param($Project, [string]$OutputPath, [string]$MSBuildPath)
+
+    Write-Host "  Using MSBuild (MAUI)..." -ForegroundColor Gray
+
+    if ($Project.Framework) {
+        Write-Host "  Framework: $($Project.Framework)" -ForegroundColor Gray
+    }
+
+    # Build with MSBuild
+    & $MSBuildPath $Project.Path /p:Configuration=Release /p:Platform=AnyCPU /t:Restore,Rebuild /v:minimal
+    Assert-BuildSuccess $Project.Name
+
+    # Copy output
+    $sourceDir = Join-Path (Split-Path $Project.Path -Parent) "bin\Release\$($Project.Framework)\win10-x64"
+    Copy-BuildOutput -SourceDir $sourceDir -OutputPath $OutputPath -ProjectName $Project.Name
+}
+
+function Build-ModernProject {
+    param($Project, [string]$OutputPath)
+
+    Write-Host "  Using dotnet publish..." -ForegroundColor Gray
+
+    dotnet publish $Project.Path `
+        --configuration Release `
+        --output $OutputPath `
+        --self-contained false `
+        /p:PublishSingleFile=false
+
+    Assert-BuildSuccess $Project.Name
+    Write-Host "  ✓ Published successfully" -ForegroundColor Green
+}
+
+# ========================================
+# Main Build Process
+# ========================================
+
 Write-Host "Starting release build for version: $Version" -ForegroundColor Green
 
 # Find MSBuild if needed
 $msbuildPath = $null
 $needsMSBuild = $projects | Where-Object { $_.Type -eq "Framework" -or $_.Type -eq "MAUI" }
 if ($needsMSBuild) {
-    Write-Host "`nLocating MSBuild..." -ForegroundColor Cyan
     $msbuildPath = Find-MSBuild
-    Write-Host "  Found: $msbuildPath" -ForegroundColor Green
 }
 
-# Create publish directory structure
+# Create publish directory
 Write-Host "`nCreating directory structure..." -ForegroundColor Cyan
 if (Test-Path $versionPath) {
     Write-Host "Warning: Version directory already exists. Cleaning up..." -ForegroundColor Yellow
@@ -81,116 +184,28 @@ if (Test-Path $versionPath) {
 }
 New-Item -ItemType Directory -Path $versionPath -Force | Out-Null
 
-# Build and publish each project
+# Build each project
 foreach ($project in $projects) {
-    $projectName = $project.Name
-    $projectPath = $project.Path
-    $projectType = $project.Type
-    $outputPath = Join-Path $versionPath $projectName
+    $outputPath = Join-Path $versionPath $project.Name
 
-    Write-Host "`nPublishing $projectName..." -ForegroundColor Cyan
-    Write-Host "  Project: $projectPath" -ForegroundColor Gray
-    Write-Host "  Type: $projectType" -ForegroundColor Gray
-    Write-Host "  Output: $outputPath" -ForegroundColor Gray
+    Write-BuildHeader -ProjectName $project.Name -ProjectPath $project.Path -ProjectType $project.Type -OutputPath $outputPath
 
-    if ($projectType -eq "Framework") {
-        # Use MSBuild for .NET Framework projects
-        Write-Host "  Using MSBuild..." -ForegroundColor Gray
-
-        # Restore NuGet packages first
-        & $msbuildPath $projectPath /t:Restore /v:minimal
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error: Failed to restore packages for $projectName" -ForegroundColor Red
-            exit 1
+    try {
+        switch ($project.Type) {
+            "Framework" { Build-FrameworkProject -Project $project -OutputPath $outputPath -MSBuildPath $msbuildPath }
+            "MAUI"      { Build-MAUIProject -Project $project -OutputPath $outputPath -MSBuildPath $msbuildPath }
+            "Modern"    { Build-ModernProject -Project $project -OutputPath $outputPath }
         }
-
-        & $msbuildPath $projectPath /p:Configuration=Release /p:Platform=AnyCPU /t:Build /v:minimal
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error: Failed to build $projectName" -ForegroundColor Red
-            exit 1
-        }
-
-        # Copy output files
-        $sourceDir = Join-Path (Split-Path $projectPath -Parent) "bin\Release"
-        if (Test-Path $sourceDir) {
-            New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
-            Copy-Item -Path "$sourceDir\*" -Destination $outputPath -Recurse -Force
-            Write-Host "  ✓ Built and copied successfully" -ForegroundColor Green
-        } else {
-            Write-Host "Error: Output directory not found: $sourceDir" -ForegroundColor Red
-            exit 1
-        }
-    } elseif ($projectType -eq "MAUI") {
-        # Use MSBuild for MAUI projects (Windows App SDK doesn't support dotnet publish)
-        Write-Host "  Using MSBuild (MAUI)..." -ForegroundColor Gray
-
-        $framework = $project.Framework
-        if ($framework) {
-            Write-Host "  Framework: $framework" -ForegroundColor Gray
-        }
-
-        # Build the project with MSBuild
-        & $msbuildPath $projectPath /p:Configuration=Release /p:Platform=AnyCPU /t:Restore,Rebuild /v:minimal
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error: Failed to build $projectName" -ForegroundColor Red
-            exit 1
-        }
-
-        # Copy output files - MAUI outputs to bin\Release\{framework}\win10-x64
-        $sourceDir = Join-Path (Split-Path $projectPath -Parent) "bin\Release\$framework\win10-x64"
-        if (Test-Path $sourceDir) {
-            New-Item -ItemType Directory -Path $outputPath -Force | Out-Null
-            Copy-Item -Path "$sourceDir\*" -Destination $outputPath -Recurse -Force
-            Write-Host "  ✓ Built and copied successfully" -ForegroundColor Green
-        } else {
-            Write-Host "Error: Output directory not found: $sourceDir" -ForegroundColor Red
-            exit 1
-        }
-    } else {
-        # Use dotnet publish for modern .NET projects
-        Write-Host "  Using dotnet publish..." -ForegroundColor Gray
-
-        dotnet publish $projectPath `
-            --configuration Release `
-            --output $outputPath `
-            --self-contained false `
-            /p:PublishSingleFile=false
-
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Error: Failed to publish $projectName" -ForegroundColor Red
-            exit 1
-        }
-
-        Write-Host "  ✓ Published successfully" -ForegroundColor Green
+    } catch {
+        Write-Host "Error: $_" -ForegroundColor Red
+        exit 1
     }
 }
 
-# Copy .env.example to .env in version folder
-Write-Host "`nCopying .env.example to .env..." -ForegroundColor Cyan
-$envExamplePath = ".env.example"
-$envDestPath = Join-Path $versionPath ".env"
-
-if (Test-Path $envExamplePath) {
-    Copy-Item -Path $envExamplePath -Destination $envDestPath
-    Write-Host "  ✓ .env file created" -ForegroundColor Green
-} else {
-    Write-Host "  Warning: .env.example not found, skipping .env creation" -ForegroundColor Yellow
-}
-
-# Copy start.bat launcher to version folder
-Write-Host "`nCopying start.bat launcher..." -ForegroundColor Cyan
-$startBatPath = "start.bat"
-$startBatDestPath = Join-Path $versionPath "start.bat"
-
-if (Test-Path $startBatPath) {
-    Copy-Item -Path $startBatPath -Destination $startBatDestPath
-    Write-Host "  ✓ start.bat copied" -ForegroundColor Green
-} else {
-    Write-Host "  Warning: start.bat not found, skipping launcher creation" -ForegroundColor Yellow
-}
+# Copy additional files
+Write-Host "`nCopying additional files..." -ForegroundColor Cyan
+Copy-FileToVersion -SourceFile ".env.example" -DestinationName ".env"
+Copy-FileToVersion -SourceFile "start.bat" -DestinationName "start.bat"
 
 # Summary
 Write-Host "`n========================================" -ForegroundColor Green

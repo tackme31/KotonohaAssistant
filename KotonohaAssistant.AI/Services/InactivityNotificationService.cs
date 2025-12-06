@@ -131,18 +131,26 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         }
     }
 
-    private (DateTime? createdAt, Kotonoha sister, long conversationId)? GetLastActivity(IEnumerable<Message?> messages)
+    private (DateTime createdAt, Kotonoha sister, long conversationId)? GetLastActivity(IEnumerable<Message?> messages)
     {
-        foreach (var m in messages.OfType<Message>().Reverse())
+        foreach (var message in messages.OfType<Message>().Reverse())
         {
-            if (m.Content is not null &&
-                ChatResponse.TryParse(m.Content, out var content) &&
-                m.ConversationId.HasValue &&
-                m.CreatedAt.HasValue)
+            var m = message.ToChatMessage();
+            if (m.Content is [])
             {
-                return (m.CreatedAt.Value, content!.Assistant, m.ConversationId.Value);
+                continue;
             }
+
+            var content = m.Content[0].Text;
+            if (!ChatResponse.TryParse(content, out var res) || res is null)
+            {
+                continue;
+            }
+            
+            return (message.CreatedAt!.Value, res.Assistant, message.ConversationId!.Value);
+
         }
+
         return null;
     }
 

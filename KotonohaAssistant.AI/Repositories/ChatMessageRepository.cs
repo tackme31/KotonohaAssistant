@@ -1,8 +1,9 @@
-﻿using OpenAI.Chat;
-using Dapper;
+﻿using Dapper;
 using Microsoft.Data.Sqlite;
+using OpenAI.Chat;
 using System.Data;
 using System.Text.Json;
+using static KotonohaAssistant.AI.Prompts.InitialConversation;
 
 namespace KotonohaAssistant.AI.Repositories;
 
@@ -116,7 +117,7 @@ CREATE TABLE IF NOT EXISTS Conversation (
             }
 
             return messages
-                .Select(ParseMessage)
+                .Select(m => m.ToChatMessage())
                 .OfType<ChatMessage>()
                 .ToList();
         }
@@ -213,35 +214,12 @@ CREATE TABLE IF NOT EXISTS Conversation (
         catch (Exception)
         {
         }
+
     }
 
     private static string ConvertBinaryDataToString(BinaryData data)
     {
         return Convert.ToBase64String(data.ToArray());
-    }
-
-    private static BinaryData ConvertStringToBinaryData(string base64String)
-    {
-        byte[] byteArray = Convert.FromBase64String(base64String);
-        return new BinaryData(byteArray);
-    }
-
-    private static ChatMessage? ParseMessage(Message message)
-    {
-        var texts = JsonSerializer.Deserialize<List<string>>(message.Content ?? "[]");
-        var content = (texts ?? []).Select(ChatMessageContentPart.CreateTextPart);
-        var functions = JsonSerializer.Deserialize<List<Function>>(message.ToolCalls ?? "[]");
-        var tollCalls = (functions ?? []).Select(tc => ChatToolCall.CreateFunctionToolCall(tc.Id, tc.Name, ConvertStringToBinaryData(tc.Arguments)));
-        
-        return message.Type switch
-        {
-            "User" => new UserChatMessage(content),
-            "Assistant" when tollCalls.Any() => new AssistantChatMessage(tollCalls),
-            "Assistant" => new AssistantChatMessage(content),
-            "Tool" => new ToolChatMessage(message.ToolId, content),
-            "System" => new SystemChatMessage(content),
-            _ => null
-        };
     }
 }
 
@@ -254,6 +232,30 @@ public class Message
     public string? ToolCalls { get; set; }
     public string? ToolId { get; set; }
     public DateTime? CreatedAt { get; set; }
+
+    public ChatMessage ToChatMessage()
+    {
+        var texts = JsonSerializer.Deserialize<List<string>>(Content ?? "[]");
+        var content = (texts ?? []).Select(ChatMessageContentPart.CreateTextPart);
+        var functions = JsonSerializer.Deserialize<List<Function>>(ToolCalls ?? "[]");
+        var tollCalls = (functions ?? []).Select(tc => ChatToolCall.CreateFunctionToolCall(tc.Id, tc.Name, ConvertStringToBinaryData(tc.Arguments)));
+
+        return Type switch
+        {
+            "User" => new UserChatMessage(content),
+            "Assistant" when tollCalls.Any() => new AssistantChatMessage(tollCalls),
+            "Assistant" => new AssistantChatMessage(content),
+            "Tool" => new ToolChatMessage(this.ToolId, content),
+            "System" => new SystemChatMessage(content),
+            _ => throw new ArgumentOutOfRangeException(nameof(Type))
+        };
+    }
+
+    private static BinaryData ConvertStringToBinaryData(string base64String)
+    {
+        byte[] byteArray = Convert.FromBase64String(base64String);
+        return new BinaryData(byteArray);
+    }
 }
 
 public class Conversation

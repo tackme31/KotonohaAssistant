@@ -173,8 +173,6 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
                 return;
             }
 
-            await _chatMessageRepository.InsertChatMessagesAsync([message], conversationId);
-
             lineMessage = res!.Text ?? string.Empty;
         }
         catch (Exception ex)

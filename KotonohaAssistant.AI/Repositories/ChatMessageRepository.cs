@@ -99,7 +99,12 @@ CREATE TABLE IF NOT EXISTS Conversation (
     {
         await InitializeDatabaseAsync();
 
-        var sql = "SELECT * FROM Message WHERE ConversationId = @Id";
+        var sql = """
+            SELECT *
+            FROM Message
+            WHERE ConversationId = @Id
+            ORDER BY Id DESC
+            """;
         try
         {
             using var connection = Connection;
@@ -125,7 +130,12 @@ CREATE TABLE IF NOT EXISTS Conversation (
     {
         await InitializeDatabaseAsync();
 
-        var sql = "SELECT * FROM Message WHERE ConversationId = @Id";
+        var sql = """
+            SELECT *
+            FROM Message
+            WHERE ConversationId = @Id
+            ORDER BY Id DESC
+            """;
         try
         {
             using var connection = Connection;

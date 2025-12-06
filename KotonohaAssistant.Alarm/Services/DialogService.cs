@@ -1,6 +1,6 @@
-﻿using KotonohaAssistant.Alarm.Controls;
+﻿using System.Windows;
+using KotonohaAssistant.Alarm.Controls;
 using KotonohaAssistant.Alarm.Models;
-using System.Windows;
 
 namespace KotonohaAssistant.Alarm.Services;
 

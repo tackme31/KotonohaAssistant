@@ -1,5 +1,5 @@
+﻿using KotonohaAssistant.Core.Utils;
 using Line.Messaging;
-using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Repositories;
 

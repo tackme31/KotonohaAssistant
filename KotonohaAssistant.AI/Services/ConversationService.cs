@@ -1,11 +1,11 @@
-﻿using KotonohaAssistant.AI.Functions;
+﻿using System.Text.Json;
+using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
-using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Services;
 

@@ -1,4 +1,4 @@
-using KotonohaAssistant.Core;
+﻿using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Services;

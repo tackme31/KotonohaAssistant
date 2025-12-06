@@ -136,7 +136,7 @@ namespace KotonohaAssistant.CharacterView
 
         private void UpdateCapture()
         {
-            if(!TryGetWindowData("A.I.VOICE Editor", out var windowData))
+            if (!TryGetWindowData("A.I.VOICE Editor", out var windowData))
             {
                 return;
             }

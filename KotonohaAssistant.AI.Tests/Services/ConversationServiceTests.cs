@@ -1,4 +1,4 @@
-using KotonohaAssistant.AI.Functions;
+﻿using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;

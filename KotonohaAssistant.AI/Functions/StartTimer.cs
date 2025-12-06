@@ -1,8 +1,8 @@
+﻿using System.Text.Json;
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
-using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
@@ -53,7 +53,7 @@ public class StartTimer(IPromptRepository promptRepository, ILogger logger) : To
 
             return "成功";
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             logger.LogError(ex);
             return "失敗";

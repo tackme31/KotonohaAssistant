@@ -1,8 +1,8 @@
-﻿using Dapper;
+﻿using System.Data;
+using Dapper;
 using KotonohaAssistant.Alarm.Models;
 using KotonohaAssistant.Core.Utils;
 using Microsoft.Data.Sqlite;
-using System.Data;
 
 namespace KotonohaAssistant.Alarm.Repositories;
 

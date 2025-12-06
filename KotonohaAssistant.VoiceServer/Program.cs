@@ -1,11 +1,4 @@
-﻿using AI.Talk;
-using AI.Talk.Editor.Api;
-using CoreAudio;
-using KotonohaAssistant.Core;
-using KotonohaAssistant.Core.Models;
-using KotonohaAssistant.Core.Utils;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
@@ -13,6 +6,13 @@ using System.Linq;
 using System.Security.Policy;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using AI.Talk;
+using AI.Talk.Editor.Api;
+using CoreAudio;
+using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Models;
+using KotonohaAssistant.Core.Utils;
+using Newtonsoft.Json;
 
 namespace KotonohaAssistant.VoiceServer
 {
@@ -342,7 +342,7 @@ namespace KotonohaAssistant.VoiceServer
                         break;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Logger.LogError(ex);
             }

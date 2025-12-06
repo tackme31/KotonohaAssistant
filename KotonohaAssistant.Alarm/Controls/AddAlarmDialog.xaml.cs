@@ -1,7 +1,7 @@
-﻿using KotonohaAssistant.Alarm.Models;
-using Microsoft.Win32;
-using System.IO;
+﻿using System.IO;
 using System.Windows;
+using KotonohaAssistant.Alarm.Models;
+using Microsoft.Win32;
 
 namespace KotonohaAssistant.Alarm.Controls
 {
@@ -61,7 +61,7 @@ namespace KotonohaAssistant.Alarm.Controls
             FilePath.Text = dialog.FileName;
         }
 
-        private TimeSpan AlarmTime => new ((int) Hour.SelectedValue, (int)(Minute.Value ?? 0), 0);
+        private TimeSpan AlarmTime => new((int)Hour.SelectedValue, (int)(Minute.Value ?? 0), 0);
 
 
         public AlarmSetting AlarmSetting => new()

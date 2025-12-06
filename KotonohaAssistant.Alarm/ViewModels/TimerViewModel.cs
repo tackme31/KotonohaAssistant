@@ -1,7 +1,7 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using System.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KotonohaAssistant.Alarm.Services;
-using System.Windows;
 
 namespace KotonohaAssistant.Alarm.ViewModels;
 

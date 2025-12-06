@@ -1,5 +1,5 @@
+﻿using System.Text.Json;
 using KotonohaAssistant.AI.Extensions;
-using System.Text.Json;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
@@ -73,7 +73,7 @@ public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEv
 
             return "予定を作成しました。";
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Logger.LogError(ex);
 

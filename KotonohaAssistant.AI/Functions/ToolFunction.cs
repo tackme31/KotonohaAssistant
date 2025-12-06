@@ -1,4 +1,4 @@
-using System.Text;
+ï»¿using System.Text;
 using System.Text.Json;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
@@ -12,22 +12,22 @@ public abstract class ToolFunction(ILogger logger)
     protected ILogger Logger { get; } = logger;
 
     /// <summary>
-    /// ŠÖ”‚Ìà–¾
+    /// é–¢æ•°ã®èª¬æ˜
     /// </summary>
     public abstract string Description { get; }
 
     /// <summary>
-    /// ŠÖ”‚Ìƒpƒ‰ƒ[ƒ^
+    /// é–¢æ•°ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
     /// </summary>
     public abstract string Parameters { get; }
 
     /// <summary>
-    /// ‘Ó‚¯•È‘ÎÛ‚©‚Ç‚¤‚©
+    /// æ€ ã‘ç™–å¯¾è±¡ã‹ã©ã†ã‹
     /// </summary>
     public virtual bool CanBeLazy { get; set; } = true;
 
     /// <summary>
-    /// ˆø”‚Ìƒp[ƒXˆ—
+    /// å¼•æ•°ã®ãƒ‘ãƒ¼ã‚¹å‡¦ç†
     /// </summary>
     /// <param name="doc"></param>
     /// <param name="arguments"></param>
@@ -35,7 +35,7 @@ public abstract class ToolFunction(ILogger logger)
     public abstract bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments);
 
     /// <summary>
-    /// ŠÖ”‚ÌÀsˆ—
+    /// é–¢æ•°ã®å®Ÿè¡Œå‡¦ç†
     /// </summary>
     /// <param name="arguments"></param>
     /// <param name="state"></param>

@@ -1,6 +1,6 @@
 ﻿using System;
-using System.IO.Pipes;
 using System.IO;
+using System.IO.Pipes;
 using System.Threading.Tasks;
 using KotonohaAssistant.Core.Models;
 using Newtonsoft.Json;

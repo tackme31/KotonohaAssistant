@@ -1,6 +1,6 @@
-﻿using KotonohaAssistant.Core;
+﻿using System.Xml.Linq;
+using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Extensions;
-using System.Xml.Linq;
 
 namespace KotonohaAssistant.AI.Prompts;
 

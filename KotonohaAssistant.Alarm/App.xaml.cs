@@ -1,4 +1,6 @@
-﻿using KotonohaAssistant.Alarm.Pages;
+﻿using System.IO;
+using System.Windows;
+using KotonohaAssistant.Alarm.Pages;
 using KotonohaAssistant.Alarm.Repositories;
 using KotonohaAssistant.Alarm.Services;
 using KotonohaAssistant.Alarm.ViewModels;
@@ -6,8 +8,6 @@ using KotonohaAssistant.Core.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.IO;
-using System.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Abstractions;
 

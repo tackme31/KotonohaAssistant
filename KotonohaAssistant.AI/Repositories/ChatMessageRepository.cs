@@ -1,8 +1,8 @@
-﻿using Dapper;
+﻿using System.Data;
+using System.Text.Json;
+using Dapper;
 using Microsoft.Data.Sqlite;
 using OpenAI.Chat;
-using System.Data;
-using System.Text.Json;
 using static KotonohaAssistant.AI.Prompts.InitialConversation;
 
 namespace KotonohaAssistant.AI.Repositories;
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS Conversation (
                 return [];
             }
 
-            return [..messages];
+            return [.. messages];
         }
         catch (Exception)
         {
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS Conversation (
 
             var content = chatMessage.Content.Select(c => c.Text).ToList();
             var toolCalls = chatMessage is AssistantChatMessage assistant
-                ? assistant.ToolCalls.Select(t => new Function 
+                ? assistant.ToolCalls.Select(t => new Function
                 {
                     Id = t.Id,
                     Name = t.FunctionName,

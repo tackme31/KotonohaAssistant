@@ -1,11 +1,11 @@
-﻿using KotonohaAssistant.AI.Functions;
+﻿using System;
+using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
-using System;
 
 namespace KotonohaAssistant.AI.Services;
 
@@ -146,7 +146,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
             {
                 continue;
             }
-            
+
             return (message.CreatedAt!.Value, res.Assistant, message.ConversationId!.Value);
 
         }

@@ -1,6 +1,6 @@
-﻿using KotonohaAssistant.Core.Utils;
+﻿using System.Windows;
+using KotonohaAssistant.Core.Utils;
 using NAudio.Wave;
-using System.Windows;
 
 namespace KotonohaAssistant.Alarm.Services;
 

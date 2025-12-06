@@ -1,6 +1,6 @@
-﻿using KotonohaAssistant.Alarm.ViewModels;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
+using KotonohaAssistant.Alarm.ViewModels;
 
 namespace KotonohaAssistant.Alarm.Pages
 {

@@ -1,9 +1,9 @@
+﻿using System.Text;
+using System.Text.Json;
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
-using System.Text;
-using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
@@ -91,7 +91,8 @@ public class GetCalendarEvent(IPromptRepository promptRepository, ICalendarEvent
                 sb.AppendLine($"- [{start:HH:mm}から{end:HH:mm}まで] {eventItem.Summary}");
             }
 
-            return sb.ToString(); ;
+            return sb.ToString();
+            ;
         }
         catch (Exception ex)
         {

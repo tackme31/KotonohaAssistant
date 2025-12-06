@@ -1,6 +1,6 @@
-﻿using KotonohaAssistant.Core.Utils;
+﻿using System.ClientModel;
+using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
-using System.ClientModel;
 
 namespace KotonohaAssistant.AI.Repositories;
 

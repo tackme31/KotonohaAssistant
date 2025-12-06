@@ -1,7 +1,7 @@
-﻿using Dapper;
+﻿using System.Data;
+using Dapper;
 using KotonohaAssistant.Core.Utils;
 using Microsoft.Data.Sqlite;
-using System.Data;
 
 namespace KotonohaAssistant.AI.Repositories;
 

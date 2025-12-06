@@ -31,11 +31,11 @@ public class PromptRepository(string promptPath) : IPromptRepository
     private static readonly string InstructionInactiveNotification = "instruction_inactive_notification.md";
 
     public string GetCharacterPrompt(Kotonoha sister) => sister switch
-        {
-            Kotonoha.Akane => SystemMessage.KotonohaAkane(GetPrompt(CharacterPromptAkane), DateTime.Now),
-            Kotonoha.Aoi => SystemMessage.KotonohaAoi(GetPrompt(CharacterPromptAoi), DateTime.Now),
-            _ => throw new FileNotFoundException()
-        };
+    {
+        Kotonoha.Akane => SystemMessage.KotonohaAkane(GetPrompt(CharacterPromptAkane), DateTime.Now),
+        Kotonoha.Aoi => SystemMessage.KotonohaAoi(GetPrompt(CharacterPromptAoi), DateTime.Now),
+        _ => throw new FileNotFoundException()
+    };
 
     public string CallMasterDescription => GetPrompt(ToolCallMaster);
 

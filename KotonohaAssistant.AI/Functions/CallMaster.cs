@@ -1,8 +1,8 @@
+﻿using System.Text.Json;
 using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
-using System.Text.Json;
 
 namespace KotonohaAssistant.AI.Functions;
 
@@ -65,7 +65,7 @@ public class CallMaster(IPromptRepository promptRepository, string voiceDirector
             await voiceClient.ExportVoiceAsync(state.CurrentSister, Core.Emotion.Calm, message, savePath);
             await alarmClient.AddAlarm(time, savePath + ".wav", isRepeated: false);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Logger.LogError(ex);
 

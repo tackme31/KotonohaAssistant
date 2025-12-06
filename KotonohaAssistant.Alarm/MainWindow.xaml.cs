@@ -1,6 +1,6 @@
-﻿using KotonohaAssistant.Alarm.Pages;
+﻿using System.Windows;
+using KotonohaAssistant.Alarm.Pages;
 using KotonohaAssistant.Alarm.ViewModels;
-using System.Windows;
 using Wpf.Ui;
 using Wpf.Ui.Controls;
 

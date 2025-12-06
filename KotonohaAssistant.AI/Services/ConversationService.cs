@@ -215,7 +215,7 @@ public class ConversationService
     {
         try
         {
-            var trimmed = messages.TakeLast(300); // コンテキストウィンドウ対策
+            var trimmed = messages.TakeLast(20);
             return await _chatCompletionRepository.CompleteChatAsync(messages, _options);
         }
         catch (Exception ex)

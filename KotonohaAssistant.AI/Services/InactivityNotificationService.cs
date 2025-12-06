@@ -156,7 +156,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         };
 
         state.LoadInitialConversation();
-        state.LoadMessages(allChatMessages.OfType<ChatMessage>());
+        state.LoadMessages(allChatMessages.OfType<ChatMessage>().Take(20));
         state.AddInstruction(Instruction.SwitchSisterTo(sister));
         state.AddInstruction(_promptRepository.InactiveNotification(notifyInterval));
 

@@ -1,143 +1,218 @@
 # Kotonoha Assistant
 
+琴葉茜・琴葉葵の二人が会話形式でサポートしてくれるAIアシスタントです。
 
-**NOTE:**
-このプロジェクトは個人用に作成したものです。利用は自己責任でお願いします。
+> ⚠️ **注意**
+> 
+> 本プロジェクトは個人用として作成されたものです。利用は自己責任でお願いします。
 
-## 機能一覧
-トリガーワード（AIアシスタントの起動ワード）は以下の通りです。
 
-- 「ねえ茜ちゃん」
-- 「ねえ葵ちゃん」
-- 「茜ちゃんいる？」
-- 「葵ちゃんいる？」
+# 📌 機能一覧
 
-また、こちらの入力に「あおい」が入っていれば琴葉葵に、「あかね」が入っていた場合琴葉茜に切り替わります。
-会話を終了する場合は以下の入力を行ってください。
+## 🎙️ トリガーワード（起動ワード）
 
-- 「ばいばい」
+次の呼びかけでアシスタントを起動できます：
 
-### アラーム機能
-アラームの設定ができます。
+* 「ねえ茜ちゃん」
+* 「ねえ葵ちゃん」
+* 「茜ちゃんいる？」
+* 「葵ちゃんいる？」
 
-- 「明日9時半に起こして」
-- 「10時になったら教えて」
-- 「アラームを15時に設定」
+また、メッセージ内に
 
-時刻になったら、文脈に応じたボイスが読み上げられ、その後アラーム音が再生されます。
-アラームを停止する旨を伝えることで、停止できます。
+* 「あおい」 → 琴葉葵
+* 「あかね」 → 琴葉茜
 
-### タイマー機能
+が含まれると自動的に担当キャラクターが切り替わります。
+
+会話終了は：
+
+* 「ばいばい」
+
+
+## ⏰ アラーム機能
+
+自然な言い回しでアラームを設定できます。
+
+例：
+
+* 「明日9時半に起こして」
+* 「10時になったら教えて」
+* 「アラームを15時に設定」
+
+指定時刻になると、文脈に応じたキャラボイス→アラーム音が再生されます。
+
+「アラームを止めて」などで停止できます。
+
+
+## ⏱ タイマー機能
+
 タイマーの開始・停止ができます。
 
-- 「タイマー3分」
-- 「30秒数えて」
-- 「タイマーを止めて」
+例：
 
-### 予定の取得・作成 (オプション)
-Googleカレンダーからの予定の取得・作成ができます。
+* 「タイマー3分」
+* 「30秒数えて」
+* 「タイマーを止めて」
 
-- 「今日の予定を教えて」
-- 「明日の午前中、空いてる時間ある？」
 
-### 天気の取得 (オプション)
-Open Weatherから天気を取得できます。
+## 📅 Googleカレンダー連携（要設定）
 
-- 「明日の天気を教えて」
-- 「今日の午後から雨降りそう？」
+Googleカレンダーの予定取得・作成が可能です。
 
-### 会話履歴の削除
-会話記録を消し、新しい会話を始めます。
+例：
 
-- 「2人の記憶を消したい」
-- 「会話記録を消してほしい」
+* 「今日の予定を教えて」
+* 「明日の午前中、空いてる時間ある？」
 
-琴葉姉妹は記憶を消さないようにお願いしてきます。
-2人の説得に成功した場合、会話記録を削除できます。
-また、1/10の確率で削除に失敗します。
+有効化には OAuth 設定が必要です（後述）。
 
-### 怠け癖について
-以下の条件を満たすことで、琴葉姉妹はもう一方にタスクを押し付けます。
 
-- 1/10の確率でランダムに発生
-- 姉妹のうち一方に、連続で4回お願いを頼んだ場合に発生
+## ☁️ 天気取得（要設定）
 
-怠け癖が発動した場合、姉妹が切り替わります。
-ただし、以下の機能では怠け癖が起こりません。
+OpenWeatherMap API を使って天気を取得できます。
 
-- アラームの停止
-- タイマーの開始
-- タイマーの終了
-- 会話履歴の削除
+例：
 
-## セットアップ
+* 「明日の天気を教えて」
+* 「今日の午後から雨降りそう？」
 
-### 必要要件
-- Windows 11
-- [A.I. VOICE 琴葉 茜・葵](https://aivoice.jp/product/kotonoha/)
-  - **A.I VOICE2はAPIが提供されていないため使用できません。**
-- Open AI APIのAPIキー
-- .NET Framework 4.8.1 Runtime
-- .NET 9.0 Runtime
 
-### 手順
-1. A.I. VOICEをインストールし、琴葉 茜・琴葉 葵の両キャラクターを追加
-1. [Release](https://github.com/tackme31/KotonohaAssistant/releases)から`KotonohaAssistant-{version}.zip`をダウンロードし、適当なフォルダに展開
-1. `.env`ファイルを編集し`OPENAI_API_KEY`にOpen AI APIのAPIキーを設定
-1. A.I. VOICE Eitorを起動
-1. `start.bat`を実行
+## 📭 非アクティブ通知（要設定）
 
-もしCLIでのやり取りがしたい場合、`start-cli.bat`を使用してください。
+一定期間やり取りが無い場合、LINE に通知を送れます。
 
-## Option
-.envを設定することで以下の機能を有効化できます。
+<img src="./img/inactive_notification_screenshot.png" width="400">
 
-- `ENABLE_CALENDAR_FUNCTION`
-  - Googleカレンダーからの予定の取得・作成
-- `ENABLE_WEATHER_FUNCTION`
-  - Open Weatherからの天気の取得
+## 🗑 会話履歴の削除
 
-### カレンダーの予定取得・作成
-Googleカレンダーへアクセスするために、認証情報が必要です。
-またサービスアカウントとcredentials.jsonの作成が必要です。
-以下を参考に、作成してください。
+会話記録をリセットします。
 
-- [アクセス認証情報を作成する  |  Google Workspace  |  Google for Developers](https://developers.google.com/workspace/guides/create-credentials?hl=ja)
+例：
 
-作成後、予定を取得したいGoogleアカウントでGoogleカレンダーを開き、以下の設定をしてください。
+* 「2人の記憶を消したい」
+* 「会話記録を消してほしい」
 
-- マイカレンダー > ユーザー名の⋮から「設定と共有」を開く
-- 共有する相手に、先程作成したサービスアカウントのメールアドレスを追加
-- アクセス権限を「予定の変更」に設定
+姉妹から引き止められますが、説得に成功すると削除します。
 
-設定完了後、`.env`の以下の値を設定してください。
+また1/10 の確率で削除に失敗します。
 
-- `GOOGLE_API_KEY`: シークレットファイル（credentials.json）のパス
-- `CALENDAR_ID`: 予定を取得するカレンダーのメールアドレス
 
-### 天気の取得
-[Open Weather Map](https://openweathermap.org/)のAPIが必要です。
-アカウントを作成・ログイン後、"API eys"からAPIキーを生成し、`.env`の以下の値を設定してください。
+## 😪 怠け癖システム
 
-- `OWM_API_KEY`: Open WeatherのAPI Key
-- `OWM_LAT`, `OWM_LON`: 天気を取得する緯度経度
+以下の条件で一方がタスクを押し付け、担当が切り替わります：
 
-### 姉妹の音声再生をスピーカー左右で分ける
-使用しているスピーカーにチャネルが2つある場合、琴葉茜・琴葉葵のそれぞれで異なるチャネルから音声を再生できます。
-有効化するには、`.env`の`ENABLE_CHANNEL_SWITCHING`をtrueに設定してください。
+* 1/10 の確率でランダム発生
+* 同じキャラへ連続して4回タスクを依頼した場合
 
-**読み上げ中にプログラムを終了すると一方のチャネルの音量が0のままになるので注意してください**
+ただし以下では発生しません：
 
-## Author
-- Takumi Yamada ([@tackme31](https://x.com/tackme31))
+* アラーム停止
+* タイマー開始/終了
+* 会話履歴の削除
 
-## Credits
-アラーム音提供
 
-- [Clock-Alarm02-1(Loop).mp3](https://github.com/tackme31/KotonohaAssistant/blob/main/assets/Clock-Alarm02-1(Loop).mp3): [OtoLogic](https://otologic.jp)様
-  - ライセンス: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+# 🖥 セットアップ手順
 
-サードパーティアセットのライセンスについては[THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES)をご覧ください。
+## 必要環境
 
-## LICENSE
-このプロジェクトはMITライセンスのもとで公開されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。
+* Windows 11
+* **A.I.VOICE 琴葉 茜・葵**
+
+  * ※ A.I.VOICE2 は API 非対応のため使用できません
+* OpenAI APIキー
+* .NET Framework 4.8.1 Runtime
+* .NET 9.0 Runtime
+
+
+## インストール手順
+
+1. A.I.VOICE をインストールし、琴葉茜・琴葉葵を追加
+2. [Releases](https://github.com/tackme31/KotonohaAssistant/releases) から
+   `KotonohaAssistant-{version}.zip` をダウンロードして展開
+3. `.env` を開き、`OPENAI_API_KEY` に API キーを設定
+4. A.I. VOICE Editor を起動
+5. `start.bat` を実行
+
+CLI で使いたい場合は `start-cli.bat` を使用してください。
+
+
+# ⚙️ オプション機能の設定
+
+## 📅 カレンダー連携
+
+`.env` の `ENABLE_CALENDAR_FUNCTION = true` で有効化。
+
+Google カレンダー API 用の認証設定が必要です：
+
+1. Google Cloud Consoleで
+   サービスアカウント＋`credentials.json`を作成
+   参考：
+   [https://developers.google.com/workspace/guides/create-credentials?hl=ja](https://developers.google.com/workspace/guides/create-credentials?hl=ja)
+2. Google カレンダーを開き、
+   *対象カレンダー → 設定 → アクセス権限* から
+   サービスアカウントのメールを追加し「予定の変更」権限を付与
+3. `.env` に以下を設定：
+
+```
+GOOGLE_API_KEY=credentials.json のパス
+CALENDAR_ID=対象カレンダーのメールアドレス
+```
+
+
+## ☁️ 天気機能
+
+`.env` の `ENABLE_WEATHER_FUNCTION = true` で有効化。
+
+OpenWeatherMap に登録し APIキーを取得後 `.env` に設定：
+
+```
+OWM_API_KEY=取得したAPIキー
+OWM_LAT=緯度
+OWM_LON=経度
+```
+
+
+## 📭 非アクティブ通知（LINE）
+
+`.env` の `ENABLE_INACTIVITY_NOTIFICATION = true` で有効化。
+
+LINE Messaging API のチャネルを作成し、以下を `.env` に設定：
+
+```
+LINE_CHANNEL_ACCESS_TOKEN=チャネルアクセストークン
+LINE_USER_ID=送信先ユーザーID
+INACTIVITY_NOTIFY_INTERVAL_DAYS=通知する日数
+INACTIVITY_NOTIFY_TIME=通知チェックの時刻 (HH:mm)
+```
+
+
+## 🔊 ステレオ分離再生（右/左チャンネル分け）
+
+`.env` の `ENABLE_CHANNEL_SWITCHING = true` で
+茜と葵の音声をスピーカーの左右に分けて再生できます。
+
+> ⚠️ 注意
+> 再生中にプログラムを終了すると、一方のチャンネルが無音のままになる可能性があります。
+
+
+# 👤 Author
+
+* Takumi Yamada ([@tackme31](https://x.com/tackme31))
+
+
+# 🎵 Credits
+
+アラーム音：
+
+* Clock-Alarm02-1(Loop).mp3（OtoLogic 様）
+  ライセンス: CC BY 4.0
+
+サードパーティライセンスは [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES) を参照。
+
+
+# 📄 License
+
+このプロジェクトはMIT Licenseの下で公開されています。
+
+詳細は [LICENSE](LICENSE) をご覧ください。

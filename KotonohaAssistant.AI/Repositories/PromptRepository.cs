@@ -13,6 +13,7 @@ public interface IPromptRepository
     string StartTimerDescription { get; }
     string StopAlarmDescription { get; }
     string StopTimerDescription { get; }
+    string InactiveNotification { get; }
 }
 
 public class PromptRepository(string promptPath) : IPromptRepository
@@ -27,6 +28,7 @@ public class PromptRepository(string promptPath) : IPromptRepository
     private static readonly string ToolStartTimer = "tool_start_timer.md";
     private static readonly string ToolStopAlarm = "tool_stop_alarm.md";
     private static readonly string ToolStopTimer = "tool_stop_timer.md";
+    private static readonly string InstructionInactiveNotification = "instruction_inactive_notification.md";
 
     public string GetCharacterPrompt(Kotonoha sister) => sister switch
         {
@@ -50,6 +52,8 @@ public class PromptRepository(string promptPath) : IPromptRepository
     public string StopAlarmDescription => GetPrompt(ToolStopAlarm);
 
     public string StopTimerDescription => GetPrompt(ToolStopTimer);
+
+    public string InactiveNotification => GetPrompt(InstructionInactiveNotification);
 
     private string GetPrompt(string fileName) => File.ReadAllText(Path.Combine(promptPath, fileName));
 }

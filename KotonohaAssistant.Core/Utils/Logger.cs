@@ -47,7 +47,6 @@ public class Logger(string filePath, bool isConsoleLoggingEnabled = true) : ILog
     public void LogInformation(string message)
     {
         Log(LogLevel.Information, message);
-        throw new NotImplementedException();
     }
 
     public void LogWarning(string message)

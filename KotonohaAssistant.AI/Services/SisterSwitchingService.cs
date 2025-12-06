@@ -1,4 +1,5 @@
 using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Services;
 
@@ -15,6 +16,15 @@ public interface ISisterSwitchingService
 
 public class SisterSwitchingService : ISisterSwitchingService
 {
+    private const string LogPrefix = "[SisterSwitch]";
+
+    private readonly ILogger _logger;
+
+    public SisterSwitchingService(ILogger logger)
+    {
+        _logger = logger;
+    }
+
     /// <summary>
     /// ユーザー入力を解析し、必要に応じて姉妹を切り替えます
     /// </summary>
@@ -29,6 +39,7 @@ public class SisterSwitchingService : ISisterSwitchingService
             return false;
         }
 
+        _logger.LogInformation($"{LogPrefix} Sister switch detected: {state.CurrentSister} -> {nextSister.Value}");
         state.SwitchToSister(nextSister.Value);
         return true;
     }

@@ -24,6 +24,11 @@ var promptPath = Path.Combine(appDirectory, "prompts");
 
 var enableCalendarFunction = EnvUtils.GetBooleanValueOrDefault("ENABLE_CALENDAR_FUNCTION", false);
 var enableWeatherFunction = EnvUtils.GetBooleanValueOrDefault("ENABLE_WEATHER_FUNCTION", false);
+var enableInactivityNotification = EnvUtils.GetBooleanValueOrDefault("ENABLE_INACTIVITY_NOTIFICATION", false);
+var lineChannelAccessToken = EnvUtils.GetStringValueOrDefault("LINE_CHANNEL_ACCESS_TOKEN", string.Empty);
+var lineUserId = EnvUtils.GetStringValueOrDefault("LINE_USER_ID", string.Empty);
+var inactivityNotifyIntervalDays = EnvUtils.GetIntValueOrDefault("INACTIVITY_NOTIFY_INTERVAL_DAYS", 7);
+var inactivityNotifyTime = EnvUtils.GetTimeSpanValueOrDefault("INACTIVITY_NOTIFY_TIME", new TimeSpan(9, 0, 0));
 
 // DBの保存先
 if (!Directory.Exists(appDirectory))
@@ -32,7 +37,7 @@ if (!Directory.Exists(appDirectory))
 }
 
 // リポジトリ周り
-var logger = new Logger(logPath, isConsoleLoggingEnabled: true);
+var logger = new Logger(logPath, isConsoleLoggingEnabled: false);
 var chatMessageRepository = new ChatMessageRepository(dbPath);
 var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
 var promptRepository = new PromptRepository(promptPath);
@@ -64,7 +69,7 @@ if (enableWeatherFunction)
     ]);
 }
 
-var sisterSwitchingService = new SisterSwitchingService();
+var sisterSwitchingService = new SisterSwitchingService(logger);
 var functionsDictionary = functions.ToDictionary(f => f.GetType().Name);
 var lazyModeHandler = new LazyModeHandler(functionsDictionary, logger);
 var service = new ConversationService(
@@ -81,6 +86,32 @@ foreach (var (sister, message) in service.GetAllMessages())
 {
     var name = sister?.ToDisplayName() ?? "私";
     Console.WriteLine($"{name}: {message}");
+}
+
+// InactivityNotificationServiceの開始
+if (enableInactivityNotification)
+{
+    // LineMessagingRepositoryの作成
+    ILineMessagingRepository lineRepository;
+    if (!string.IsNullOrEmpty(lineChannelAccessToken) && !string.IsNullOrEmpty(lineUserId))
+    {
+        lineRepository = new LineMessagingRepository(lineChannelAccessToken, logger);
+    }
+    else
+    {
+        lineRepository = new NullLineMessagingRepository(logger);
+    }
+
+    var inactivityNotificationService = new InactivityNotificationService(
+        chatMessageRepository,
+        chatCompletionRepository,
+        functions,
+        promptRepository,
+        logger,
+        lineRepository,
+        lineUserId ?? string.Empty);
+    inactivityNotificationService.Start(TimeSpan.FromDays(inactivityNotifyIntervalDays), inactivityNotifyTime);
+    logger.LogInformation($"[Inactivity] InactivityNotificationService started. Interval: {inactivityNotifyIntervalDays} days, Time: {inactivityNotifyTime}");
 }
 
 try

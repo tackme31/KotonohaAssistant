@@ -44,6 +44,8 @@ public interface ILazyModeHandler
 
 public class LazyModeHandler : ILazyModeHandler
 {
+    private const string LogPrefix = "[LazyMode]";
+
     private readonly IDictionary<string, ToolFunction> _functions;
     private readonly Random _random = new();
     private readonly ILogger _logger;
@@ -75,15 +77,19 @@ public class LazyModeHandler : ILazyModeHandler
             };
         }
 
+        _logger.LogInformation($"{LogPrefix} Lazy mode activated for {state.CurrentSister}.");
+
         // 怠け癖モード開始
         state.AddLazyModeInstruction();
 
         // 再度返信を生成（タスクを押し付ける）
+        _logger.LogInformation($"{LogPrefix} Generating refusal response...");
         var lazyCompletion = await regenerateCompletionAsync();
 
         // それでも関数呼び出しされることがあるのでチェック
         if (lazyCompletion is null || lazyCompletion.FinishReason == ChatFinishReason.ToolCalls)
         {
+            _logger.LogWarning($"{LogPrefix} Lazy mode cancelled: still received tool calls.");
             state.AddInstruction(Prompts.Instruction.CancelLazyMode);
             return new LazyModeResult
             {
@@ -110,13 +116,17 @@ public class LazyModeHandler : ILazyModeHandler
         }
 
         // 姉妹を切り替えて引き受けるモード
+        var previousSister = state.CurrentSister;
         state.AddEndLazyModeInstruction();
         state.SwitchToOtherSister();
+        _logger.LogInformation($"{LogPrefix} Switching sister: {previousSister} -> {state.CurrentSister}");
 
         // 再度生成（引き受ける）
+        _logger.LogInformation($"{LogPrefix} Generating acceptance response...");
         var acceptCompletion = await regenerateCompletionAsync();
         if (acceptCompletion is null)
         {
+            _logger.LogWarning($"{LogPrefix} Failed to generate acceptance response.");
             // 生成失敗時は元の完了を返す
             return new LazyModeResult
             {
@@ -128,6 +138,7 @@ public class LazyModeHandler : ILazyModeHandler
 
         // 怠けると姉妹が入れ替わるのでカウンターをリセット
         state.ResetPatienceCount();
+        _logger.LogInformation($"{LogPrefix} Lazy mode completed successfully.");
 
         return new LazyModeResult
         {
@@ -154,17 +165,23 @@ public class LazyModeHandler : ILazyModeHandler
             .Select(toolCall => _functions[toolCall.FunctionName]);
         if (targetFunctions.Any(func => !func.CanBeLazy))
         {
+            _logger.LogInformation($"{LogPrefix} Lazy mode skipped: function cannot be lazy.");
             return false;
         }
 
         // 4回以上同じ方にお願いすると怠ける
         if (state.PatienceCount > 3)
         {
+            _logger.LogInformation($"{LogPrefix} Lazy mode triggered: patience count exceeded ({state.PatienceCount}).");
             return true;
         }
 
         // 1/10の確率で怠け癖発動
         var lazy = _random.NextDouble() < 1d / 10d;
+        if (lazy)
+        {
+            _logger.LogInformation($"{LogPrefix} Lazy mode triggered: random probability.");
+        }
         return lazy;
     }
 }

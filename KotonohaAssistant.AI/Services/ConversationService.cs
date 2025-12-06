@@ -11,6 +11,8 @@ namespace KotonohaAssistant.AI.Services;
 
 public class ConversationService
 {
+    private const string LogPrefix = "[Conversation]";
+
     private readonly ConversationState _state;
     private readonly Dictionary<string, ToolFunction> _functions;
     private readonly ChatCompletionOptions _options;
@@ -94,10 +96,13 @@ public class ConversationService
     /// <returns></returns>
     private async Task<long> CreateNewConversationAsync()
     {
+        _logger.LogInformation($"{LogPrefix} Creating new conversation...");
+
         long conversationId = -1;
         try
         {
             conversationId = await _chatMessageRepositoriy.CreateNewConversationIdAsync();
+            _logger.LogInformation($"{LogPrefix} New conversation created: ID={conversationId}");
         }
         catch (Exception ex)
         {
@@ -121,6 +126,8 @@ public class ConversationService
     /// <returns></returns>
     public async Task LoadLatestConversation()
     {
+        _logger.LogInformation($"{LogPrefix} Loading latest conversation...");
+
         long conversationId = -1;
         try
         {
@@ -134,6 +141,7 @@ public class ConversationService
         // 会話履歴が存在しない場合
         if (conversationId < 0)
         {
+            _logger.LogInformation($"{LogPrefix} No existing conversation found.");
             _currentConversationId = await CreateNewConversationAsync();
             return;
         }
@@ -142,6 +150,7 @@ public class ConversationService
         try
         {
             messages = await _chatMessageRepositoriy.GetAllChatMessagesAsync(conversationId);
+            _logger.LogInformation($"{LogPrefix} Loaded conversation: ID={conversationId}, MessageCount={messages.Count()}");
         }
         catch (Exception ex)
         {
@@ -162,10 +171,12 @@ public class ConversationService
         if (ChatResponse.TryParse(lastText, out var response) && response is not null)
         {
             _state.CurrentSister = response.Assistant;
+            _logger.LogInformation($"{LogPrefix} Current sister set to: {response.Assistant}");
         }
         else
         {
             _state.CurrentSister = Kotonoha.Akane;
+            _logger.LogInformation($"{LogPrefix} Current sister set to default: Akane");
         }
     }
 
@@ -180,10 +191,19 @@ public class ConversationService
             ? _state.ChatMessages
             : _state.ChatMessages.SkipWhile(message => message != _lastSavedMessage).Skip(1);
 
+        var messageCount = unsavedMessages.Count();
+        if (messageCount == 0)
+        {
+            return;
+        }
+
+        _logger.LogInformation($"{LogPrefix} Saving state: ConversationID={_currentConversationId}, UnsavedMessageCount={messageCount}");
+
         try
         {
             await _chatMessageRepositoriy.InsertChatMessagesAsync(unsavedMessages, _currentConversationId.Value);
             _lastSavedMessage = _state.ChatMessages.Last();
+            _logger.LogInformation($"{LogPrefix} State saved successfully.");
         }
         catch (Exception ex)
         {
@@ -217,6 +237,8 @@ public class ConversationService
         {
             yield break;
         }
+
+        _logger.LogInformation($"{LogPrefix} Starting conversation with input: '{input}'");
 
         await EnsureConversationExistsAsync();
 
@@ -307,6 +329,7 @@ public class ConversationService
     {
         if (functions.Any(f => f.Name == nameof(ForgetMemory) && f.Result == ForgetMemory.SuccessMessage))
         {
+            _logger.LogInformation($"{LogPrefix} Memory deletion detected. Creating new conversation...");
             _currentConversationId = await CreateNewConversationAsync();
         }
     }
@@ -321,21 +344,26 @@ public class ConversationService
         var invokedFunctions = new List<ConversationFunction>();
         while (completion.FinishReason == ChatFinishReason.ToolCalls)
         {
+            _logger.LogInformation($"{LogPrefix} Invoking {completion.ToolCalls.Count} function(s)...");
+
             foreach (var toolCall in completion.ToolCalls)
             {
                 using var doc = JsonDocument.Parse(toolCall.FunctionArguments);
                 if (!_functions.TryGetValue(toolCall.FunctionName, out var function) || function is null)
                 {
+                    _logger.LogWarning($"{LogPrefix} Function '{toolCall.FunctionName}' does not exist.");
                     _state.AddToolMessage(toolCall.Id, $"Function '{toolCall.FunctionName} does not exist.'");
                     continue;
                 }
 
                 if (!function.TryParseArguments(doc, out var arguments))
                 {
+                    _logger.LogWarning($"{LogPrefix} Failed to parse arguments of '{toolCall.FunctionName}'.");
                     _state.AddToolMessage(toolCall.Id, $"Failed to parse arguments of '{toolCall.FunctionName}'.");
                     continue;
                 }
 
+                _logger.LogInformation($"{LogPrefix} Executing function: {toolCall.FunctionName}");
                 var result = await function.Invoke(arguments, _state);
                 invokedFunctions.Add(new ConversationFunction
                 {

@@ -158,7 +158,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         state.LoadInitialConversation();
         state.LoadMessages(allChatMessages.OfType<ChatMessage>());
         state.AddInstruction(Instruction.SwitchSisterTo(sister));
-        state.AddInstruction(Instruction.InactiveNotification(notifyInterval));
+        state.AddInstruction(_promptRepository.InactiveNotification(notifyInterval));
 
         string lineMessage;
         try

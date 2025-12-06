@@ -43,13 +43,35 @@ public class ConversationService
         ILazyModeHandler lazyModeHandler,
         ILogger logger,
         Kotonoha defaultSister = Kotonoha.Akane)
+        : this(
+            new ConversationState()
+            {
+                CurrentSister = defaultSister,
+                CharacterPromptAkane = promptRepository.GetCharacterPrompt(Kotonoha.Akane),
+                CharacterPromptAoi = promptRepository.GetCharacterPrompt(Kotonoha.Aoi)
+            },
+            chatMessageRepository,
+            chatCompletionRepository,
+            availableFunctions,
+            sisterSwitchingService,
+            lazyModeHandler,
+            logger)
     {
-        _state = new ConversationState()
-        {
-            CurrentSister = defaultSister,
-            CharacterPromptAkane = promptRepository.GetCharacterPrompt(Kotonoha.Akane),
-            CharacterPromptAoi = promptRepository.GetCharacterPrompt(Kotonoha.Aoi)
-        };
+    }
+
+    /// <summary>
+    /// テスト用のコンストラクタ（ConversationStateを外部から注入可能）
+    /// </summary>
+    internal ConversationService(
+        ConversationState state,
+        IChatMessageRepository chatMessageRepository,
+        IChatCompletionRepository chatCompletionRepository,
+        IList<ToolFunction> availableFunctions,
+        ISisterSwitchingService sisterSwitchingService,
+        ILazyModeHandler lazyModeHandler,
+        ILogger logger)
+    {
+        _state = state;
 
         _options = new ChatCompletionOptions
         {
@@ -221,7 +243,7 @@ public class ConversationService
         try
         {
             var trimmed = messages.TakeLast(20);
-            return await _chatCompletionRepository.CompleteChatAsync(messages, _options);
+            return await _chatCompletionRepository.CompleteChatAsync(trimmed, _options);
         }
         catch (Exception ex)
         {

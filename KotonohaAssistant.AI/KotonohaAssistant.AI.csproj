@@ -19,4 +19,8 @@
     <ProjectReference Include="..\KotonohaAssistant.Core\KotonohaAssistant.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="KotonohaAssistant.AI.Tests" />
+  </ItemGroup>
+
 </Project>

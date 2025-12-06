@@ -13,21 +13,21 @@
 
 次の呼びかけでアシスタントを起動できます：
 
-* 「ねえ茜ちゃん」
-* 「ねえ葵ちゃん」
-* 「茜ちゃんいる？」
-* 「葵ちゃんいる？」
+- 「ねえ茜ちゃん」
+- 「ねえ葵ちゃん」
+- 「茜ちゃんいる？」
+- 「葵ちゃんいる？」
 
 また、メッセージ内に
 
-* 「あおい」 → 琴葉葵
-* 「あかね」 → 琴葉茜
+- 「あおい」 → 琴葉葵
+- 「あかね」 → 琴葉茜
 
 が含まれると自動的に担当キャラクターが切り替わります。
 
 会話終了は：
 
-* 「ばいばい」
+- 「ばいばい」
 
 
 ## ⏰ アラーム機能
@@ -36,9 +36,9 @@
 
 例：
 
-* 「明日9時半に起こして」
-* 「10時になったら教えて」
-* 「アラームを15時に設定」
+- 「明日9時半に起こして」
+- 「10時になったら教えて」
+- 「アラームを15時に設定」
 
 指定時刻になると、文脈に応じたキャラボイス→アラーム音が再生されます。
 
@@ -51,9 +51,9 @@
 
 例：
 
-* 「タイマー3分」
-* 「30秒数えて」
-* 「タイマーを止めて」
+- 「タイマー3分」
+- 「30秒数えて」
+- 「タイマーを止めて」
 
 
 ## 📅 Googleカレンダー連携（要設定）
@@ -62,8 +62,8 @@ Googleカレンダーの予定取得・作成が可能です。
 
 例：
 
-* 「今日の予定を教えて」
-* 「明日の午前中、空いてる時間ある？」
+- 「今日の予定を教えて」
+- 「明日の午前中、空いてる時間ある？」
 
 有効化には OAuth 設定が必要です（後述）。
 
@@ -74,8 +74,8 @@ OpenWeatherMap API を使って天気を取得できます。
 
 例：
 
-* 「明日の天気を教えて」
-* 「今日の午後から雨降りそう？」
+- 「明日の天気を教えて」
+- 「今日の午後から雨降りそう？」
 
 
 ## 📭 非アクティブ通知（要設定）
@@ -90,8 +90,8 @@ OpenWeatherMap API を使って天気を取得できます。
 
 例：
 
-* 「2人の記憶を消したい」
-* 「会話記録を消してほしい」
+- 「2人の記憶を消したい」
+- 「会話記録を消してほしい」
 
 姉妹から引き止められますが、説得に成功すると削除します。
 
@@ -102,27 +102,27 @@ OpenWeatherMap API を使って天気を取得できます。
 
 以下の条件で一方がタスクを押し付け、担当が切り替わります：
 
-* 1/10 の確率でランダム発生
-* 同じキャラへ連続して4回タスクを依頼した場合
+- 1/10 の確率でランダム発生
+- 同じキャラへ連続して4回タスクを依頼した場合
 
 ただし以下では発生しません：
 
-* アラーム停止
-* タイマー開始/終了
-* 会話履歴の削除
+- アラーム停止
+- タイマー開始/終了
+- 会話履歴の削除
 
 
 # 🖥 セットアップ手順
 
 ## 必要環境
 
-* Windows 11
-* **A.I.VOICE 琴葉 茜・葵**
+- Windows 11
+- **A.I.VOICE 琴葉 茜・葵**
 
   * ※ A.I.VOICE2 は API 非対応のため使用できません
-* OpenAI APIキー
-* .NET Framework 4.8.1 Runtime
-* .NET 9.0 Runtime
+- OpenAI APIキー
+- .NET Framework 4.8.1 Runtime
+- .NET 9.0 Runtime
 
 
 ## インストール手順
@@ -147,8 +147,7 @@ Google カレンダー API 用の認証設定が必要です：
 
 1. Google Cloud Consoleで
    サービスアカウント＋`credentials.json`を作成
-   参考：
-   [https://developers.google.com/workspace/guides/create-credentials?hl=ja](https://developers.google.com/workspace/guides/create-credentials?hl=ja)
+    - 参考： [アクセス認証情報を作成する  |  Google Workspace  |  Google for Developers](https://developers.google.com/workspace/guides/create-credentials?hl=ja)
 2. Google カレンダーを開き、
    *対象カレンダー → 設定 → アクセス権限* から
    サービスアカウントのメールを追加し「予定の変更」権限を付与
@@ -198,14 +197,14 @@ INACTIVITY_NOTIFY_TIME=通知チェックの時刻 (HH:mm)
 
 # 👤 Author
 
-* Takumi Yamada ([@tackme31](https://x.com/tackme31))
+- Takumi Yamada ([@tackme31](https://x.com/tackme31))
 
 
 # 🎵 Credits
 
 アラーム音：
 
-* Clock-Alarm02-1(Loop).mp3（OtoLogic 様）
+- Clock-Alarm02-1(Loop).mp3（OtoLogic 様）
   ライセンス: CC BY 4.0
 
 サードパーティライセンスは [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES) を参照。

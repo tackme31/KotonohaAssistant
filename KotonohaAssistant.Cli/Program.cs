@@ -37,7 +37,7 @@ if (!Directory.Exists(appDirectory))
 }
 
 // リポジトリ周り
-var logger = new Logger(logPath, isConsoleLoggingEnabled: true);
+var logger = new Logger(logPath, isConsoleLoggingEnabled: false);
 var chatMessageRepository = new ChatMessageRepository(dbPath);
 var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
 var promptRepository = new PromptRepository(promptPath);

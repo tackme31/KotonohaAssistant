@@ -1,9 +1,11 @@
-﻿using KotonohaAssistant.AI.Prompts;
+﻿using KotonohaAssistant.AI.Functions;
+using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
+using System;
 
 namespace KotonohaAssistant.AI.Services;
 
@@ -18,6 +20,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
 
     private readonly IChatMessageRepository _chatMessageRepository;
     private readonly IChatCompletionRepository _chatCompletionRepository;
+    private readonly ChatCompletionOptions _options;
     private readonly IPromptRepository _promptRepository;
     private readonly ILogger _logger;
     private readonly ILineMessagingRepository _lineMessagingRepository;
@@ -27,6 +30,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
     public InactivityNotificationService(
         IChatMessageRepository chatMessageRepository,
         IChatCompletionRepository chatCompletionRepository,
+        IList<ToolFunction> availableFunctions,
         IPromptRepository promptRepository,
         ILogger logger,
         ILineMessagingRepository lineMessagingRepository,
@@ -38,6 +42,12 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         _logger = logger;
         _lineMessagingRepository = lineMessagingRepository;
         _lineUserId = lineUserId;
+
+        _options = new();
+        foreach (var func in availableFunctions)
+        {
+            _options.Tools.Add(func.CreateChatTool());
+        }
     }
 
     public void Start(TimeSpan notifyInterval, TimeSpan notifyTime)
@@ -154,7 +164,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         try
         {
             // 通知メッセージを作成
-            var result = await _chatCompletionRepository.CompleteChatAsync(state.ChatMessagesWithSystemMessage);
+            var result = await _chatCompletionRepository.CompleteChatAsync(state.ChatMessagesWithSystemMessage, _options);
             var message = new AssistantChatMessage(result.Value);
             var content = result.Value.Content[0].Text;
             if (!ChatResponse.TryParse(content, out var res))

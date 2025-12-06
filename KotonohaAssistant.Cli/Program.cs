@@ -105,6 +105,7 @@ if (enableInactivityNotification)
     var inactivityNotificationService = new InactivityNotificationService(
         chatMessageRepository,
         chatCompletionRepository,
+        functions,
         promptRepository,
         logger,
         lineRepository,

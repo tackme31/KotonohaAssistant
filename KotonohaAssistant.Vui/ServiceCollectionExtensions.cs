@@ -75,10 +75,12 @@ public static class ServiceCollectionExtensions
                 var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
                 var promptRepository = sp.GetRequiredService<IPromptRepository>();
                 var lineRepository = sp.GetRequiredService<ILineMessagingRepository>();
+                var functions = GetAvailableFunctions(sp);
 
                 var inactivityService = new InactivityNotificationService(
                     chatMessageRepository,
                     chatCompletionRepository,
+                    functions,
                     promptRepository,
                     logger,
                     lineRepository,
@@ -105,31 +107,7 @@ public static class ServiceCollectionExtensions
             var sisterSwitchingService = sp.GetRequiredService<ISisterSwitchingService>();
 
             // 利用する関数一覧
-            var functions = new List<ToolFunction>
-            {
-                new CallMaster(promptRepository, VoicePath, logger),
-                new StopAlarm(promptRepository, logger),
-                new StartTimer(promptRepository, logger),
-                new StopTimer(promptRepository, logger),
-                new ForgetMemory(promptRepository, logger),
-            };
-
-            if (EnableCalendarFunction)
-            {
-                var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
-                functions.AddRange([
-                    new CreateCalendarEvent(promptRepository, calendarRepository, logger),
-                    new GetCalendarEvent(promptRepository, calendarRepository, logger)
-                ]);
-            }
-
-            if (EnableWeatherFunction)
-            {
-                var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
-                functions.AddRange([
-                    new GetWeather(promptRepository, weatherRepository, (OwmLat, OwmLon), logger)
-                ]);
-            }
+            var functions = GetAvailableFunctions(sp);
 
             // LazyModeHandlerの作成（関数辞書が必要）
             var functionsDictionary = functions.ToDictionary(f => f.GetType().Name);
@@ -144,6 +122,44 @@ public static class ServiceCollectionExtensions
                 lazyModeHandler,
                 logger);
         });
+    }
+
+    private static List<ToolFunction> GetAvailableFunctions(IServiceProvider sp)
+    {
+        var logger = sp.GetRequiredService<ILogger>();
+        var promptRepository = sp.GetRequiredService<IPromptRepository>();
+        var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
+        var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
+        var sisterSwitchingService = sp.GetRequiredService<ISisterSwitchingService>();
+
+        // 利用する関数一覧
+        var functions = new List<ToolFunction>
+            {
+                new CallMaster(promptRepository, VoicePath, logger),
+                new StopAlarm(promptRepository, logger),
+                new StartTimer(promptRepository, logger),
+                new StopTimer(promptRepository, logger),
+                new ForgetMemory(promptRepository, logger),
+            };
+
+        if (EnableCalendarFunction)
+        {
+            var calendarRepository = sp.GetRequiredService<ICalendarEventRepository>();
+            functions.AddRange([
+                new CreateCalendarEvent(promptRepository, calendarRepository, logger),
+                    new GetCalendarEvent(promptRepository, calendarRepository, logger)
+            ]);
+        }
+
+        if (EnableWeatherFunction)
+        {
+            var weatherRepository = sp.GetRequiredService<IWeatherRepository>();
+            functions.AddRange([
+                new GetWeather(promptRepository, weatherRepository, (OwmLat, OwmLon), logger)
+            ]);
+        }
+
+        return functions;
     }
 
     private static string GetEnvVar(string name) => Environment.GetEnvironmentVariable(name) ?? throw new Exception($"環境変数'{name}'が見つかりません。");

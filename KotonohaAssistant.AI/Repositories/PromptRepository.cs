@@ -13,7 +13,7 @@ public interface IPromptRepository
     string StartTimerDescription { get; }
     string StopAlarmDescription { get; }
     string StopTimerDescription { get; }
-    public string InactiveNotification(TimeSpan interval);
+    string InactiveNotification { get; }
 }
 
 public class PromptRepository(string promptPath) : IPromptRepository
@@ -53,7 +53,7 @@ public class PromptRepository(string promptPath) : IPromptRepository
 
     public string StopTimerDescription => GetPrompt(ToolStopTimer);
 
-    public string InactiveNotification(TimeSpan interval) => GetPrompt(InstructionInactiveNotification).Replace("{INTERVAL}", interval.TotalDays.ToString());
+    public string InactiveNotification => GetPrompt(InstructionInactiveNotification);
 
     private string GetPrompt(string fileName) => File.ReadAllText(Path.Combine(promptPath, fileName));
 }

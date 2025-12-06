@@ -43,7 +43,11 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         _lineMessagingRepository = lineMessagingRepository;
         _lineUserId = lineUserId;
 
-        _options = new();
+        _options = new()
+        {
+            Temperature = 1,
+            TopP = 1,
+        };
         foreach (var func in availableFunctions)
         {
             _options.Tools.Add(func.CreateChatTool());
@@ -158,7 +162,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         var recentMessages = allChatMessages.OfType<ChatMessage>().TakeLast(20).SkipWhile(m => m is AssistantChatMessage { ToolCalls: not [] }).ToList();
         state.LoadMessages(recentMessages);
         state.AddInstruction(Instruction.SwitchSisterTo(sister));
-        state.AddInstruction(_promptRepository.InactiveNotification(notifyInterval));
+        state.AddInstruction(_promptRepository.InactiveNotification);
 
         string lineMessage;
         try

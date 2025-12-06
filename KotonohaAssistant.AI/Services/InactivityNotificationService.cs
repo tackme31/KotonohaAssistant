@@ -14,6 +14,8 @@ public interface IInactivityNotificationService
 
 public class InactivityNotificationService : IInactivityNotificationService, IDisposable
 {
+    private const string LogPrefix = "[Inactivity]";
+
     private readonly IChatMessageRepository _chatMessageRepository;
     private readonly IChatCompletionRepository _chatCompletionRepository;
     private readonly IPromptRepository _promptRepository;
@@ -61,7 +63,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
 
         var delay = next - now;
 
-        _logger.LogInformation($"[Inactivity] Next check scheduled at: {next}");
+        _logger.LogInformation($"{LogPrefix} Next check scheduled at: {next}");
 
         _timer?.Dispose();
         _timer = new Timer(async _ => await RunAndRescheduleAsync(notifyInterval, notifyTime), null, delay, Timeout.InfiniteTimeSpan);
@@ -85,47 +87,55 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
 
     private async Task CheckInactivityAsync(TimeSpan notifyInterval)
     {
-        _logger.LogInformation("[Inactivity] Checking user inactivity...");
+        _logger.LogInformation($"{LogPrefix} Checking user inactivity...");
 
         // 最終アクセス日時チェック
         var conversationId = await _chatMessageRepository.GetLatestConversationIdAsync();
         var messages = await _chatMessageRepository.GetAllMessageAsync(conversationId);
-        var message = messages
-            .OfType<Message>()
-            .Select(m => new
-            {
-                m.ConversationId,
-                m.CreatedAt,
-                Content = m.Content is not null && ChatResponse.TryParse(m.Content, out var c) ? c : null
-            })
-            .LastOrDefault(m => m.Content is not null);
+        var lastActivity = GetLastActivity(messages);
 
-        if (message is null || message.Content is null || message.ConversationId is null)
+        if (lastActivity is null)
         {
-            _logger.LogWarning("[Inactivity] No activity found. Skipping.");
+            _logger.LogWarning($"{LogPrefix} No activity found. Skipping.");
             return;
         }
 
+        var (createdAt, sister, convId) = lastActivity.Value;
         var now = DateTime.Now;
-        var elapsed = now - message.CreatedAt;
+        var elapsed = now - createdAt;
 
-        _logger.LogInformation($"[Inactivity] Last active: {message.CreatedAt}, elapsed: {elapsed}");
+        _logger.LogInformation($"{LogPrefix} Last active: {createdAt}, elapsed: {elapsed}");
 
         // 非アクティブ間隔を超えていたら LINE 通知
         if (elapsed >= notifyInterval)
         {
-            await SendInactivityNotificationAsync(notifyInterval, message.Content.Assistant, message.ConversationId.Value);
+            await SendInactivityNotificationAsync(notifyInterval, sister, convId);
         }
         else
         {
-            _logger.LogInformation("[Inactivity] Not enough time elapsed. No notification.");
+            _logger.LogInformation($"{LogPrefix} Not enough time elapsed. No notification.");
         }
+    }
+
+    private (DateTime? createdAt, Kotonoha sister, long conversationId)? GetLastActivity(IEnumerable<Message?> messages)
+    {
+        foreach (var m in messages.OfType<Message>().Reverse())
+        {
+            if (m.Content is not null &&
+                ChatResponse.TryParse(m.Content, out var content) &&
+                m.ConversationId.HasValue &&
+                m.CreatedAt.HasValue)
+            {
+                return (m.CreatedAt.Value, content!.Assistant, m.ConversationId.Value);
+            }
+        }
+        return null;
     }
 
     /// <summary>
     /// LINE などへの通知処理
     /// </summary>
-    public async Task SendInactivityNotificationAsync(TimeSpan notifyInterval, Kotonoha sister, long conversationId)
+    private async Task SendInactivityNotificationAsync(TimeSpan notifyInterval, Kotonoha sister, long conversationId)
     {
         var allChatMessages = await _chatMessageRepository.GetAllChatMessagesAsync(conversationId);
         var state = new ConversationState
@@ -135,18 +145,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
             CurrentSister = sister,
         };
 
-        foreach (var m in InitialConversation.Messages)
-        {
-            if (m.Sister is not null)
-            {
-                state.AddAssistantMessage(m.Sister.Value, m.Text, m.Emotion);
-            }
-            else
-            {
-                state.AddUserMessage(m.Text);
-            }
-        }
-
+        state.LoadInitialConversation();
         state.LoadMessages(allChatMessages.OfType<ChatMessage>());
         state.AddInstruction(Instruction.SwitchSisterTo(sister));
         state.AddInstruction(Instruction.InactiveNotification(notifyInterval));
@@ -160,13 +159,13 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
             var content = result.Value.Content[0].Text;
             if (!ChatResponse.TryParse(content, out var res))
             {
-                _logger.LogWarning($"[Inactivity] The response couldn't be parsed to ChatResponse: {content}");
+                _logger.LogWarning($"{LogPrefix} The response couldn't be parsed to ChatResponse: {content}");
                 return;
             }
 
             await _chatMessageRepository.InsertChatMessagesAsync([message], conversationId);
 
-            lineMessage = res.Text ?? string.Empty;
+            lineMessage = res!.Text ?? string.Empty;
         }
         catch (Exception ex)
         {
@@ -176,11 +175,11 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
 
         if (string.IsNullOrEmpty(lineMessage))
         {
-            _logger.LogWarning("[Inactivity] Generated message is empty. Skipping notification.");
+            _logger.LogWarning($"{LogPrefix} Generated message is empty. Skipping notification.");
             return;
         }
 
-        _logger.LogInformation("[Inactivity] Sending inactivity reminder...");
+        _logger.LogInformation($"{LogPrefix} Sending inactivity reminder...");
 
         await _lineMessagingRepository.SendTextMessageAsync(_lineUserId, lineMessage);
     }

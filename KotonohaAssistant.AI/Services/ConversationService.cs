@@ -108,17 +108,7 @@ public class ConversationService
         _state.ClearChatMessages();
 
         // 生成時の参考のためにあらかじめ会話を入れておく
-        foreach (var message in InitialConversation.Messages)
-        {
-            if (message.Sister.HasValue)
-            {
-                _state.AddAssistantMessage(message.Sister.Value, message.Text, message.Emotion);
-            }
-            else
-            {
-                _state.AddUserMessage(message.Text);
-            }
-        }
+        _state.LoadInitialConversation();
 
         _lastSavedMessage = null;
 

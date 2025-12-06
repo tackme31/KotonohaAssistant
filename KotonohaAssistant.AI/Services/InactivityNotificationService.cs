@@ -12,24 +12,30 @@ public interface IInactivityNotificationService
     void Start(TimeSpan notifyInterval, TimeSpan notifyTime);
 }
 
-public class InactivityNotificationService : IInactivityNotificationService
+public class InactivityNotificationService : IInactivityNotificationService, IDisposable
 {
     private readonly IChatMessageRepository _chatMessageRepository;
     private readonly IChatCompletionRepository _chatCompletionRepository;
     private readonly IPromptRepository _promptRepository;
     private readonly ILogger _logger;
+    private readonly ILineMessagingRepository _lineMessagingRepository;
+    private readonly string _lineUserId;
     private Timer? _timer;
 
     public InactivityNotificationService(
         IChatMessageRepository chatMessageRepository,
         IChatCompletionRepository chatCompletionRepository,
         IPromptRepository promptRepository,
-        ILogger logger)
+        ILogger logger,
+        ILineMessagingRepository lineMessagingRepository,
+        string lineUserId)
     {
         _chatMessageRepository = chatMessageRepository;
         _chatCompletionRepository = chatCompletionRepository;
         _promptRepository = promptRepository;
         _logger = logger;
+        _lineMessagingRepository = lineMessagingRepository;
+        _lineUserId = lineUserId;
     }
 
     public void Start(TimeSpan notifyInterval, TimeSpan notifyTime)
@@ -121,9 +127,6 @@ public class InactivityNotificationService : IInactivityNotificationService
     /// </summary>
     public async Task SendInactivityNotificationAsync(TimeSpan notifyInterval, Kotonoha sister, long conversationId)
     {
-        // チャット補完
-        // DBに追加
-        // LINE通知
         var allChatMessages = await _chatMessageRepository.GetAllChatMessagesAsync(conversationId);
         var state = new ConversationState
         {
@@ -148,21 +151,22 @@ public class InactivityNotificationService : IInactivityNotificationService
         state.AddInstruction(Instruction.SwitchSisterTo(sister));
         state.AddInstruction(Instruction.InactiveNotification(notifyInterval));
 
-        string? lineMessage;
+        string lineMessage;
         try
         {
+            // 通知メッセージを作成
             var result = await _chatCompletionRepository.CompleteChatAsync(state.ChatMessagesWithSystemMessage);
-
             var message = new AssistantChatMessage(result.Value);
             var content = result.Value.Content[0].Text;
             if (!ChatResponse.TryParse(content, out var res))
             {
                 _logger.LogWarning($"[Inactivity] The response couldn't be parsed to ChatResponse: {content}");
+                return;
             }
 
-            //await _chatMessageRepository.InsertChatMessagesAsync([message], conversationId);
+            await _chatMessageRepository.InsertChatMessagesAsync([message], conversationId);
 
-            lineMessage = res!.Text;
+            lineMessage = res.Text ?? string.Empty;
         }
         catch (Exception ex)
         {
@@ -170,7 +174,19 @@ public class InactivityNotificationService : IInactivityNotificationService
             return;
         }
 
+        if (string.IsNullOrEmpty(lineMessage))
+        {
+            _logger.LogWarning("[Inactivity] Generated message is empty. Skipping notification.");
+            return;
+        }
+
         _logger.LogInformation("[Inactivity] Sending inactivity reminder...");
-        await Task.CompletedTask;
+
+        await _lineMessagingRepository.SendTextMessageAsync(_lineUserId, lineMessage);
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
     }
 }

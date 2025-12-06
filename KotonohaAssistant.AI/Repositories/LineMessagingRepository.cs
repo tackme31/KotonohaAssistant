@@ -1,25 +1,69 @@
-﻿using KotonohaAssistant.Core.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Line.Messaging;
+using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Repositories;
 
+/// <summary>
+/// LINE Messaging APIとの通信を担当するRepository
+/// </summary>
 public interface ILineMessagingRepository
 {
+    /// <summary>
+    /// 指定されたユーザーにテキストメッセージを送信
+    /// </summary>
+    /// <param name="userId">送信先のLINEユーザーID</param>
+    /// <param name="message">送信するテキストメッセージ</param>
+    Task SendTextMessageAsync(string userId, string message);
 }
 
-public class LineMessagingRepository(string accessToken, string userId) : ILineMessagingRepository
+/// <summary>
+/// LINE Messaging APIを使用した実装
+/// </summary>
+public class LineMessagingRepository : ILineMessagingRepository
 {
-    private readonly string _accessToken = accessToken;
-    private readonly string _userId = userId;
+    private readonly LineMessagingClient _client;
+    private readonly ILogger _logger;
 
-    public async Task SendMessage(string message)
+    public LineMessagingRepository(string channelAccessToken, ILogger logger)
     {
-        // LINE Messaging APIでメッセージ送信
+        _client = new LineMessagingClient(channelAccessToken);
+        _logger = logger;
+    }
 
-        // 採集会話日時から3以上経過すると、寂しそうなメッセージをLINEに送信する
+    public async Task SendTextMessageAsync(string userId, string message)
+    {
+        try
+        {
+            var messages = new List<ISendMessage>
+            {
+                new TextMessage(message)
+            };
+            await _client.PushMessageAsync(userId, messages);
+            _logger.LogInformation($"[LINE] Message sent successfully to user: {userId}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex);
+            throw;
+        }
+    }
+}
+
+/// <summary>
+/// LINE未設定時のNull Object Pattern実装
+/// </summary>
+public class NullLineMessagingRepository : ILineMessagingRepository
+{
+    private readonly ILogger _logger;
+
+    public NullLineMessagingRepository(ILogger logger)
+    {
+        _logger = logger;
+    }
+
+    public Task SendTextMessageAsync(string userId, string message)
+    {
+        _logger.LogWarning("[LINE] LINE notification is not configured. Skipping notification.");
+        return Task.CompletedTask;
     }
 }

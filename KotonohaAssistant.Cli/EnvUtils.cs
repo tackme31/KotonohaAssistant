@@ -29,4 +29,24 @@ public static class EnvUtils
         }
         return defaultValue;
     }
+
+    public static int GetIntValueOrDefault(string key, int defaultValue)
+    {
+        var value = Environment.GetEnvironmentVariable(key);
+        if (int.TryParse(value, out int result))
+        {
+            return result;
+        }
+        return defaultValue;
+    }
+
+    public static TimeSpan GetTimeSpanValueOrDefault(string key, TimeSpan defaultValue)
+    {
+        var value = Environment.GetEnvironmentVariable(key);
+        if (TimeSpan.TryParse(value, out TimeSpan result))
+        {
+            return result;
+        }
+        return defaultValue;
+    }
 }

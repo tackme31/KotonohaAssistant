@@ -18,6 +18,11 @@ public class ConversationService
     private readonly ChatCompletionOptions _options;
 
     /// <summary>
+    /// 会話の状態（読み取り専用）
+    /// </summary>
+    public IReadOnlyConversationState State => _state;
+
+    /// <summary>
     /// 最後に保存したメッセージ
     /// </summary>
     private ChatMessage? _lastSavedMessage;

@@ -103,7 +103,7 @@ CREATE TABLE IF NOT EXISTS Conversation (
             SELECT *
             FROM Message
             WHERE ConversationId = @Id
-            ORDER BY Id DESC
+            ORDER BY Id
             """;
         try
         {
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS Conversation (
             SELECT *
             FROM Message
             WHERE ConversationId = @Id
-            ORDER BY Id DESC
+            ORDER BY Id
             """;
         try
         {

@@ -242,8 +242,8 @@ public class ConversationService
     {
         try
         {
-            var trimmed = messages.TakeLast(20);
-            return await _chatCompletionRepository.CompleteChatAsync(trimmed, _options);
+            var recentMessages = messages.TakeLast(20).SkipWhile(m => m is AssistantChatMessage { ToolCalls: not [] }).ToList();
+            return await _chatCompletionRepository.CompleteChatAsync(recentMessages, _options);
         }
         catch (Exception ex)
         {

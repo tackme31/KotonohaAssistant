@@ -155,8 +155,8 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
             CurrentSister = sister,
         };
 
-        state.LoadInitialConversation();
-        state.LoadMessages(allChatMessages.OfType<ChatMessage>().Take(20));
+        var recentMessages = allChatMessages.OfType<ChatMessage>().TakeLast(20).SkipWhile(m => m is AssistantChatMessage { ToolCalls: not [] }).ToList();
+        state.LoadMessages(recentMessages);
         state.AddInstruction(Instruction.SwitchSisterTo(sister));
         state.AddInstruction(_promptRepository.InactiveNotification(notifyInterval));
 

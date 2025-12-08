@@ -1,7 +1,7 @@
 ﻿namespace KotonohaAssistant.AI.Prompts;
 static class SystemMessage
 {
-    private static string InputJsonSchema = """
+    public static string InputJsonSchema = """
 {
   "type": "object",
   "properties": {
@@ -19,7 +19,7 @@ static class SystemMessage
 }
 """;
 
-    private static string OutputJsonSchemaAkane = """
+    public static string OutputJsonSchemaAkane = """
 {
   "type": "object",
   "properties": {
@@ -42,7 +42,7 @@ static class SystemMessage
 }
 """;
 
-    private static string OutputJsonSchemaAoi = """
+    public static string OutputJsonSchemaAoi = """
 {
   "type": "object",
   "properties": {

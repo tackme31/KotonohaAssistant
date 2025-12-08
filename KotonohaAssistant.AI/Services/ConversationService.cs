@@ -322,6 +322,10 @@ public class ConversationService
                     Functions = functions
                 };
             }
+            else
+            {
+                _logger.LogError($"生成結果のパースに失敗しました: {completion.Content[0].Text}");
+            }
         }
 
         // 記憶削除時は新しい会話にする

@@ -138,8 +138,6 @@ public class LazyModeHandler : ILazyModeHandler
             };
         }
 
-        // 怠けると姉妹が入れ替わるのでカウンターをリセット
-        state.ResetPatienceCount();
         _logger.LogInformation($"{LogPrefix} Lazy mode completed successfully.");
 
         return new LazyModeResult

@@ -292,6 +292,9 @@ public class ConversationService
         // 怠け癖時のタスク押し付け応答を返す
         if (lazyResult.LazyResponse is not null)
         {
+            // 怠けると姉妹が入れ替わるのでカウンターをリセット
+            _state.ResetPatienceCount();
+
             yield return lazyResult.LazyResponse;
         }
 

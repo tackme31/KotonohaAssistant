@@ -350,41 +350,6 @@ public class LazyModeHandlerTests
     }
 
     [Fact]
-    public async Task HandleLazyModeAsync_WhenLazy_ShouldResetPatienceCount()
-    {
-        // Arrange
-        var lazyFunc = CreateMockFunction("lazyFunc", canBeLazy: true);
-        _functions["lazyFunc"] = lazyFunc;
-
-        var handler = CreateHandler();
-        var state = CreateState(Kotonoha.Akane);
-        state.PatienceCount = 4;
-
-        var toolCall = CreateToolCall("lazyFunc");
-        var completion = CreateChatCompletion(ChatFinishReason.ToolCalls, null, [toolCall]);
-
-        var refusalCompletion = CreateChatCompletion(
-            ChatFinishReason.Stop,
-            "{\"Assistant\": \"Akane\", \"Text\": \"葵、任せたで\", \"Emotion\": \"Calm\"}");
-        var acceptanceCompletion = CreateChatCompletion(
-            ChatFinishReason.ToolCalls,
-            null,
-            [toolCall]);
-
-        var callCount = 0;
-
-        // Act
-        await handler.HandleLazyModeAsync(
-            completion,
-            state,
-            () => Task.FromResult<ChatCompletion?>(
-                ++callCount == 1 ? refusalCompletion : acceptanceCompletion));
-
-        // Assert: 忍耐値がリセットされている
-        Assert.Equal(1, state.PatienceCount);
-    }
-
-    [Fact]
     public async Task HandleLazyModeAsync_WhenAcceptanceGenerationFails_ShouldReturnOriginal()
     {
         // Arrange
@@ -502,7 +467,6 @@ public class LazyModeHandlerTests
         Assert.True(result.WasLazy);
         Assert.Equal(acceptanceCompletion, result.FinalCompletion);
         Assert.NotNull(result.LazyResponse);
-        Assert.Equal(1, state.PatienceCount); // Reset
     }
 
     [Fact]

@@ -6,6 +6,16 @@ echo Kotonoha Assistant Launcher
 echo ========================================
 echo.
 
+REM Check if AIVoiceEditor process is running
+tasklist /FI "IMAGENAME eq AIVoiceEditor.exe" 2>NUL | find /I /N "AIVoiceEditor.exe">NUL
+if %errorlevel% neq 0 (
+    echo [ERROR] A.I.VOICE Editor is not running.
+    echo Please start A.I.VOICE Editor first.
+    echo.
+    pause
+    exit /b 1
+)
+
 REM Check if A.I. VOICE Editor is installed
 set "AIVOICE_DIR=%PROGRAMFILES%\AI\AIVoice\AIVoiceEditor"
 if not exist "%AIVOICE_DIR%" (

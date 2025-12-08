@@ -1,7 +1,4 @@
-param(
-    [Parameter(Mandatory=$true)]
-    [string]$Version
-)
+param()
 
 $ErrorActionPreference = "Stop"
 
@@ -10,6 +7,9 @@ $ErrorActionPreference = "Stop"
 # ========================================
 
 $publishRoot = "publish"
+$Version = dotnet msbuild .\KotonohaAssistant.AI\KotonohaAssistant.AI.csproj /getProperty:Version /nologo
+Write-Host "Detected version: $Version, proceeding with build..."
+
 $versionPath = Join-Path $publishRoot $Version
 
 $projects = @(

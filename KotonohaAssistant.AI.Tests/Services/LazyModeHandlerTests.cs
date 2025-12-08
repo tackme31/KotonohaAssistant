@@ -104,6 +104,22 @@ public class LazyModeHandlerTests
         return new TestToolFunction(name, canBeLazy, _mockLogger.Object);
     }
 
+    // テスト用の決定的な乱数ジェネレーター
+    private class DeterministicRandomGenerator : IRandomGenerator
+    {
+        private readonly Queue<double> _values;
+
+        public DeterministicRandomGenerator(params double[] values)
+        {
+            _values = new Queue<double>(values);
+        }
+
+        public double NextDouble()
+        {
+            return _values.Count > 0 ? _values.Dequeue() : 0.0;
+        }
+    }
+
     // テスト用の具象クラス
     private class TestToolFunction : ToolFunction
     {
@@ -490,51 +506,72 @@ public class LazyModeHandlerTests
     }
 
     [Fact]
-    public async Task HandleLazyModeAsync_RandomProbability_ShouldSometimesBeLazy()
+    public async Task HandleLazyModeAsync_RandomProbability_ShouldBeLazy_WhenUnderThreshold()
     {
         // Arrange
         var lazyFunc = CreateMockFunction("lazyFunc", canBeLazy: true);
         _functions["lazyFunc"] = lazyFunc;
 
-        var handler = CreateHandler();
-        var toolCall = CreateToolCall("lazyFunc");
+        // 0.09 < 0.1 なので怠ける
+        var deterministicRandom = new DeterministicRandomGenerator(0.09);
+        var handler = new LazyModeHandler(_functions, _mockLogger.Object, deterministicRandom);
 
-        var lazyCount = 0;
-        const int iterations = 200; // 十分な試行回数
+        var state = CreateState(Kotonoha.Akane);
+        state.PatienceCount = 1; // Low patience count
+
+        var toolCall = CreateToolCall("lazyFunc");
+        var completion = CreateChatCompletion(ChatFinishReason.ToolCalls, null, [toolCall]);
+
+        var refusalCompletion = CreateChatCompletion(
+            ChatFinishReason.Stop,
+            "{\"Assistant\": \"Akane\", \"Text\": \"葵、任せたで\", \"Emotion\": \"Calm\"}");
+        var acceptanceCompletion = CreateChatCompletion(
+            ChatFinishReason.ToolCalls,
+            null,
+            [toolCall]);
+
+        var callCount = 0;
 
         // Act
-        for (int i = 0; i < iterations; i++)
-        {
-            var state = CreateState(Kotonoha.Akane);
-            state.PatienceCount = 1; // Low patience count
+        var result = await handler.HandleLazyModeAsync(
+            completion,
+            state,
+            () => Task.FromResult<ChatCompletion?>(
+                ++callCount == 1 ? refusalCompletion : acceptanceCompletion));
 
-            var completion = CreateChatCompletion(ChatFinishReason.ToolCalls, null, [toolCall]);
+        // Assert
+        Assert.True(result.WasLazy);
+        Assert.NotNull(result.LazyResponse);
+        Assert.Equal("葵、任せたで", result.LazyResponse.Message);
+    }
 
-            var refusalCompletion = CreateChatCompletion(
-                ChatFinishReason.Stop,
-                "{\"Assistant\": \"Akane\", \"Text\": \"葵、任せたで\", \"Emotion\": \"Calm\"}");
-            var acceptanceCompletion = CreateChatCompletion(
-                ChatFinishReason.ToolCalls,
-                null,
-                [toolCall]);
+    [Fact]
+    public async Task HandleLazyModeAsync_RandomProbability_ShouldNotBeLazy_WhenOverThreshold()
+    {
+        // Arrange
+        var lazyFunc = CreateMockFunction("lazyFunc", canBeLazy: true);
+        _functions["lazyFunc"] = lazyFunc;
 
-            var callCount = 0;
-            Func<Task<ChatCompletion?>> regenerate = () =>
-            {
-                callCount++;
-                return Task.FromResult<ChatCompletion?>(
-                    callCount == 1 ? refusalCompletion : acceptanceCompletion);
-            };
+        // 0.11 >= 0.1 なので怠けない
+        var deterministicRandom = new DeterministicRandomGenerator(0.11);
+        var handler = new LazyModeHandler(_functions, _mockLogger.Object, deterministicRandom);
 
-            var result = await handler.HandleLazyModeAsync(completion, state, regenerate);
-            if (result.WasLazy)
-            {
-                lazyCount++;
-            }
-        }
+        var state = CreateState(Kotonoha.Akane);
+        state.PatienceCount = 1; // Low patience count
 
-        // Assert: 期待値は20回前後（1/10の確率）、範囲をゆるめに設定
-        Assert.InRange(lazyCount, 5, 50);
+        var toolCall = CreateToolCall("lazyFunc");
+        var completion = CreateChatCompletion(ChatFinishReason.ToolCalls, null, [toolCall]);
+
+        // Act
+        var result = await handler.HandleLazyModeAsync(
+            completion,
+            state,
+            () => Task.FromResult<ChatCompletion?>(null));
+
+        // Assert
+        Assert.False(result.WasLazy);
+        Assert.Equal(completion, result.FinalCompletion);
+        Assert.Null(result.LazyResponse);
     }
 
     #endregion

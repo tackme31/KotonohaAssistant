@@ -49,7 +49,7 @@ var functions = new List<ToolFunction>
     new StopAlarm(promptRepository, logger),
     new StartTimer(promptRepository, logger),
     new StopTimer(promptRepository, logger),
-    new ForgetMemory(promptRepository, logger)
+    new ForgetMemory(promptRepository, new SystemRandomGenerator(), logger)
 };
 
 if (enableCalendarFunction)

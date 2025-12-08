@@ -47,15 +47,17 @@ public class LazyModeHandler : ILazyModeHandler
     private const string LogPrefix = "[LazyMode]";
 
     private readonly IDictionary<string, ToolFunction> _functions;
-    private readonly Random _random = new();
+    private readonly IRandomGenerator _randomGenerator;
     private readonly ILogger _logger;
 
     public LazyModeHandler(
         IDictionary<string, ToolFunction> functions,
-        ILogger logger)
+        ILogger logger,
+        IRandomGenerator? randomGenerator = null)
     {
         _functions = functions;
         _logger = logger;
+        _randomGenerator = randomGenerator ?? new SystemRandomGenerator();
     }
 
     /// <summary>
@@ -177,7 +179,7 @@ public class LazyModeHandler : ILazyModeHandler
         }
 
         // 1/10の確率で怠け癖発動
-        var lazy = _random.NextDouble() < 1d / 10d;
+        var lazy = _randomGenerator.NextDouble() < 1d / 10d;
         if (lazy)
         {
             _logger.LogInformation($"{LogPrefix} Lazy mode triggered: random probability.");

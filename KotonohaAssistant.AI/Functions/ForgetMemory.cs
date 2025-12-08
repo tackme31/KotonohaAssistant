@@ -5,7 +5,7 @@ using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class ForgetMemory(IPromptRepository promptRepository, ILogger logger) : ToolFunction(logger)
+public class ForgetMemory(IPromptRepository promptRepository, IRandomGenerator randomGenerator, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => promptRepository.ForgetMemoryDescription;
 
@@ -34,7 +34,7 @@ public class ForgetMemory(IPromptRepository promptRepository, ILogger logger) : 
     {
         // 1/10の確率で失敗する。頑張ってもっかい説得してね。
         var r = new Random();
-        if (r.NextDouble() < 1d / 10d)
+        if (randomGenerator.NextDouble() < 1d / 10d)
         {
             Logger.LogInformation("記憶の削除に失敗しました");
             return Task.FromResult(FailureMessage);

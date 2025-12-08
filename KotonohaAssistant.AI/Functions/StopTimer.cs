@@ -35,9 +35,9 @@ public class StopTimer(IPromptRepository promptRepository, IAlarmClient alarmCli
         catch (Exception ex)
         {
             Logger.LogError(ex);
-            return "ERROR";
+            return "タイマーの設定に失敗しました。";
         }
 
-        return "OK";
+        return "タイマーを設定しました";
     }
 }

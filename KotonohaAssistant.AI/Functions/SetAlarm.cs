@@ -6,9 +6,9 @@ using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CallMaster(IPromptRepository promptRepository, string voiceDirectory, IVoiceClient voiceClient, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
+public class SetAlarm(IPromptRepository promptRepository, string voiceDirectory, IVoiceClient voiceClient, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
 {
-    public override string Description => promptRepository.CallMasterDescription;
+    public override string Description => promptRepository.SetAlarmDescription;
 
     public override string Parameters => """
 {
@@ -66,9 +66,9 @@ public class CallMaster(IPromptRepository promptRepository, string voiceDirector
         {
             Logger.LogError(ex);
 
-            return "ERROR";
+            return "アラームの設定に失敗しました";
         }
 
-        return "OK";
+        return $"アラームを設定しました: {time.Hours}時{time.Minutes}分";
     }
 }

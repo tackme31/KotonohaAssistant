@@ -23,7 +23,8 @@ namespace KotonohaAssistant.VoiceServer
     /// </summary>
     internal class Program
     {
-        private static readonly string LogPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant", "log.voiceserver.txt");
+        private static readonly string AppDirectory = EnvVarUtils.TraverseEnvFileFolder(AppContext.BaseDirectory) ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
+        private static readonly string LogPath = Path.Combine(AppDirectory, "log.voiceserver.txt");
         private static readonly TtsControl TtsControl = new TtsControl();
         private static readonly int WaitCheckInterval = 500;
         private static readonly int WaitTimeout = 15 * 1000;

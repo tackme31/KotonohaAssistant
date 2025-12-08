@@ -1,9 +1,13 @@
-﻿using KotonohaAssistant.AI.Functions;
+﻿using FluentAssertions;
+using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
 using Moq;
+using OpenAI.Chat;
+using System.ClientModel;
+using System.ClientModel.Primitives;
 
 namespace KotonohaAssistant.AI.Tests.Services;
 
@@ -37,23 +41,77 @@ public class ConversationServiceTests
             .Returns("テスト用プロンプト");
     }
 
+    private ConversationState CreateInitialState(Kotonoha initialSister)
+    {
+        return new ConversationState
+        {
+            CurrentSister = initialSister,
+            CharacterPromptAkane = "test prompt akane",
+            CharacterPromptAoi = "test prompt aoi",
+            PatienceCount = 0,
+            LastToolCallSister = initialSister
+        };
+    }
+
     private ConversationService CreateService(
-        IList<ToolFunction>? availableFunctions = null,
-        Kotonoha defaultSister = Kotonoha.Akane)
+        ConversationState state,
+        IList<ToolFunction>? availableFunctions = null)
     {
         availableFunctions ??= new List<ToolFunction>();
 
         return new ConversationService(
-            _mockPromptRepository.Object,
+            state,
             _mockChatMessageRepository.Object,
             _mockChatCompletionRepository.Object,
             availableFunctions,
             _mockSisterSwitchingService.Object,
             _mockLazyModeHandler.Object,
-            _mockLogger.Object,
-            defaultSister
-        );
+            _mockLogger.Object);
     }
+
+    private static async Task<List<ConversationResult>> CollectAllResultsAsync(IAsyncEnumerable<ConversationResult> resultStream)
+    {
+        var results = new List<ConversationResult>();
+        await foreach (var result in resultStream)
+        {
+            results.Add(result);
+        }
+        return results;
+    }
+
+    private ChatCompletion CreateChatCompletion(
+        ChatFinishReason finishReason,
+        string content)
+    {
+        var finishReasonStr = finishReason switch
+        {
+            ChatFinishReason.Stop => "stop",
+            ChatFinishReason.ToolCalls => "tool_calls",
+            _ => "stop"
+        };
+
+        // 改行やタブを削除してJSONを1行にする
+        var escapedContent = content
+            .Replace("\r", "")
+            .Replace("\n", "")
+            .Replace("\"", "\\\"");
+
+        var json = $@"{{""id"":""test-id"",""object"":""chat.completion"",""created"":{DateTimeOffset.UtcNow.ToUnixTimeSeconds()},""model"":""gpt-4"",""choices"":[{{""index"":0,""message"":{{""role"":""assistant"",""content"":""{escapedContent}""}},""finish_reason"":""{finishReasonStr}""}}]}}";
+
+        return ModelReaderWriter.Read<ChatCompletion>(BinaryData.FromString(json))!;
+    }
+
+    private void SetupLazyModeHandler(LazyModeResult result, ConversationState state)
+    {
+        _mockLazyModeHandler
+            .Setup(x => x.HandleLazyModeAsync(
+                It.IsAny<ChatCompletion>(),
+                It.IsAny<ConversationState>(),
+                It.IsAny<Func<Task<ChatCompletion?>>>()))
+            .Callback(() => state.SwitchToOtherSister())
+            .ReturnsAsync(result);
+    }
+
 
     #region Constructor Tests
 
@@ -180,8 +238,83 @@ public class ConversationServiceTests
     [Fact]
     public async Task TalkWithKotonohaSisters_WhenLazyResponseExists_ShouldReturnBothResponses()
     {
-        // TODO: 怠け癖応答がある場合、両方の応答を返すことを検証
-        throw new NotImplementedException();
+        // Arrange
+        var inputText = "テストメッセージ";
+        var state = CreateInitialState(Kotonoha.Akane);
+        var service = CreateService(state);
+
+        // 最初のChatCompletion（通常の応答）
+        var initialCompletion = CreateChatCompletion(
+            ChatFinishReason.Stop,
+            @"{""Assistant"":""Akane"",""Text"":""初期応答やで"",""Emotion"":""Calm""}");
+
+        // ChatCompletionRepositoryのモック
+        _mockChatCompletionRepository
+            .Setup(x => x.CompleteChatAsync(
+                It.IsAny<IEnumerable<ChatMessage>>(),
+                It.IsAny<ChatCompletionOptions?>()))
+            .Returns(Task.FromResult(ClientResult.FromValue(initialCompletion, new MockPipelineResponse())));
+
+        // 怠け癖時の応答（茜が拒否）
+        var lazyRefusalResponse = new ConversationResult
+        {
+            Message = "葵、任せたで",
+            Emotion = Emotion.Calm,
+            Sister = Kotonoha.Akane,
+            Functions = []
+        };
+
+        // 最終的な応答（葵が引き受け）
+        var finalAcceptanceCompletion = CreateChatCompletion(
+            ChatFinishReason.Stop,
+            @"{""Assistant"":""Aoi"",""Text"":""もう、仕方ないなあ。"",""Emotion"":""Anger""}");
+
+        // LazyModeHandlerのモック（怠け癖発動）
+        var lazyResult = new LazyModeResult
+        {
+            FinalCompletion = finalAcceptanceCompletion,
+            WasLazy = true,
+            LazyResponse = lazyRefusalResponse
+        };
+
+        SetupLazyModeHandler(lazyResult, state);
+
+        // Act
+        var results = await CollectAllResultsAsync(service.TalkWithKotonohaSisters(inputText));
+
+        // Assert
+        results.Should().HaveCount(2);
+        results[0].Should().BeEquivalentTo(
+            new ConversationResult
+            {
+                Message = "葵、任せたで",
+                Emotion = Emotion.Calm,
+                Sister = Kotonoha.Akane,
+                Functions = []
+            });
+        results[1].Should().BeEquivalentTo(
+            new ConversationResult
+            {
+                Message = "もう、仕方ないなあ。",
+                Emotion = Emotion.Anger,
+                Sister = Kotonoha.Aoi,
+                Functions = []
+            });
+
+        // TrySwitchSisterが呼び出されたことを確認
+        _mockSisterSwitchingService.Verify(
+            x => x.TrySwitchSister(
+                It.Is<string>(input => input == "テストメッセージ"),
+                It.IsAny<ConversationState>()),
+            Times.Once);
+
+        // LazyModeHandlerが呼び出されたことを確認
+        _mockLazyModeHandler.Verify(
+            x => x.HandleLazyModeAsync(
+                It.IsAny<ChatCompletion>(),
+                It.IsAny<ConversationState>(),
+                It.IsAny<Func<Task<ChatCompletion?>>>()),
+            Times.Once);
     }
 
     [Fact]
@@ -323,7 +456,7 @@ public class ConversationServiceTests
     }
 
     [Fact]
-    public async Task TalkWithKotonohaSisters_WhenLazy_ShouldClearPatienceCounter()
+    public async Task TalkWithKotonohaSisters_WhenLazyResponseExists_ShouldClearPatienceCounter()
     {
         // TODO: 怠け癖発動時は忍耐地がリセットされることを検証
         throw new NotImplementedException();
@@ -355,4 +488,51 @@ public class ConversationServiceTests
     }
 
     #endregion
+}
+
+// テスト用のモッククラス
+internal class MockPipelineResponse : PipelineResponse
+{
+    private BinaryData _content = BinaryData.FromString("{}");
+
+    public override int Status => 200;
+    public override string ReasonPhrase => "OK";
+    public override Stream? ContentStream { get; set; }
+    public override BinaryData Content => _content;
+
+    protected override PipelineResponseHeaders HeadersCore => new MockPipelineResponseHeaders();
+
+    public override BinaryData BufferContent(CancellationToken cancellationToken = default)
+    {
+        return _content;
+    }
+
+    public override async ValueTask<BinaryData> BufferContentAsync(CancellationToken cancellationToken = default)
+    {
+        return await Task.FromResult(_content);
+    }
+
+    public override void Dispose()
+    {
+    }
+}
+
+internal class MockPipelineResponseHeaders : PipelineResponseHeaders
+{
+    public override IEnumerator<KeyValuePair<string, string>> GetEnumerator()
+    {
+        yield break;
+    }
+
+    public override bool TryGetValue(string name, out string? value)
+    {
+        value = null;
+        return false;
+    }
+
+    public override bool TryGetValues(string name, out IEnumerable<string>? values)
+    {
+        values = null;
+        return false;
+    }
 }

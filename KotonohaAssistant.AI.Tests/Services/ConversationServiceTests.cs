@@ -322,6 +322,13 @@ public class ConversationServiceTests
         throw new NotImplementedException();
     }
 
+    [Fact]
+    public async Task TalkWithKotonohaSisters_WhenLazy_ShouldClearPatienceCounter()
+    {
+        // TODO: 怠け癖発動時は忍耐地がリセットされることを検証
+        throw new NotImplementedException();
+    }
+
     #endregion
 
     #region State Persistence Tests

@@ -167,7 +167,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
             CurrentSister = sister,
         };
 
-        var recentMessages = allChatMessages.OfType<ChatMessage>().TakeLast(20).SkipWhile(m => m is AssistantChatMessage { ToolCalls: not [] }).ToList();
+        var recentMessages = allChatMessages.OfType<ChatMessage>().TakeLast(20).SkipWhile(m => m is AssistantChatMessage or ToolChatMessage).ToList();
         state.LoadMessages(recentMessages);
         state.AddInstruction(Instruction.SwitchSisterTo(sister));
         state.AddInstruction(_promptRepository.InactiveNotification);

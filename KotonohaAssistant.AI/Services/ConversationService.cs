@@ -242,7 +242,7 @@ public class ConversationService
     {
         try
         {
-            var recentMessages = messages.TakeLast(20).SkipWhile(m => m is AssistantChatMessage { ToolCalls: not [] }).ToList();
+            var recentMessages = messages.TakeLast(20).SkipWhile(m => m is ToolChatMessage or AssistantChatMessage).ToList();
             return await _chatCompletionRepository.CompleteChatAsync(recentMessages, _options);
         }
         catch (Exception ex)

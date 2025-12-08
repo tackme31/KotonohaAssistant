@@ -162,12 +162,6 @@ namespace KotonohaAssistant.VoiceServer
             {
                 var host = availableHosts.First();
                 TtsControl.Initialize(host);
-
-                if (TtsControl.Status == HostStatus.NotRunning)
-                {
-                    TtsControl.StartHost();
-                }
-
                 TtsControl.Connect();
             }
             catch (Exception ex)

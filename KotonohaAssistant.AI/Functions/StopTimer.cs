@@ -5,7 +5,7 @@ using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopTimer(IPromptRepository promptRepository, ILogger logger) : ToolFunction(logger)
+public class StopTimer(IPromptRepository promptRepository, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => promptRepository.StopTimerDescription;
 
@@ -30,8 +30,7 @@ public class StopTimer(IPromptRepository promptRepository, ILogger logger) : Too
     {
         try
         {
-            using var client = new AlarmClient();
-            await client.StopTimer();
+            await alarmClient.StopTimer();
         }
         catch (Exception ex)
         {

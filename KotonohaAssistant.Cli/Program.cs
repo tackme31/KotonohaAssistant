@@ -41,14 +41,16 @@ var logger = new Logger(logPath, isConsoleLoggingEnabled: false);
 var chatMessageRepository = new ChatMessageRepository(dbPath);
 var chatCompletionRepository = new ChatCompletionRepository(modelName, openAiApiKey);
 var promptRepository = new PromptRepository(promptPath);
+using var voiceClient = new VoiceClient();
+using var alarmClient = new AlarmClient();
 
 // 利用可能な関数
 var functions = new List<ToolFunction>
 {
-    new CallMaster(promptRepository, voicePath, logger),
-    new StopAlarm(promptRepository, logger),
-    new StartTimer(promptRepository, logger),
-    new StopTimer(promptRepository, logger),
+    new CallMaster(promptRepository, voicePath, voiceClient, alarmClient, logger),
+    new StopAlarm(promptRepository, alarmClient, logger),
+    new StartTimer(promptRepository, alarmClient, logger),
+    new StopTimer(promptRepository, alarmClient, logger),
     new ForgetMemory(promptRepository, new SystemRandomGenerator(), logger)
 };
 
@@ -116,8 +118,6 @@ if (enableInactivityNotification)
 
 try
 {
-    using var voiceClient = new VoiceClient();
-
     while (true)
     {
         Console.Write("私: ");

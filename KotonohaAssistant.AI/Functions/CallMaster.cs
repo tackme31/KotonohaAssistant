@@ -6,7 +6,7 @@ using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CallMaster(IPromptRepository promptRepository, string voiceDirectory, ILogger logger) : ToolFunction(logger)
+public class CallMaster(IPromptRepository promptRepository, string voiceDirectory, IVoiceClient voiceClient, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => promptRepository.CallMasterDescription;
 
@@ -59,9 +59,6 @@ public class CallMaster(IPromptRepository promptRepository, string voiceDirector
 
         try
         {
-            using var voiceClient = new VoiceClient();
-            using var alarmClient = new AlarmClient();
-
             await voiceClient.ExportVoiceAsync(state.CurrentSister, Core.Emotion.Calm, message, savePath);
             await alarmClient.AddAlarm(time, savePath + ".wav", isRepeated: false);
         }

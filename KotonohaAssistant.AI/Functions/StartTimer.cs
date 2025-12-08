@@ -6,7 +6,7 @@ using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StartTimer(IPromptRepository promptRepository, ILogger logger) : ToolFunction(logger)
+public class StartTimer(IPromptRepository promptRepository, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => promptRepository.StartTimerDescription;
 
@@ -47,9 +47,7 @@ public class StartTimer(IPromptRepository promptRepository, ILogger logger) : To
 
         try
         {
-            using var client = new AlarmClient();
-
-            await client.StartTimer(TimeSpan.FromSeconds(seconds));
+            await alarmClient.StartTimer(TimeSpan.FromSeconds(seconds));
 
             return "成功";
         }

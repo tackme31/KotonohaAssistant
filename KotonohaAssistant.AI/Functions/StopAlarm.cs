@@ -5,7 +5,7 @@ using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopAlarm(IPromptRepository promptRepository, ILogger logger) : ToolFunction(logger)
+public class StopAlarm(IPromptRepository promptRepository, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
 {
     public override string Description => promptRepository.StopAlarmDescription;
 
@@ -30,7 +30,6 @@ public class StopAlarm(IPromptRepository promptRepository, ILogger logger) : Too
     {
         try
         {
-            using var alarmClient = new AlarmClient();
             await alarmClient.StopAlarm();
 
             return "アラームを停止しました";

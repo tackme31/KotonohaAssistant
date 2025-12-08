@@ -10,7 +10,7 @@ namespace KotonohaAssistant.Core.Utils;
 /// <summary>
 /// KotonohaAssistant.VoiceServerのクライアント
 /// </summary>
-public class VoiceClient : IDisposable
+public class VoiceClient : IVoiceClient
 {
     private NamedPipeClientStream _pipeClient;
     private StreamReader? _reader;

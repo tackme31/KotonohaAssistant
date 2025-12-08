@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 namespace KotonohaAssistant.Core.Utils;
 
-public class AlarmClient : IDisposable
+public class AlarmClient : IAlarmClient
 {
     private NamedPipeClientStream _pipeClient;
     private StreamReader? _reader;

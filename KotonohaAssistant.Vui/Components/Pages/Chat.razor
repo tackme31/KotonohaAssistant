@@ -9,6 +9,7 @@
 @using Toolbelt.Blazor.SpeechRecognition
 @inject SpeechRecognition SpeechRecognition
 @inject ConversationService ConversationService
+@inject IVoiceClient VoiceClient
 @inject IJSRuntime JS
 
 <PageTitle>Kotonoha Assistant</PageTitle>
@@ -119,11 +120,6 @@
     /// </summary>
     private CancellationTokenSource? _conversationTimer;
 
-    /// <summary>
-    /// 音声読み上げクライアント
-    /// </summary>
-    private VoiceClient? _voiceClient = null;
-
     protected override async Task OnInitializedAsync()
     {
         this.SpeechRecognition.Lang = "ja-JP";
@@ -132,8 +128,6 @@
         this.SpeechRecognition.Result += OnSpeechRecognized;
         this.SpeechRecognition.End += OnSpeechEnded;
         _ = this.SpeechRecognition.StartAsync();
-
-        _voiceClient = new VoiceClient();
 
         await ConversationService.LoadLatestConversation();
         foreach (var (sister, message) in ConversationService.GetAllMessages())
@@ -238,7 +232,7 @@
     /// <returns></returns>
     private async Task SendMessage(string message)
     {
-        if (ConversationService is null || _voiceClient is null)
+        if (ConversationService is null)
         {
             return;
         }
@@ -275,7 +269,7 @@
             ScrollToEnd();
 
             // 読み上げ
-            await _voiceClient.SpeakAsync(result.Sister, result.Emotion, result.Message);
+            await VoiceClient.SpeakAsync(result.Sister, result.Emotion, result.Message);
 
             _isThinking = true;
             this.StateHasChanged();
@@ -346,7 +340,6 @@
     {
         this.SpeechRecognition.Result -= OnSpeechRecognized;
         this.SpeechRecognition.End -= OnSpeechEnded;
-        _voiceClient?.Dispose();
         _conversationTimer?.Cancel();
     }
 

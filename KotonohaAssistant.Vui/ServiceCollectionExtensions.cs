@@ -41,6 +41,8 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddSingleton<ILogger>(new Logger(LogPath, isConsoleLoggingEnabled: false));
+        services.AddSingleton<IAlarmClient, AlarmClient>();
+        services.AddSingleton<IVoiceClient, VoiceClient>();
         services.AddSingleton<IAlarmRepository>(_ => new AlarmRepository(AlarmDBPath));
 
         if (EnableCalendarFunction)
@@ -127,6 +129,8 @@ public static class ServiceCollectionExtensions
     private static List<ToolFunction> GetAvailableFunctions(IServiceProvider sp)
     {
         var logger = sp.GetRequiredService<ILogger>();
+        var alarmClient = sp.GetRequiredService<IAlarmClient>();
+        var voiceClient = sp.GetRequiredService<IVoiceClient>();
         var promptRepository = sp.GetRequiredService<IPromptRepository>();
         var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
         var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
@@ -135,10 +139,10 @@ public static class ServiceCollectionExtensions
         // 利用する関数一覧
         var functions = new List<ToolFunction>
             {
-                new CallMaster(promptRepository, VoicePath, logger),
-                new StopAlarm(promptRepository, logger),
-                new StartTimer(promptRepository, logger),
-                new StopTimer(promptRepository, logger),
+                new CallMaster(promptRepository, VoicePath, voiceClient, alarmClient, logger),
+                new StopAlarm(promptRepository, alarmClient, logger),
+                new StartTimer(promptRepository, alarmClient, logger),
+                new StopTimer(promptRepository, alarmClient, logger),
                 new ForgetMemory(promptRepository, new SystemRandomGenerator(), logger),
             };
 

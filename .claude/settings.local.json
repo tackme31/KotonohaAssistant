@@ -8,7 +8,10 @@
       "Bash(dotnet sln:*)",
       "Bash(dotnet add:*)",
       "Bash(del KotonohaAssistant.AI.TestsUnitTest1.cs)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "mcp__serena__find_symbol",
+      "mcp__serena__replace_symbol_body",
+      "mcp__serena__insert_after_symbol"
     ],
     "deny": [],
     "ask": []

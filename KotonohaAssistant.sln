@@ -31,6 +31,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ソリューション項目
 		prompts\tool_stop_timer.md = prompts\tool_stop_timer.md
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KotonohaAssistant.AI.Tests", "KotonohaAssistant.AI.Tests\KotonohaAssistant.AI.Tests.csproj", "{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -125,6 +127,18 @@ Global
 		{A48CA373-9397-B617-DB03-4B746942E1C6}.Release|x64.Build.0 = Release|Any CPU
 		{A48CA373-9397-B617-DB03-4B746942E1C6}.Release|x86.ActiveCfg = Release|Any CPU
 		{A48CA373-9397-B617-DB03-4B746942E1C6}.Release|x86.Build.0 = Release|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Debug|x64.Build.0 = Debug|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Debug|x86.Build.0 = Debug|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Release|x64.ActiveCfg = Release|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Release|x64.Build.0 = Release|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Release|x86.ActiveCfg = Release|Any CPU
+		{EAD4E29A-FFF6-016B-5ACB-85F77B77765A}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

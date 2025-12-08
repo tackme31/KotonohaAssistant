@@ -113,7 +113,8 @@ public class LazyModeHandler : ILazyModeHandler
             {
                 Message = response?.Text ?? string.Empty,
                 Emotion = response?.Emotion ?? Emotion.Calm,
-                Sister = response?.Assistant ?? state.CurrentSister
+                Sister = response?.Assistant ?? state.CurrentSister,
+                Functions = []
             };
         }
 

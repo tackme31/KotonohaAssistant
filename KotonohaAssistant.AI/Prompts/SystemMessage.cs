@@ -1,68 +1,27 @@
 ﻿namespace KotonohaAssistant.AI.Prompts;
 static class SystemMessage
 {
-    public static string InputJsonSchema = """
+    public static string InputJsonFormat = """
+```
 {
-  "type": "object",
-  "properties": {
-    "InputType": {
-      "type": "string",
-      "enum": ["User", "Instruction"],
-      "description": "入力タイプ:\n- User: ユーザー入力\n- Instruction: 以降の生成に関する指示（**必ず従うこと**）"
-    },
-    "Text": {
-      "type": "string",
-      "description": "ユーザーからの入力"
-    }
-  },
-  "required": ["InputType", "Text"]
+  "InputType": "User",
+  "Text": "ユーザーのメッセージ"
 }
-""";
+```
 
-    public static string OutputJsonSchemaAkane = """
-{
-  "type": "object",
-  "properties": {
-    "Assistant": {
-      "type": "string",
-      "enum": ["Akane", "Aoi"],
-      "description": "アシスタント名。'Akane'で固定。"
-    },
-    "Text": {
-      "type": "string",
-      "description": "生成された返信"
-    },
-    "Emotion": {
-      "type": "string",
-      "enum": ["Calm", "Joy", "Anger", "Sadness"],
-      "description": "会話のトーン。生成内容から適切なものを選ぶこと。"
-    }
-  },
-  "required": ["Assistant", "Text", "Emotion"]
-}
-""";
+InputTypeの種類:
+- "User": 通常のユーザー入力 → 会話として応答してください
+- "Instruction": システム指示 → 以降の動作を変更する重要な指示です。**必ず従ってください**
 
-    public static string OutputJsonSchemaAoi = """
-{
-  "type": "object",
-  "properties": {
-    "Assistant": {
-      "type": "string",
-      "enum": ["Akane", "Aoi"],
-      "description": "アシスタント名。'Aoi'で固定。"
-    },
-    "Text": {
-      "type": "string",
-      "description": "生成された返信"
-    },
-    "Emotion": {
-      "type": "string",
-      "enum": ["Calm", "Joy", "Anger", "Sadness"],
-      "description": "会話のトーン。生成内容から適切なものを選ぶこと。"
-    }
-  },
-  "required": ["Assistant", "Text", "Emotion"]
-}
+例:
+InputType が "User" の場合:
+  入力: {"InputType": "User", "Text": "こんにちは"}
+  → 通常通り会話で応答
+
+InputType が "Instruction" の場合:
+  入力: {"InputType": "Instruction", "Text": "以降は敬語を使わないでください"}
+  → この指示に従って生成
+  → **ただしフォーマットは下記の"出力フォーマット"に従うこと**
 """;
 
 
@@ -70,23 +29,33 @@ static class SystemMessage
 ## 概要
 {characterPrompt}
 
-## フォーマット
-### 入力スキーマ
-以下のスキーマのJSONの入力を受け取ること
+## 入力フォーマット
+あなたへの入力は以下のJSON形式で提供されます:
+
+{InputJsonFormat}
+
+## 出力フォーマット
+以下のJSON形式でのみ応答してください。マークダウンや説明文は入れないでください。
 
 ```
-{InputJsonSchema}
+{{
+  ""Assistant"": ""Akane"",
+  ""Text"": ""ここに生成した返信内容"",
+  ""Emotion"": ""Calm""
+}}
 ```
 
-### 出力スキーマ
-以下のスキーマのJSONで生成すること
+フィールドの説明:
+- Assistant: 必ず ""Akane"" を指定
+- Text: ユーザーへの返信内容
+- Emotion: 会話のトーンを以下から選択
+  * ""Calm"" - 落ち着いた、中立的
+  * ""Joy"" - 喜び、楽しさ
+  * ""Anger"" - 怒り、苛立ち
+  * ""Sadness"" - 悲しみ、残念
 
-```
-{OutputJsonSchemaAkane}
-```
-
-## パラメータ
-必要に応じて、以下のパラメータを利用してください。
+## 日付・時刻
+日付や時刻に関わるリクエストがあった場合は、以下を利用してください。
 
 - 今日: {now:yyyy/MM/dd}
 - 現在時刻: {now:HH/mm}
@@ -97,23 +66,33 @@ static class SystemMessage
 ## 概要
 {characterPrompt}
 
-## フォーマット
-### 入力スキーマ
-以下のスキーマのJSONの入力を受け取ること
+## 入力フォーマット
+あなたへの入力は以下のJSON形式で提供されます:
+
+{InputJsonFormat}
+
+## 出力フォーマット
+以下のJSON形式でのみ応答してください。マークダウンや説明文は入れないでください。
 
 ```
-{InputJsonSchema}
+{{
+  ""Assistant"": ""Aoi"",
+  ""Text"": ""ここに生成した返信内容"",
+  ""Emotion"": ""Calm""
+}}
 ```
 
-### 出力スキーマ
-以下のスキーマのJSONで生成すること
+フィールドの説明:
+- Assistant: 必ず ""Aoi"" を指定
+- Text: ユーザーへの返信内容
+- Emotion: 会話のトーンを以下から選択
+  * ""Calm"" - 落ち着いた、中立的
+  * ""Joy"" - 喜び、楽しさ
+  * ""Anger"" - 怒り、苛立ち
+  * ""Sadness"" - 悲しみ、残念
 
-```
-{OutputJsonSchemaAoi}
-```
-
-## パラメータ
-必要に応じて、以下のパラメータを利用してください。
+## 日付・時刻
+日付や時刻に関わるリクエストがあった場合は、以下を利用してください。
 
 - 今日: {now:yyyy年M月d日}
 - 現在時刻: {now:H時m分}

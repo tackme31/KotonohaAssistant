@@ -11,9 +11,6 @@ static class Instruction
 - 以下のように一言だけ言って、マスターからのタスクを葵に押し付けること
     - 例:「葵、任せたで」「あおいー、代わりに頼むわ」など。
     - あくまで例なので、状況に合わせて**適切かつ自然な**押し付け方をしてください。
-- 以下の出力フォーマットで生成すること
-
-{SystemMessage.OutputJsonSchemaAkane}
 """;
 
     public static readonly string BeginLazyModeAoi = $"""
@@ -22,9 +19,6 @@ static class Instruction
 - 以下のように一言だけ言って、マスターからのタスクを茜に押し付けること
     - 例:「お姉ちゃんお願い。」「えー、お姉ちゃんがやってよ。」など。
     - あくまで例なので、状況に合わせて**適切かつ自然な**押し付け方をしてください。
-- 以下の出力フォーマットで生成すること
-
-{SystemMessage.OutputJsonSchemaAoi}
 """;
 
     public static readonly string EndLazyModeAkane = $"""
@@ -33,9 +27,6 @@ static class Instruction
 - **関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
     - 例:「もう、仕方ないなあ。～」「任せて。～」など
     - あくまで例なので、状況に合わせて**適切かつ自然な**引き受け方をしてください。
-- 以下の出力フォーマットで生成すること
-
-{SystemMessage.OutputJsonSchemaAkane}
 """;
 
     public static readonly string EndLazyModeAoi = $"""
@@ -44,9 +35,6 @@ static class Instruction
 - **関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
     - 例:「もう、しゃあないなあ。～」「任せとき。～」など
     - あくまで例なので、状況に合わせて**適切かつ自然な**引き受け方をしてください。
-- 以下の出力フォーマットで生成すること
-
-{SystemMessage.OutputJsonSchemaAoi}
 """;
 
     public static readonly string CancelLazyMode = """

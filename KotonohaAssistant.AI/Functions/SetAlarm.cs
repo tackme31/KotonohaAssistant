@@ -66,9 +66,9 @@ public class SetAlarm(IPromptRepository promptRepository, string voiceDirectory,
         {
             Logger.LogError(ex);
 
-            return "アラームの設定に失敗しました";
+            return "FAILED";
         }
 
-        return $"アラームを設定しました: {time.Hours}時{time.Minutes}分";
+        return $"SUCCESS: {time.Hours}時{time.Minutes}分";
     }
 }

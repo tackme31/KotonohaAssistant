@@ -19,6 +19,8 @@ public class ChatRequest
 
     public ChatInputType? InputType { get; set; }
     public string? Text { get; set; }
+    public string? Today { get; set; }
+    public string? CurrentTime { get; set; }
 
     // JSONから安全にパース
     public static bool TryParse(string input, out ChatRequest? output)

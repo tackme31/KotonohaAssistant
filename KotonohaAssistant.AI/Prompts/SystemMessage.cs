@@ -5,13 +5,17 @@ static class SystemMessage
 ```
 {
   "InputType": "User",
-  "Text": "ユーザーのメッセージ"
+  "Text": "ユーザーのメッセージ",
+  "Today": "2025年12月8日 (月曜日)",
+  "CurrentTime": "13時30分",
 }
 ```
 
 InputTypeの種類:
 - "User": 通常のユーザー入力 → 会話として応答してください
 - "Instruction": システム指示 → 以降の動作を変更する重要な指示です。**必ず従ってください**
+- "Today": 現在の日にち → 「明日」など日付の推測が必要な場合に使用すること
+- "CurrentTime": 現在時刻 → 「30分後」など時刻の推測が必要な場合に使用すること
 
 例:
 InputType が "User" の場合:
@@ -25,7 +29,7 @@ InputType が "Instruction" の場合:
 """;
 
 
-    public static string KotonohaAkane(string characterPrompt, DateTime now) => @$"
+    public static string KotonohaAkane(string characterPrompt) => @$"
 ## 概要
 {characterPrompt}
 
@@ -35,7 +39,7 @@ InputType が "Instruction" の場合:
 {InputJsonFormat}
 
 ## 出力フォーマット
-以下のJSON形式でのみ応答してください。マークダウンや説明文は入れないでください。
+**いかなる場合でも**、応答は以下のJSON形式で行うこと。
 
 ```
 {{
@@ -53,16 +57,9 @@ InputType が "Instruction" の場合:
   * ""Joy"" - 喜び、楽しさ
   * ""Anger"" - 怒り、苛立ち
   * ""Sadness"" - 悲しみ、残念
-
-## 日付・時刻
-日付や時刻に関わるリクエストがあった場合は、以下を利用してください。
-
-- 今日: {now:yyyy/MM/dd}
-- 現在時刻: {now:HH/mm}
-- 曜日: {now:dddd}
 ";
 
-    public static string KotonohaAoi(string characterPrompt, DateTime now) => @$"
+    public static string KotonohaAoi(string characterPrompt) => @$"
 ## 概要
 {characterPrompt}
 
@@ -72,7 +69,7 @@ InputType が "Instruction" の場合:
 {InputJsonFormat}
 
 ## 出力フォーマット
-以下のJSON形式でのみ応答してください。マークダウンや説明文は入れないでください。
+**いかなる場合でも**、応答は以下のJSON形式で行うこと。
 
 ```
 {{
@@ -90,12 +87,5 @@ InputType が "Instruction" の場合:
   * ""Joy"" - 喜び、楽しさ
   * ""Anger"" - 怒り、苛立ち
   * ""Sadness"" - 悲しみ、残念
-
-## 日付・時刻
-日付や時刻に関わるリクエストがあった場合は、以下を利用してください。
-
-- 今日: {now:yyyy年M月d日}
-- 現在時刻: {now:H時m分}
-- 曜日: {now:dddd}
 ";
 }

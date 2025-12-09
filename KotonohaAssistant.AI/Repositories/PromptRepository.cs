@@ -32,8 +32,8 @@ public class PromptRepository(string promptPath) : IPromptRepository
 
     public string GetCharacterPrompt(Kotonoha sister) => sister switch
     {
-        Kotonoha.Akane => SystemMessage.KotonohaAkane(GetPrompt(CharacterPromptAkane), DateTime.Now),
-        Kotonoha.Aoi => SystemMessage.KotonohaAoi(GetPrompt(CharacterPromptAoi), DateTime.Now),
+        Kotonoha.Akane => SystemMessage.KotonohaAkane(GetPrompt(CharacterPromptAkane)),
+        Kotonoha.Aoi => SystemMessage.KotonohaAoi(GetPrompt(CharacterPromptAoi)),
         _ => throw new FileNotFoundException()
     };
 

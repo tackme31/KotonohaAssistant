@@ -49,8 +49,8 @@ public class ConversationState() : IReadOnlyConversationState
             var now = DateTime.Now;
             return CurrentSister switch
             {
-                Kotonoha.Akane => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane(CharacterPromptAkane, now))),
-                Kotonoha.Aoi => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi(CharacterPromptAoi, now))),
+                Kotonoha.Akane => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane(CharacterPromptAkane))),
+                Kotonoha.Aoi => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi(CharacterPromptAoi))),
                 _ => throw new NotSupportedException()
             };
         }
@@ -95,10 +95,13 @@ public class ConversationState() : IReadOnlyConversationState
 
     public void AddUserMessage(string text)
     {
+        var now = DateTime.Now;
         var request = new ChatRequest
         {
             InputType = ChatInputType.User,
             Text = text,
+            Today = now.ToString("yyyy年M月d日 (dddd)"),
+            CurrentTime = now.ToString("H時m分")
         };
 
         _chatMessages.Add(new UserChatMessage(request.ToJson()));
@@ -106,10 +109,13 @@ public class ConversationState() : IReadOnlyConversationState
 
     public void AddInstruction(string text)
     {
+        var now = DateTime.Now;
         var request = new ChatRequest
         {
             InputType = ChatInputType.Instruction,
             Text = text,
+            Today = now.ToString("yyyy年M月d日 (dddd)"),
+            CurrentTime = now.ToString("H時m分")
         };
 
         _chatMessages.Add(new UserChatMessage(request.ToJson()));

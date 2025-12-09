@@ -242,7 +242,8 @@ public class ConversationService
     {
         try
         {
-            var recentMessages = messages.TakeLast(20).SkipWhile(m => m is ToolChatMessage or AssistantChatMessage).ToList();
+            // ToolCallを要求されていない状態でTooLChatMessageを送信すると400エラーになるのでスキップ
+            var recentMessages = messages.TakeLast(20).SkipWhile(m => m is ToolChatMessage).ToList();
             return await _chatCompletionRepository.CompleteChatAsync(recentMessages, _options);
         }
         catch (Exception ex)

@@ -167,7 +167,8 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
             CurrentSister = sister,
         };
 
-        var recentMessages = allChatMessages.OfType<ChatMessage>().TakeLast(20).SkipWhile(m => m is AssistantChatMessage or ToolChatMessage).ToList();
+        // ToolCallを要求されていない状態でTooLChatMessageを送信すると400エラーになるのでスキップ
+        var recentMessages = allChatMessages.OfType<ChatMessage>().TakeLast(20).SkipWhile(m => m is ToolChatMessage).ToList();
         state.LoadMessages(recentMessages);
         state.AddInstruction(Instruction.SwitchSisterTo(sister));
         state.AddInstruction(_promptRepository.InactiveNotification);

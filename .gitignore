@@ -360,9 +360,8 @@ build/tools/
 /lib/*.dll
 
 # DB
-/app.db
-/app.cli.db
-/alarm.db
+/*.db
+/*.db-journal
 alarm voice/
 
 # Logs

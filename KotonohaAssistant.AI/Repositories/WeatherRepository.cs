@@ -18,7 +18,7 @@ public interface IWeatherRepository
     Task<List<Weather>> GetWeather(DateTime date, (double lat, double lon) location);
 }
 
-public class WeatherRepository(string apiKey) : IWeatherRepository, IDisposable
+public class WeatherRepository(string apiKey, ILogger logger) : IWeatherRepository, IDisposable
 {
     private readonly string _apiKey = apiKey;
     private readonly HttpClient _httpClient = new();
@@ -113,7 +113,7 @@ public class WeatherRepository(string apiKey) : IWeatherRepository, IDisposable
         }
         catch (Exception ex)
         {
-            // TODO: ログ出力
+            logger.LogError(ex);
             return null;
         }
     }

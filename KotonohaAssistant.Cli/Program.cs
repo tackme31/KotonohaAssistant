@@ -65,7 +65,7 @@ if (enableCalendarFunction)
 
 if (enableWeatherFunction)
 {
-    var weatherRepository = new WeatherRepository(owmApiKey);
+    var weatherRepository = new WeatherRepository(owmApiKey, logger);
     functions.AddRange([
         new GetWeather(promptRepository, weatherRepository, (owmLat, owmLon), logger)
     ]);
@@ -142,7 +142,7 @@ try
         }
     }
 }
-catch (Exception ex)
+catch (Exception)
 {
     throw;
 }

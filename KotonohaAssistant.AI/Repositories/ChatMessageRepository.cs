@@ -11,8 +11,8 @@ public interface IChatMessageRepository
 {
     Task<long> GetLatestConversationIdAsync();
     Task<int> CreateNewConversationIdAsync();
-    Task<IEnumerable<ChatMessage?>> GetAllChatMessagesAsync(long conversationId);
-    Task<IEnumerable<Message?>> GetAllMessageAsync(long conversationId);
+    Task<IEnumerable<ChatMessage>> GetAllChatMessagesAsync(long conversationId);
+    Task<IEnumerable<Message>> GetAllMessageAsync(long conversationId);
     Task InsertChatMessagesAsync(IEnumerable<ChatMessage> chatMessages, long conversationId);
 }
 
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS Conversation (
         }
     }
 
-    public async Task<IEnumerable<ChatMessage?>> GetAllChatMessagesAsync(long conversationId)
+    public async Task<IEnumerable<ChatMessage>> GetAllChatMessagesAsync(long conversationId)
     {
         await InitializeDatabaseAsync();
 
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS Conversation (
         }
     }
 
-    public async Task<IEnumerable<Message?>> GetAllMessageAsync(long conversationId)
+    public async Task<IEnumerable<Message>> GetAllMessageAsync(long conversationId)
     {
         await InitializeDatabaseAsync();
 
@@ -251,9 +251,9 @@ public class Message
         };
     }
 
-    private static BinaryData ConvertStringToBinaryData(string base64String)
+    private static BinaryData ConvertStringToBinaryData(string? base64String)
     {
-        byte[] byteArray = Convert.FromBase64String(base64String);
+        byte[] byteArray = Convert.FromBase64String(base64String ?? string.Empty);
         return new BinaryData(byteArray);
     }
 }

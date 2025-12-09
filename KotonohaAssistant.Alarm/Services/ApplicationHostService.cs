@@ -94,7 +94,7 @@ internal class ApplicationHostService : IHostedService
             using (var reader = new StreamReader(ps))
             using (var writer = new StreamWriter(ps) { AutoFlush = true })
             {
-                string line;
+                string? line;
                 while ((line = await reader.ReadLineAsync()) != null)
                 {
                     Console.WriteLine($"Data received: {line}");

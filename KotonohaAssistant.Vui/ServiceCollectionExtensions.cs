@@ -52,7 +52,7 @@ public static class ServiceCollectionExtensions
 
         if (EnableWeatherFunction)
         {
-            services.AddSingleton<IWeatherRepository>(_ => new WeatherRepository(OwmApiKey));
+            services.AddSingleton<IWeatherRepository>(sp => new WeatherRepository(OwmApiKey, sp.GetRequiredService<ILogger>()));
         }
 
         // InactivityNotificationServiceの登録
@@ -129,8 +129,6 @@ public static class ServiceCollectionExtensions
         var alarmClient = sp.GetRequiredService<IAlarmClient>();
         var voiceClient = sp.GetRequiredService<IVoiceClient>();
         var promptRepository = sp.GetRequiredService<IPromptRepository>();
-        var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
-        var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
 
         // 利用する関数一覧
         var functions = new List<ToolFunction>

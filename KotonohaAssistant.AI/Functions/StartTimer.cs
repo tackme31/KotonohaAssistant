@@ -58,11 +58,11 @@ public class StartTimer(IPromptRepository promptRepository, IAlarmClient alarmCl
             {
                 return $"タイマーを開始しました。: {time.Minutes}分{time.Seconds}秒";
             }
-            
+
         }
         catch (Exception ex)
         {
-            logger.LogError(ex);
+            Logger.LogError(ex);
             return "タイマーの設定に失敗しました。";
         }
     }

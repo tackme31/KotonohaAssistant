@@ -71,7 +71,6 @@ if (enableWeatherFunction)
     ]);
 }
 
-var sisterSwitchingService = new SisterSwitchingService(logger);
 var functionsDictionary = functions.ToDictionary(f => f.GetType().Name);
 var lazyModeHandler = new LazyModeHandler(functionsDictionary, logger);
 var service = new ConversationService(
@@ -79,7 +78,6 @@ var service = new ConversationService(
     chatMessageRepository,
     chatCompletionRepository,
     functions,
-    sisterSwitchingService,
     lazyModeHandler,
     logger);
 

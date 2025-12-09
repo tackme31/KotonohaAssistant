@@ -98,7 +98,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IChatMessageRepository>(_ => new ChatMessageRepository(DBPath));
         services.AddSingleton<IChatCompletionRepository>(_ => new ChatCompletionRepository(OpenAIModel, OpenAIApiKey));
         services.AddSingleton<IPromptRepository>(_ => new PromptRepository(PromptPath));
-        services.AddSingleton<ISisterSwitchingService, SisterSwitchingService>();
 
         services.AddSingleton(sp =>
         {
@@ -106,7 +105,6 @@ public static class ServiceCollectionExtensions
             var promptRepository = sp.GetRequiredService<IPromptRepository>();
             var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
             var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
-            var sisterSwitchingService = sp.GetRequiredService<ISisterSwitchingService>();
 
             // 利用する関数一覧
             var functions = GetAvailableFunctions(sp);
@@ -120,7 +118,6 @@ public static class ServiceCollectionExtensions
                 chatMessageRepository,
                 chatCompletionRepository,
                 functions,
-                sisterSwitchingService,
                 lazyModeHandler,
                 logger);
         });
@@ -134,7 +131,6 @@ public static class ServiceCollectionExtensions
         var promptRepository = sp.GetRequiredService<IPromptRepository>();
         var chatMessageRepository = sp.GetRequiredService<IChatMessageRepository>();
         var chatCompletionRepository = sp.GetRequiredService<IChatCompletionRepository>();
-        var sisterSwitchingService = sp.GetRequiredService<ISisterSwitchingService>();
 
         // 利用する関数一覧
         var functions = new List<ToolFunction>

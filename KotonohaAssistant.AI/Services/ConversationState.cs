@@ -190,9 +190,9 @@ public class ConversationState() : IReadOnlyConversationState
     /// <summary>
     /// 怠け癖モード終了の指示を追加します
     /// </summary>
-    public void AddEndLazyModeInstruction()
+    public void AddEndLazyModeInstruction(Kotonoha sister)
     {
-        var instruction = CurrentSister switch
+        var instruction = sister switch
         {
             Kotonoha.Akane => Instruction.EndLazyModeAkane,
             Kotonoha.Aoi => Instruction.EndLazyModeAoi,

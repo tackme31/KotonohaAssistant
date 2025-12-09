@@ -23,9 +23,9 @@ public class ConversationService
     public IReadOnlyConversationState State => _state;
 
     /// <summary>
-    /// 最後に保存したメッセージ
+    /// 最後に保存したメッセージのインデックス（次に保存すべき位置）
     /// </summary>
-    private ChatMessage? _lastSavedMessage;
+    private int _lastSavedMessageIndex = 0;
     private long? _currentConversationId = null;
 
     private readonly IChatMessageRepository _chatMessageRepositoriy;
@@ -137,7 +137,7 @@ public class ConversationService
         // 生成時の参考のためにあらかじめ会話を入れておく
         _state.LoadInitialConversation();
 
-        _lastSavedMessage = null;
+        _lastSavedMessageIndex = _state.ChatMessages.Count();
 
         return conversationId;
     }
@@ -182,14 +182,15 @@ public class ConversationService
 
         _currentConversationId = conversationId;
         _state.LoadMessages(messages);
-        _lastSavedMessage = messages.LastOrDefault();
+        _lastSavedMessageIndex = _state.ChatMessages.Count();
 
-        if (_lastSavedMessage is null)
+        var lastSavedMessage = messages.LastOrDefault();
+        if (lastSavedMessage is null)
         {
             return;
         }
 
-        var lastText = _lastSavedMessage.Content.FirstOrDefault()?.Text ?? "";
+        var lastText = lastSavedMessage.Content.FirstOrDefault()?.Text ?? "";
         if (ChatResponse.TryParse(lastText, out var response) && response is not null)
         {
             _state.CurrentSister = response.Assistant;
@@ -209,22 +210,25 @@ public class ConversationService
             return;
         }
 
-        var unsavedMessages = _lastSavedMessage is null
-            ? _state.ChatMessages
-            : _state.ChatMessages.SkipWhile(message => message != _lastSavedMessage).Skip(1);
+        // インデックスベースで未保存メッセージを取得
+        var unsavedMessages = _state.ChatMessages
+            .Skip(_lastSavedMessageIndex)
+            .ToList();
 
-        var messageCount = unsavedMessages.Count();
-        if (messageCount == 0)
+        if (unsavedMessages.Count == 0)
         {
             return;
         }
 
-        _logger.LogInformation($"{LogPrefix} Saving state: ConversationID={_currentConversationId}, UnsavedMessageCount={messageCount}");
+        _logger.LogInformation($"{LogPrefix} Saving state: ConversationID={_currentConversationId}, UnsavedMessageCount={unsavedMessages.Count}");
 
         try
         {
             await _chatMessageRepositoriy.InsertChatMessagesAsync(unsavedMessages, _currentConversationId.Value);
-            _lastSavedMessage = _state.ChatMessages.Last();
+
+            // インデックスを更新
+            _lastSavedMessageIndex = _state.ChatMessages.Count();
+
             _logger.LogInformation($"{LogPrefix} State saved successfully.");
         }
         catch (Exception ex)

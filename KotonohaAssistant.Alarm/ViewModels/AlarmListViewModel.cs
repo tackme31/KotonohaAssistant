@@ -132,6 +132,13 @@ public partial class AlarmListViewModel : ObservableObject
         });
     }
 
+    public IRelayCommand PlayCommand => new RelayCommand<long>(Play);
+
+    private void Play(long id)
+    {
+        _ = _alarmService.Play(id);
+    }
+
     private async void AlarmSetting_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not AlarmSetting alarm)

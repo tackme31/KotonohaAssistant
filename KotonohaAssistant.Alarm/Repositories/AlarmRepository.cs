@@ -8,6 +8,7 @@ namespace KotonohaAssistant.Alarm.Repositories;
 
 public interface IAlarmRepository
 {
+    Task<AlarmSetting?> GetAlarmSettingAsync(long id);
     Task<List<AlarmSetting>> GetAlarmSettingsAsync(TimeSpan from, TimeSpan to);
 
     Task DeleteAlarmSettingsAsync(IEnumerable<long> ids);
@@ -46,6 +47,33 @@ CREATE TABLE IF NOT EXISTS AlarmSetting (
         await connection.ExecuteAsync(createTableQuery);
 
         _isInitialized = true;
+    }
+
+    public async Task<AlarmSetting?> GetAlarmSettingAsync(long id)
+    {
+        await InitializeDatabaseAsync();
+
+        var sql = @"
+SELECT *
+FROM AlarmSetting
+WHERE Id = @Id
+";
+        try
+        {
+            using var connection = ReadOnlyConnection;
+            connection.Open();
+            var setting = await connection.QueryFirstAsync<AlarmSetting>(sql, new
+            {
+                Id = id
+            });
+
+            return setting;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex);
+            return null;
+        }
     }
 
     public async Task<List<AlarmSetting>> GetAlarmSettingsAsync(TimeSpan from, TimeSpan to)

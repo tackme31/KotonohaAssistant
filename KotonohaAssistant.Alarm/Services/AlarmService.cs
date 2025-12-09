@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Security.Claims;
 using System.Timers;
 using KotonohaAssistant.Alarm.Models;
 using KotonohaAssistant.Alarm.Repositories;
@@ -11,6 +12,7 @@ public interface IAlarmService
 {
     public void Start();
     public void Stop();
+    public Task Play(long id);
     public void StopAlarm();
     public Task<bool> SetAlarm(AlarmSetting setting);
     public long? GetCurrentAlarmId();
@@ -80,6 +82,30 @@ public class AlarmService : IDisposable, IAlarmService
     public void StopAlarm()
     {
         _cts?.Cancel();
+    }
+
+    public async Task Play(long id)
+    {
+        try
+        {
+            var alarm = await _alarmRepository.GetAlarmSettingAsync(id);
+            if (alarm is null)
+            {
+                return;
+            }
+
+            if (!File.Exists(alarm.VoicePath))
+            {
+                return;
+            }
+
+            // ボイス音声読み上げ
+            await PlayAlarmSoundAsync(alarm.VoicePath, TimeSpan.FromSeconds(10), CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex);
+        }
     }
 
     public async Task<bool> SetAlarm(AlarmSetting setting)

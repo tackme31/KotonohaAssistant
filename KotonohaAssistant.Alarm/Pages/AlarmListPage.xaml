@@ -41,9 +41,11 @@
                                  VerticalAlignment="Center"
                                  Fill="{ui:ThemeResource ControlStrongStrokeColorDefaultBrush}">
                         </Ellipse>
-                        <ui:SymbolIcon Symbol="ClockAlarm20"
-                                       FontSize="20"
-                                       Grid.RowSpan="2"/>
+                        <ui:Button Icon="{ui:SymbolIcon Play12}"
+                                   Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListView}}"
+                                   CommandParameter="{Binding Id}"
+                                   Grid.RowSpan="2"
+                                   FontSize="20" />
                         <ui:TextBlock Grid.Row="0"
                                       Grid.Column="1"
                                       Margin="12,6,0,0"

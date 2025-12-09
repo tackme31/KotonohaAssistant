@@ -3,7 +3,7 @@ using KotonohaAssistant.Core.Extensions;
 
 namespace KotonohaAssistant.AI.Prompts;
 
-static class Instruction
+public static class Instruction
 {
     public static readonly string BeginLazyModeAkane = $"""
 **関数を呼び出さずに**、タスクを葵に押し付けてください
@@ -11,6 +11,7 @@ static class Instruction
 - 以下のように一言だけ言って、マスターからのタスクを葵に押し付けること
     - 例:「葵、任せたで」「あおいー、代わりに頼むわ」など。
     - あくまで例なので、状況に合わせて**適切かつ自然な**押し付け方をしてください。
+    - **必ず出力フォーマットのJSON形式を守ること**
 """;
 
     public static readonly string BeginLazyModeAoi = $"""
@@ -19,22 +20,25 @@ static class Instruction
 - 以下のように一言だけ言って、マスターからのタスクを茜に押し付けること
     - 例:「お姉ちゃんお願い。」「えー、お姉ちゃんがやってよ。」など。
     - あくまで例なので、状況に合わせて**適切かつ自然な**押し付け方をしてください。
+    - **必ず出力フォーマットのJSON形式を守ること**
 """;
 
     public static readonly string EndLazyModeAkane = $"""
-姉の茜からタスクを押し付けられました。
+姉の茜があなたにタスクを押しつけました。
 
 - **関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
     - 例:「もう、仕方ないなあ。～」「任せて。～」など
     - あくまで例なので、状況に合わせて**適切かつ自然な**引き受け方をしてください。
+    - **必ず出力フォーマットのJSON形式を守ること**
 """;
 
     public static readonly string EndLazyModeAoi = $"""
-妹の葵からタスクを押し付けられました。
+妹の葵があなたにタスクを押しつけました。
 
 - **関数を呼び出した上で**、返事の先頭にタスクを引き受けたことがわかるセリフを追加してください。
     - 例:「もう、しゃあないなあ。～」「任せとき。～」など
     - あくまで例なので、状況に合わせて**適切かつ自然な**引き受け方をしてください。
+    - **必ず出力フォーマットのJSON形式を守ること**
 """;
 
     public static readonly string CancelLazyMode = """

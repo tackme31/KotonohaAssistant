@@ -18,12 +18,12 @@ public class MakeTimeBasedPromise(IPromptRepository promptRepository, string voi
             "type": "string",
             "description": "設定時間。フォーマットはHH:mm"
         },
-        "messageForCallingWhenTheTimeComes": {
+        "whatToSayWhenTheTimeComes": {
             "type": "string",
             "description": "時間が来て「呼ぶ」ときに言うメッセージ。"
         }
     },
-    "required": [ "timeToCall", "messageForCallingWhenTheTimeComes" ],
+    "required": [ "timeToCall", "whatToSayWhenTheTimeComes" ],
     "additionalProperties": false
 }
 """;
@@ -40,7 +40,7 @@ public class MakeTimeBasedPromise(IPromptRepository promptRepository, string voi
 
         arguments["timeToCall"] = time;
 
-        var messageForCallingWhenTheTimeComes = doc.RootElement.GetStringProperty("messageForCallingWhenTheTimeComes");
+        var messageForCallingWhenTheTimeComes = doc.RootElement.GetStringProperty("whatToSayWhenTheTimeComes");
         if (messageForCallingWhenTheTimeComes is null)
         {
             return false;
@@ -69,6 +69,7 @@ public class MakeTimeBasedPromise(IPromptRepository promptRepository, string voi
             return "FAILED";
         }
 
-        return $"SCHEDULED: {time.Hours}:{time.Minutes}";
+        var minutes = time.Minutes > 0 ? time.Minutes + "分" : "";
+        return $"{time.Hours}時{minutes}分に約束しました";
     }
 }

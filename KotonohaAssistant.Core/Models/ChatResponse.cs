@@ -19,7 +19,6 @@ public class ChatResponse
 
     public Kotonoha Assistant { get; set; } = new Kotonoha();
     public string? Text { get; set; }
-    public Emotion? Emotion { get; set; }
 
     // JSONから安全にパース
     public static bool TryParse(string input, out ChatResponse? output)

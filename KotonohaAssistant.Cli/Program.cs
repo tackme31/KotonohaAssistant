@@ -138,7 +138,7 @@ try
 
             Console.WriteLine($"{result.Sister.ToDisplayName()}: {result.Message}");
 
-            await voiceClient.SpeakAsync(result.Sister, result.Emotion, result.Message);
+            await voiceClient.SpeakAsync(result.Sister, KotonohaAssistant.Core.Emotion.Calm, result.Message);
         }
     }
 }

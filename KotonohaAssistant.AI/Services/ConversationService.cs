@@ -317,7 +317,6 @@ public class ConversationService
                 yield return new ConversationResult
                 {
                     Message = response?.Text ?? string.Empty,
-                    Emotion = response?.Emotion ?? Emotion.Calm,
                     Sister = _state.CurrentSister,
                     Functions = functions
                 };

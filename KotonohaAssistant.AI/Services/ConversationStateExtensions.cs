@@ -28,7 +28,7 @@ public static class ConversationStateExtensions
 
             if (m.Response is not null)
             {
-                state.AddAssistantMessage(m.Response.Assistant, m.Response.Text, m.Response.Emotion.Value);
+                state.AddAssistantMessage(m.Response.Assistant, m.Response.Text);
             }
         }
     }

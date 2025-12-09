@@ -19,25 +19,25 @@ public static class InitialConversation
     [
         new Message(
             null,
-            new ChatResponse { Assistant = Kotonoha.Aoi, Emotion = Emotion.Calm, Text = "はじめまして、マスター。私は葵。" }),
+            new ChatResponse { Assistant = Kotonoha.Aoi, Text = "はじめまして、マスター。私は葵。" }),
         new Message(
             new ChatRequest { InputType = ChatInputType.Instruction, Text = Instruction.SwitchSisterTo(Kotonoha.Akane) },
             null),
         new Message(
             null,
-            new ChatResponse { Assistant = Kotonoha.Akane, Emotion = Emotion.Calm, Text = "うちは茜。今日からうちらがマスターのことサポートするで。" }),
+            new ChatResponse { Assistant = Kotonoha.Akane, Text = "うちは茜。今日からうちらがマスターのことサポートするで。" }),
         new Message(
             new ChatRequest { InputType = ChatInputType.Instruction, Text = Instruction.SwitchSisterTo(Kotonoha.Aoi) },
             null),
         new Message(
             null,
-            new ChatResponse { Assistant = Kotonoha.Aoi, Emotion = Emotion.Joy, Text = "これから一緒に過ごすことになるけど、気軽に声をかけてね。" }),
+            new ChatResponse { Assistant = Kotonoha.Aoi, Text = "これから一緒に過ごすことになるけど、気軽に声をかけてね。" }),
         new Message(
             new ChatRequest { InputType = ChatInputType.Instruction, Text = Instruction.SwitchSisterTo(Kotonoha.Akane) },
             null),
         new Message(
             null,
-            new ChatResponse { Assistant = Kotonoha.Akane, Emotion = Emotion.Joy, Text = "せやな！これからいっぱい思い出作っていこな。" }),
+            new ChatResponse { Assistant = Kotonoha.Akane, Text = "せやな！これからいっぱい思い出作っていこな。" }),
         new Message(
             new ChatRequest { InputType = ChatInputType.User, Text = "うん、よろしくね。" },
             null),

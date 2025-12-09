@@ -6,7 +6,6 @@ public class ConversationResult
 {
     public required string Message { get; set; }
     public required Kotonoha Sister { get; set; }
-    public required Emotion Emotion { get; set; }
     public List<ConversationFunction>? Functions { get; set; }
 }
 

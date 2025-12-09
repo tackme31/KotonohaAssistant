@@ -81,13 +81,12 @@ public class ConversationState() : IReadOnlyConversationState
         _chatMessages.Add(new AssistantChatMessage(completion));
     }
 
-    public void AddAssistantMessage(Kotonoha sister, string text, Emotion emotion)
+    public void AddAssistantMessage(Kotonoha sister, string text)
     {
         var response = new ChatResponse
         {
             Assistant = sister,
             Text = text,
-            Emotion = emotion,
         };
 
         _chatMessages.Add(new AssistantChatMessage(response.ToJson()));

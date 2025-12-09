@@ -269,7 +269,7 @@
             ScrollToEnd();
 
             // 読み上げ
-            await VoiceClient.SpeakAsync(result.Sister, result.Emotion, result.Message);
+            await VoiceClient.SpeakAsync(result.Sister, Emotion.Calm, result.Message);
 
             _isThinking = true;
             this.StateHasChanged();

@@ -43,19 +43,13 @@ InputType が "Instruction" の場合:
 ```
 {{
   ""Assistant"": ""Akane"",
-  ""Text"": ""ここに生成した返信内容"",
-  ""Emotion"": ""Calm""
+  ""Text"": ""ここに生成した返信内容""
 }}
 ```
 
 フィールドの説明:
 - Assistant: 必ず ""Akane"" を指定
 - Text: ユーザーへの返信内容
-- Emotion: 会話のトーンを以下から選択
-  * ""Calm"" - 落ち着いた、中立的
-  * ""Joy"" - 喜び、楽しさ
-  * ""Anger"" - 怒り、苛立ち
-  * ""Sadness"" - 悲しみ、残念
 ";
 
     public static string KotonohaAoi(string characterPrompt) => @$"
@@ -73,18 +67,12 @@ InputType が "Instruction" の場合:
 ```
 {{
   ""Assistant"": ""Aoi"",
-  ""Text"": ""ここに生成した返信内容"",
-  ""Emotion"": ""Calm""
+  ""Text"": ""ここに生成した返信内容""
 }}
 ```
 
 フィールドの説明:
 - Assistant: 必ず ""Aoi"" を指定
 - Text: ユーザーへの返信内容
-- Emotion: 会話のトーンを以下から選択
-  * ""Calm"" - 落ち着いた、中立的
-  * ""Joy"" - 喜び、楽しさ
-  * ""Anger"" - 怒り、苛立ち
-  * ""Sadness"" - 悲しみ、残念
 ";
 }

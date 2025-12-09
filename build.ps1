@@ -253,6 +253,7 @@ Copy-FileToVersion -SourceFile "prompts" -DestinationName "prompts"
 Write-Host "`nGenerating NuGet package license information..." -ForegroundColor Cyan
 Write-OutPut "`n## NuGet Packages`n" >> $versionPath\THIRD-PARTY-NOTICES
 nuget-license.exe -i .\KotonohaAssistant.sln  --override-package-information .\override-package-license.json >> $versionPath\THIRD-PARTY-NOTICES
+Write-Host "  ✓ NuGet license information appended" -ForegroundColor Green
 
 # Summary
 Write-Host "`n========================================" -ForegroundColor Green

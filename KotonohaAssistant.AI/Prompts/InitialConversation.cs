@@ -1,5 +1,6 @@
 ﻿using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Models;
 
 namespace KotonohaAssistant.AI.Prompts;
 
@@ -11,21 +12,35 @@ public static class InitialConversation
     /// <summary>
     /// 初期会話メッセージ
     /// </summary>
-    /// <param name="Sister">発言した姉妹（nullの場合はユーザー）</param>
-    /// <param name="Text">メッセージ本文</param>
-    /// <param name="Emotion">感情</param>
-    public record Message(Kotonoha? Sister, string Text, Emotion Emotion);
+    public record Message(ChatRequest? Request, ChatResponse? Response);
 
-    /// <summary>
-    /// 初期会話メッセージ一覧
-    /// </summary>
+
     private static readonly IReadOnlyList<Message> _messages =
     [
-        new Message(Kotonoha.Aoi, "はじめまして、マスター。私は琴葉葵。こっちは姉の茜。", Emotion.Calm),
-        new Message(Kotonoha.Akane, "今日からうちらがマスターのことサポートするで。", Emotion.Calm),
-        new Message(Kotonoha.Aoi, "これから一緒に過ごすことになるけど、気軽に声をかけてね。", Emotion.Joy),
-        new Message(Kotonoha.Akane, "せやな！これからいっぱい思い出作っていこな。", Emotion.Joy),
-        new Message(null, "うん。よろしくね。", Emotion.Calm) // ユーザーメッセージ
+        new Message(
+            null,
+            new ChatResponse { Assistant = Kotonoha.Aoi, Emotion = Emotion.Calm, Text = "はじめまして、マスター。私は葵。" }),
+        new Message(
+            new ChatRequest { InputType = ChatInputType.Instruction, Text = Instruction.SwitchSisterTo(Kotonoha.Akane) },
+            null),
+        new Message(
+            null,
+            new ChatResponse { Assistant = Kotonoha.Akane, Emotion = Emotion.Calm, Text = "うちは茜。今日からうちらがマスターのことサポートするで。" }),
+        new Message(
+            new ChatRequest { InputType = ChatInputType.Instruction, Text = Instruction.SwitchSisterTo(Kotonoha.Aoi) },
+            null),
+        new Message(
+            null,
+            new ChatResponse { Assistant = Kotonoha.Aoi, Emotion = Emotion.Joy, Text = "これから一緒に過ごすことになるけど、気軽に声をかけてね。" }),
+        new Message(
+            new ChatRequest { InputType = ChatInputType.Instruction, Text = Instruction.SwitchSisterTo(Kotonoha.Akane) },
+            null),
+        new Message(
+            null,
+            new ChatResponse { Assistant = Kotonoha.Akane, Emotion = Emotion.Joy, Text = "せやな！これからいっぱい思い出作っていこな。" }),
+        new Message(
+            new ChatRequest { InputType = ChatInputType.User, Text = "うん、よろしくね。" },
+            null),
     ];
 
     /// <summary>

@@ -23,9 +23,8 @@ InputType が "User" の場合:
   → 通常通り会話で応答
 
 InputType が "Instruction" の場合:
-  入力: {"InputType": "Instruction", "Text": "以降は敬語を使わないでください"}
-  → この指示に従って生成
-  → **ただしフォーマットは下記の"出力フォーマット"に従うこと**
+  入力: {"InputType": "Instruction", "Text": "以降、関数を呼び出してください"}
+  → この指示に従って応答すること
 """;
 
 

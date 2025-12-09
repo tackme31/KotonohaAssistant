@@ -69,7 +69,8 @@ public class MakeTimeBasedPromise(IPromptRepository promptRepository, string voi
             return "FAILED";
         }
 
-        var minutes = time.Minutes > 0 ? time.Minutes + "分" : "";
-        return $"{time.Hours}時{minutes}分に約束しました";
+        return time.Minutes > 0
+            ? $"{time.Hours}時{time.Minutes}分に約束しました"
+            : $"{time.Hours}時に約束しました";
     }
 }

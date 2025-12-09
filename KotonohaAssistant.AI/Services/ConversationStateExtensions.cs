@@ -1,7 +1,6 @@
 ﻿using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.Core;
 
-
 namespace KotonohaAssistant.AI.Services;
 
 public static class ConversationStateExtensions
@@ -18,17 +17,17 @@ public static class ConversationStateExtensions
                 switch (m.Request.InputType)
                 {
                     case ChatInputType.Instruction:
-                        state.AddInstruction(m.Request.Text);
+                        state.AddInstruction(m.Request.Text ?? string.Empty);
                         continue;
                     case ChatInputType.User:
-                        state.AddUserMessage(m.Request.Text);
+                        state.AddUserMessage(m.Request.Text ?? string.Empty);
                         continue;
                 }
             }
 
             if (m.Response is not null)
             {
-                state.AddAssistantMessage(m.Response.Assistant, m.Response.Text);
+                state.AddAssistantMessage(m.Response.Assistant, m.Response.Text ?? string.Empty);
             }
         }
     }

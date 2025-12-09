@@ -120,8 +120,8 @@ public class LazyModeHandler : ILazyModeHandler
 
         // 姉妹を切り替えて引き受けるモード
         var previousSister = state.CurrentSister;
-        state.SwitchToOtherSister();
         state.AddEndLazyModeInstruction();
+        state.SwitchToOtherSister();
         _logger.LogInformation($"{LogPrefix} Switching sister: {previousSister} -> {state.CurrentSister}");
 
         // 再度生成（引き受ける）

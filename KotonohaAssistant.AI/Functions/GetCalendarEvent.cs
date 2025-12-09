@@ -64,7 +64,9 @@ public class GetCalendarEvent(IPromptRepository promptRepository, ICalendarEvent
                     continue;
                 }
 
-                if (!IsToday(start.Value) && !IsToday(end.Value))
+                // 今日をまたぐ予定
+                if (!IsToday(start.Value) && !IsToday(end.Value) &&
+                    start.Value < DateTime.Now && DateTime.Now < end.Value)
                 {
                     sb.AppendLine($"- {eventItem.Summary}");
                     continue;

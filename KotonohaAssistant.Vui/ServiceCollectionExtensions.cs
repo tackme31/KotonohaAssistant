@@ -133,7 +133,7 @@ public static class ServiceCollectionExtensions
         // 利用する関数一覧
         var functions = new List<ToolFunction>
             {
-                new SetAlarm(promptRepository, VoicePath, voiceClient, alarmClient, logger),
+                new MakeTimeBasedPromise(promptRepository, VoicePath, voiceClient, alarmClient, logger),
                 new StopAlarm(promptRepository, alarmClient, logger),
                 new StartTimer(promptRepository, alarmClient, logger),
                 new StopTimer(promptRepository, alarmClient, logger),

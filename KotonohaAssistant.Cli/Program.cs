@@ -47,7 +47,7 @@ using var alarmClient = new AlarmClient();
 // 利用可能な関数
 var functions = new List<ToolFunction>
 {
-    new SetAlarm(promptRepository, voicePath, voiceClient, alarmClient, logger),
+    new MakeTimeBasedPromise(promptRepository, voicePath, voiceClient, alarmClient, logger),
     new StopAlarm(promptRepository, alarmClient, logger),
     new StartTimer(promptRepository, alarmClient, logger),
     new StopTimer(promptRepository, alarmClient, logger),

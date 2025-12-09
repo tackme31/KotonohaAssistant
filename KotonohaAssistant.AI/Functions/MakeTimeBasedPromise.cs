@@ -6,9 +6,9 @@ using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class SetAlarm(IPromptRepository promptRepository, string voiceDirectory, IVoiceClient voiceClient, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
+public class MakeTimeBasedPromise(IPromptRepository promptRepository, string voiceDirectory, IVoiceClient voiceClient, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
 {
-    public override string Description => promptRepository.SetAlarmDescription;
+    public override string Description => promptRepository.MakeTimeBasedPromise;
 
     public override string Parameters => """
 {
@@ -69,6 +69,6 @@ public class SetAlarm(IPromptRepository promptRepository, string voiceDirectory,
             return "FAILED";
         }
 
-        return $"SUCCESS: {time.Hours}時{time.Minutes}分";
+        return $"SCHEDULED: {time.Hours}:{time.Minutes}";
     }
 }

@@ -5,7 +5,7 @@ namespace KotonohaAssistant.AI.Repositories;
 public interface IPromptRepository
 {
     string GetCharacterPrompt(Kotonoha sister);
-    string SetAlarmDescription { get; }
+    string MakeTimeBasedPromise { get; }
     string CreateCalendarEventDescription { get; }
     string ForgetMemoryDescription { get; }
     string GetCalendarEventDescription { get; }
@@ -20,7 +20,7 @@ public class PromptRepository(string promptPath) : IPromptRepository
 {
     private static readonly string CharacterPromptAkane = "system_akane.md";
     private static readonly string CharacterPromptAoi = "system_aoi.md";
-    private static readonly string ToolSetAlarm = "tool_set_alarm.md";
+    private static readonly string ToolMakeTimeBasedPromise = "tool_make_time_based_promise.md";
     private static readonly string ToolCreateCalendarEvent = "tool_create_calendar_event.md";
     private static readonly string ToolForgetMemory = "tool_forget_memory.md";
     private static readonly string ToolGetCalendarEvent = "tool_get_calendar_event.md";
@@ -37,7 +37,7 @@ public class PromptRepository(string promptPath) : IPromptRepository
         _ => throw new FileNotFoundException()
     };
 
-    public string SetAlarmDescription => GetPrompt(ToolSetAlarm);
+    public string MakeTimeBasedPromise => GetPrompt(ToolMakeTimeBasedPromise);
 
     public string CreateCalendarEventDescription => GetPrompt(ToolCreateCalendarEvent);
 

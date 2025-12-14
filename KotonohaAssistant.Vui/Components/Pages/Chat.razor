@@ -59,33 +59,34 @@
             </div>
         }
     }
+
+    @if(_isThinking)
+    {
+        <div class="message-wrapper message-wrapper-left">
+            <div class="message-bubble message-thinking">
+                <span class="dot dot-1">.</span>
+                <span class="dot dot-2">.</span>
+                <span class="dot dot-3">.</span>
+            </div>
+        </div>
+    }
 </div>
 
 <div class="input-area">
-    @if (!_isThinking)
-    {
+    @{
         var activeClass = _isInConversation ? "active" : "inactive";
-        <div class="talking-text @activeClass">
-            <span class="prompt-symbol">&gt;</span>
-            @if (_isInConversation && _isMyTurn && string.IsNullOrEmpty(_talkingText))
-            {
-                <span class="cursor">_</span>
-            }
-            @if(_isMyTurn)
-            {
-                <span class="talking-content">@(_talkingText)</span>
-            }
-        </div>
     }
-    else
-    {
-        <div class="thinking-indicator">
-            <span>Thinking</span>
-            <span class="dot dot-1">.</span>
-            <span class="dot dot-2">.</span>
-            <span class="dot dot-3">.</span>
-        </div>
-    }
+    <div class="talking-text @activeClass">
+        <span class="prompt-symbol">&gt;</span>
+        @if (_isInConversation && _isMyTurn && string.IsNullOrEmpty(_talkingText))
+        {
+            <span class="cursor">_</span>
+        }
+        @if(_isMyTurn)
+        {
+            <span class="talking-content">@(_talkingText)</span>
+        }
+    </div>
 </div>
 
 @code {

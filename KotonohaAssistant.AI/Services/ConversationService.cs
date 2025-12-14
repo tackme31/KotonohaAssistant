@@ -137,7 +137,7 @@ public class ConversationService
         // 生成時の参考のためにあらかじめ会話を入れておく
         _state.LoadInitialConversation();
 
-        _lastSavedMessageIndex = _state.ChatMessages.Count();
+        _lastSavedMessageIndex = 0;
 
         return conversationId;
     }

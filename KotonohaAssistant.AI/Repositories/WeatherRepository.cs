@@ -31,7 +31,7 @@ public class WeatherRepository(string apiKey, ILogger logger) : IWeatherReposito
         var weathers = new List<Weather>();
 
         // 過去の天気データを取得
-        weathers.AddRange(await FetchPastWeather(date, location));
+        //weathers.AddRange(await FetchPastWeather(date, location));
 
         // 予報データを取得
         weathers.AddRange(await FetchForecastWeather(date, location));

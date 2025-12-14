@@ -50,7 +50,7 @@ public class GetWeather(IPromptRepository promptRepository, IWeatherRepository w
             var weathers = await _weatherRepository.GetWeather(date, _location);
             if (weathers is null or [])
             {
-                throw new Exception("天気の取得に失敗しました");
+                return "天気情報が見つかりませんでした";
             }
 
             var sb = new StringBuilder();

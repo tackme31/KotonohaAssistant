@@ -67,10 +67,13 @@
         var activeClass = _isInConversation ? "active" : "inactive";
         <div class="talking-text @activeClass">
             <span class="prompt-symbol">&gt;</span>
-            <span class="talking-content">@(_talkingText)</span>
-            @if (_isInConversation)
+            @if (_isInConversation && _isMyTurn && string.IsNullOrEmpty(_talkingText))
             {
                 <span class="cursor">_</span>
+            }
+            @if(_isMyTurn)
+            {
+                <span class="talking-content">@(_talkingText)</span>
             }
         </div>
     }

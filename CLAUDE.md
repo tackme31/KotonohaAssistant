@@ -19,6 +19,57 @@ dotnet build KotonohaAssistant.sln
 dotnet build KotonohaAssistant.Core/KotonohaAssistant.Core.csproj
 ```
 
+### Building Individual Projects
+
+Projects in this solution have different build requirements based on their target framework:
+
+**Modern .NET Projects** (use `dotnet build`):
+```bash
+# Core library
+dotnet build KotonohaAssistant.Core/KotonohaAssistant.Core.csproj
+
+# AI library
+dotnet build KotonohaAssistant.AI/KotonohaAssistant.AI.csproj
+
+# Console interface
+dotnet build KotonohaAssistant.Cli/KotonohaAssistant.Cli.csproj
+
+# Alarm app (WPF)
+dotnet build KotonohaAssistant.Alarm/KotonohaAssistant.Alarm.csproj
+```
+
+**.NET Framework Projects** (require MSBuild):
+```bash
+# Voice Server (.NET Framework 4.8.1)
+# Locate MSBuild first
+$msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+  -latest -requires Microsoft.Component.MSBuild `
+  -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
+
+# Restore and build
+& $msbuild KotonohaAssistant.VoiceServer/KotonohaAssistant.VoiceServer.csproj /t:Restore /v:minimal
+& $msbuild KotonohaAssistant.VoiceServer/KotonohaAssistant.VoiceServer.csproj /p:Configuration=Release /p:Platform=AnyCPU /t:Build /v:minimal
+```
+
+**MAUI Projects** (require MSBuild):
+```bash
+# Voice UI (MAUI + Blazor, .NET 9.0)
+# Locate MSBuild (same as above)
+$msbuild = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+  -latest -requires Microsoft.Component.MSBuild `
+  -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
+
+# Restore and build
+& $msbuild KotonohaAssistant.Vui/KotonohaAssistant.Vui.csproj /p:Configuration=Release /p:Platform=AnyCPU /t:Restore,Rebuild /v:minimal
+```
+
+**Note for AI Code Verification**:
+- For quick verification of Modern .NET projects, use `dotnet build`
+- For VoiceServer or Vui projects, either:
+  - Build through Visual Studio
+  - Use the full MSBuild commands above
+  - Run `dotnet build KotonohaAssistant.sln` to build all projects together
+
 ### Running Applications
 
 **Multi-Startup Configurations** (via KotonohaAssistant.slnLaunch):

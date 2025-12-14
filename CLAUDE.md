@@ -45,15 +45,21 @@ dotnet run --project KotonohaAssistant.Alarm/KotonohaAssistant.Alarm.csproj
 **Directory Structure**:
 ```
 /publish
-    /{version}
-        .env              # Auto-copied from .env.example
-        start.bat         # Launcher script
+    /{version}                    # Auto-detected from project version
+        .env                      # Auto-copied from .env.example
+        start.bat                 # VUI launcher script
+        start-cli.bat             # CLI launcher script
+        README.md
+        LICENSE
+        THIRD-PARTY-NOTICES       # Includes NuGet package licenses
+        /assets                   # Resource files
+        /prompts                  # AI prompt templates
         /KotonohaAssistant.Alarm
             KotonohaAssistant.Alarm.exe
             (other DLLs and supporting files)
         /KotonohaAssistant.VoiceServer
             KotonohaAssistant.VoiceServer.exe
-            (A.I. VOICE API DLLs)
+            (A.I. VOICE API DLLs - excluding Editor-specific DLLs)
         /KotonohaAssistant.Vui
             KotonohaAssistant.Vui.exe
             (other DLLs and supporting files)
@@ -64,26 +70,37 @@ dotnet run --project KotonohaAssistant.Alarm/KotonohaAssistant.Alarm.csproj
 
 **Build Command**:
 ```powershell
-.\build.ps1 -Version {version}
-
-# Example
-.\build.ps1 -Version 1.0.0
+.\build.ps1
 ```
 
+Version is automatically detected from `KotonohaAssistant.AI.csproj` using MSBuild property extraction.
+
 **What the Build Script Does**:
-1. Detects MSBuild automatically (for .NET Framework and MAUI projects)
-2. Builds each project based on type:
-   - **Modern .NET** (Alarm, Cli): Uses `dotnet publish`
+1. **Auto-detects version** from `KotonohaAssistant.AI.csproj` via MSBuild
+2. **Locates MSBuild** automatically using vswhere.exe or fallback paths
+3. **Builds each project** based on type:
+   - **Modern .NET** (Alarm, Cli): Uses `dotnet publish` with `--self-contained false`
    - **.NET Framework** (VoiceServer): Uses MSBuild with NuGet restore
-   - **MAUI** (Vui): Uses MSBuild with framework-specific output path
-3. Copies build outputs to version-specific publish folder
-4. Auto-copies `.env.example` → `.env` and `start.bat` to publish folder
-5. Displays build summary
+   - **MAUI** (Vui): Uses MSBuild targeting `net9.0-windows10.0.19041.0` framework
+4. **Removes debug symbols**: Deletes all `.pdb` files from build outputs
+5. **Removes A.I. VOICE Editor DLLs** from VoiceServer output (should not be redistributed):
+   - `AI.Framework.dll`
+   - `AI.Talk.dll`
+   - `AI.Talk.Editor.Api.dll`
+   - `System.Text.Json.dll`
+6. **Copies additional files** to publish folder:
+   - `.env.example` → `.env`
+   - `start.bat`, `start-cli.bat`
+   - `README.md`, `LICENSE`, `THIRD-PARTY-NOTICES`
+   - `assets/`, `prompts/` folders
+7. **Appends NuGet license information** to `THIRD-PARTY-NOTICES` using `nuget-license.exe`
+8. **Displays build summary** with version and output path
 
 **Customizing Build**:
 - Edit project list in `build.ps1` (lines 15-37)
 - Add new project types by creating `Build-{Type}Project` function
-- Configure output paths via `$publishRoot` variable
+- Configure output paths via `$publishRoot` variable (line 9)
+- Modify DLL removal list in `Remove-AIEditorDLLs` function (lines 178-193)
 
 
 ## Architecture

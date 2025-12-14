@@ -14,25 +14,20 @@
 
 <PageTitle>Kotonoha Assistant</PageTitle>
 
-<div id="conversationContainer" style="
-    width: 100%;
-    padding: 20px;
-    height: calc(100vh - 80px);
-    overflow-y: auto;
-">
+<div id="conversationContainer" class="conversation-container">
     @foreach (var (text, talking, function) in _messages)
     {
         if (function is not null)
         {
             var arguments = string.Join(", ", function.Arguments.Select(a => $"{a.Key}={a.Value}") ?? []);
 
-            <div style="display: flex; justify-content: flex-end;">
-                <div style="width: 400px; background: whitesmoke; color: #adadad; padding: 5px 20px 5px; margin: 5px 0px">
+            <div class="function-message-wrapper">
+                <div class="function-message">
                     <details>
                         <summary>
                             @(function.Name)(@(arguments))
                         </summary>
-                        <p style="white-space: pre-line">
+                        <p class="function-result">
                             @(function.Result)
                         </p>
                     </details>
@@ -41,24 +36,24 @@
         }
         else if (talking == Kotonoha.Akane)
         {
-            <div style="display: flex; justify-content: flex-start;">
-                <div style="width: 400px; margin: 7px 0px; padding: 20px; border-radius: 0px 20px 20px 20px; background-color: pink;">
+            <div class="message-wrapper message-wrapper-left">
+                <div class="message-bubble message-akane">
                     <p>@(text)</p>
                 </div>
             </div>
         }
         else if (talking == Kotonoha.Aoi)
         {
-            <div style="display: flex; justify-content: flex-start;">
-                <div style="width: 400px; margin: 7px 0px; padding: 20px; border-radius: 0px 20px 20px 20px; background-color: lightblue;">
+            <div class="message-wrapper message-wrapper-left">
+                <div class="message-bubble message-aoi">
                     <p>@(text)</p>
                 </div>
             </div>
         }
         else
         {
-            <div style="display: flex; justify-content: flex-end;">
-                <div style="width: 400px; margin: 7px 0px; padding: 20px; border-radius: 20px 0px 20px 20px; background-color: whitesmoke;">
+            <div class="message-wrapper message-wrapper-right">
+                <div class="message-bubble message-user">
                     <p>@(text)</p>
                 </div>
             </div>
@@ -66,26 +61,27 @@
     }
 </div>
 
-<div style="position: fixed; bottom: 1.5em; left: 1em; width: 100%;">
-    @if (_isMyTurn)
+<div class="input-area">
+    @if (!_isThinking)
     {
-        var color = _isInConversation ? "black" : "gray";
-        var fontWeight = _isInConversation ? "bold" : "normal";
-        <p style="color: @color; font-weight: @fontWeight">
-            &gt;&nbsp;
-            @(_talkingText)
+        var activeClass = _isInConversation ? "active" : "inactive";
+        <div class="talking-text @activeClass">
+            <span class="prompt-symbol">&gt;</span>
+            <span class="talking-content">@(_talkingText)</span>
             @if (_isInConversation)
             {
-                <span class="blinking-underscore">_</span>
+                <span class="cursor">_</span>
             }
-        </p>
+        </div>
     }
-
-    @if (_isThinking)
+    else
     {
-        <p style="color: gray;">
-            Thinking...
-        </p>
+        <div class="thinking-indicator">
+            <span>Thinking</span>
+            <span class="dot dot-1">.</span>
+            <span class="dot dot-2">.</span>
+            <span class="dot dot-3">.</span>
+        </div>
     }
 </div>
 

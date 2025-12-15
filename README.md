@@ -182,13 +182,25 @@ INACTIVITY_NOTIFY_TIME=通知チェックの時刻 (HH:mm)
 ```
 
 
-### ステレオ分離再生（右/左チャンネル分け）
+### スピーカーデバイス切り替え
 
-`.env` の `ENABLE_CHANNEL_SWITCHING = true` で
-茜と葵の音声をスピーカーの左右に分けて再生できます。
+`.env` の `ENABLE_SPEAKER_SWITCHING = true` で
+茜と葵の音声を別々のスピーカーデバイスで再生できます。
+
+設定例：
+```
+ENABLE_SPEAKER_SWITCHING=true
+AKANE_SPEAKER_DEVICE_NAME=スピーカー 1
+AOI_SPEAKER_DEVICE_NAME=スピーカー 2
+```
+
+デバイス名の確認方法：
+1. VoiceServer を起動
+2. `.env` でデバイス名を未設定にすると、利用可能なデバイス一覧が表示されます
 
 > ⚠️ 注意
-> 再生中にプログラムを終了すると、一方のチャンネルが無音のままになる可能性があります。
+> - プログラム終了時に自動的にデフォルトデバイスへ戻ります
+> - デバイス名は Windows のオーディオ設定に表示される名前と一致させてください
 
 
 ## 作者

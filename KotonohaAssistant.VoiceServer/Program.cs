@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
-using System.Security.Policy;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AI.Talk;
@@ -23,19 +22,19 @@ namespace KotonohaAssistant.VoiceServer
     /// </summary>
     internal class Program
     {
-        private static readonly string AppDirectory = EnvVarUtils.TraverseEnvFileFolder(AppContext.BaseDirectory) ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
-        private static readonly string LogPath = Path.Combine(AppDirectory, "log.voiceserver.txt");
-        private static readonly TtsControl TtsControl = new TtsControl();
-        private static readonly int WaitCheckInterval = 250;
-        private static readonly int WaitTimeout = 15 * 1000;
-        private static readonly ILogger Logger = new Logger(LogPath, isConsoleLoggingEnabled: true);
+        private static readonly string _appDirectory = EnvVarUtils.TraverseEnvFileFolder(AppContext.BaseDirectory) ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Kotonoha Assistant");
+        private static readonly string _logPath = Path.Combine(_appDirectory, "log.voiceserver.txt");
+        private static readonly TtsControl _ttsControl = new TtsControl();
+        private static readonly int _waitCheckInterval = 250;
+        private static readonly int _waitTimeout = 15 * 1000;
+        private static readonly ILogger _logger = new Logger(_logPath, isConsoleLoggingEnabled: true);
 
-        private static bool _isSpeakerSwitchingEnabled = GetBoolVarOrDefault("ENABLE_SPEAKER_SWITCHING", false);
+        private static bool _isSpeakerSwitchingEnabled;
         private static MMDevice _defaultDevice;
         private static MMDevice _akaneDevice;
         private static MMDevice _aoiDevice;
 
-        static async Task Main(string[] args)
+        internal static async Task Main(string[] args)
         {
             // load .env
             DotNetEnv.Env.TraversePath().Load();
@@ -84,7 +83,7 @@ namespace KotonohaAssistant.VoiceServer
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex);
+                    _logger.LogError(ex);
                 }
             }
 
@@ -185,9 +184,9 @@ namespace KotonohaAssistant.VoiceServer
             return false;
         }
 
-        public static void InitializeEditorHost()
+        private static void InitializeEditorHost()
         {
-            var availableHosts = TtsControl.GetAvailableHostNames();
+            var availableHosts = _ttsControl.GetAvailableHostNames();
             if (!availableHosts.Any())
             {
                 throw new Exception("利用可能なホストが存在しません。");
@@ -196,33 +195,33 @@ namespace KotonohaAssistant.VoiceServer
             try
             {
                 var host = availableHosts.First();
-                TtsControl.Initialize(host);
-                TtsControl.Connect();
+                _ttsControl.Initialize(host);
+                _ttsControl.Connect();
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex);
+                _logger.LogError(ex);
                 throw;
             }
         }
 
-        public static void EnsureEditorConnected()
+        private static void EnsureEditorConnected()
         {
             try
             {
-                if (TtsControl.Status == HostStatus.NotConnected)
+                if (_ttsControl.Status == HostStatus.NotConnected)
                 {
-                    TtsControl.Connect();
+                    _ttsControl.Connect();
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex);
+                _logger.LogError(ex);
                 throw;
             }
         }
 
-        public static async Task SpeakAsync(Kotonoha sister, Emotion emotion, string message)
+        private static async Task SpeakAsync(Kotonoha sister, Emotion emotion, string message)
         {
             EnsureEditorConnected();
 
@@ -233,17 +232,17 @@ namespace KotonohaAssistant.VoiceServer
                 await WaitForStatusAsync(HostStatus.Idle);
 
                 var presetName = GetPresetName(sister);
-                TtsControl.CurrentVoicePresetName = presetName;
+                _ttsControl.CurrentVoicePresetName = presetName;
                 ChangeStyle(presetName, emotion);
 
-                TtsControl.Text = message;
-                TtsControl.Play();
+                _ttsControl.Text = message;
+                _ttsControl.Play();
 
                 await WaitForStatusAsync(HostStatus.Idle);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex);
+                _logger.LogError(ex);
             }
             finally
             {
@@ -251,28 +250,28 @@ namespace KotonohaAssistant.VoiceServer
             }
         }
 
-        public static async Task StopAsync()
+        private static async Task StopAsync()
         {
             EnsureEditorConnected();
 
-            if (TtsControl.Status == HostStatus.Idle)
+            if (_ttsControl.Status == HostStatus.Idle)
             {
                 return;
             }
 
             try
             {
-                TtsControl.Stop();
+                _ttsControl.Stop();
 
                 await WaitForStatusAsync(HostStatus.Idle);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex);
+                _logger.LogError(ex);
             }
         }
 
-        public static async Task ExportVoiceAsync(ExportVoiceRequest request)
+        private static async Task ExportVoiceAsync(ExportVoiceRequest request)
         {
             EnsureEditorConnected();
 
@@ -281,7 +280,7 @@ namespace KotonohaAssistant.VoiceServer
                 await WaitForStatusAsync(HostStatus.Idle);
 
                 var presetName = GetPresetName(request.SisterType);
-                TtsControl.CurrentVoicePresetName = presetName;
+                _ttsControl.CurrentVoicePresetName = presetName;
                 ChangeStyle(presetName, request.Emotion);
 
                 var dir = Path.GetDirectoryName(request.SavePath);
@@ -290,14 +289,14 @@ namespace KotonohaAssistant.VoiceServer
                     Directory.CreateDirectory(dir);
                 }
 
-                TtsControl.Text = request.Message;
-                TtsControl.SaveAudioToFile(request.SavePath);
+                _ttsControl.Text = request.Message;
+                _ttsControl.SaveAudioToFile(request.SavePath);
 
                 await WaitForStatusAsync(HostStatus.Idle);
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex);
+                _logger.LogError(ex);
             }
         }
 
@@ -305,15 +304,15 @@ namespace KotonohaAssistant.VoiceServer
         {
             var startTime = DateTime.Now;
 
-            while (TtsControl.Status != status)
+            while (_ttsControl.Status != status)
             {
                 // タイムアウトチェック
-                if ((DateTime.Now - startTime).TotalMilliseconds > WaitTimeout)
+                if ((DateTime.Now - startTime).TotalMilliseconds > _waitTimeout)
                 {
                     throw new TimeoutException();
                 }
 
-                await Task.Delay(WaitCheckInterval);
+                await Task.Delay(_waitCheckInterval);
             }
         }
 
@@ -347,9 +346,9 @@ namespace KotonohaAssistant.VoiceServer
             deviceEnumerator.SetDefaultAudioEndpoint(_defaultDevice);
         }
 
-        public static void ChangeStyle(string presetName, Emotion emotion)
+        private static void ChangeStyle(string presetName, Emotion emotion)
         {
-            var presetValue = TtsControl.GetVoicePreset(presetName);
+            var presetValue = _ttsControl.GetVoicePreset(presetName);
             var preset = JsonConvert.DeserializeObject<VoicePreset>(presetValue);
 
             switch (emotion)
@@ -378,7 +377,7 @@ namespace KotonohaAssistant.VoiceServer
 
             var newPreset = JsonConvert.SerializeObject(preset);
 
-            TtsControl.SetVoicePreset(newPreset);
+            _ttsControl.SetVoicePreset(newPreset);
         }
 
         private static string GetPresetName(Kotonoha sister)
@@ -390,7 +389,7 @@ namespace KotonohaAssistant.VoiceServer
                 case Kotonoha.Aoi:
                     return "琴葉 葵";
                 default:
-                    return TtsControl.CurrentVoicePresetName;
+                    return _ttsControl.CurrentVoicePresetName;
             }
         }
 
@@ -414,7 +413,7 @@ namespace KotonohaAssistant.VoiceServer
         {
             Console.WriteLine("\nShutting down gracefully...");
             Cleanup();
-            
+
             // Ctrl+C のデフォルト動作（プロセス終了）を許可
             e.Cancel = false;
         }
@@ -434,7 +433,7 @@ namespace KotonohaAssistant.VoiceServer
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex);
+                _logger.LogError(ex);
                 Console.WriteLine($"Error during cleanup: {ex.Message}");
             }
         }

@@ -198,7 +198,7 @@ AOI_SPEAKER_DEVICE_ID=スピーカー 2
 PowerShellで以下のコマンドを実行してください。`InstanceId`がデバイスIDです。
 
 ```ps1
-> Get-PnpDevice -Class AudioEndpoint | Select-Object FriendlyName, InstanceId
+> Get-PnpDevice -Class AudioEndpoint | ? InstanceId -Like "*{0.0.0.00000000}*" | select FriendlyName, InstanceId
 ```
 
 ## 作者

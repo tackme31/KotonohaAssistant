@@ -386,8 +386,8 @@ Configuration is loaded from `.env` file (not committed to git):
 - `CALENDAR_ID` - Google Calendar ID
 - `OWM_API_KEY`, `OWM_LAT`, `OWM_LON` - OpenWeatherMap config
 - `ENABLE_SPEAKER_SWITCHING` - Enable switching audio output device per character
-- `AKANE_SPEAKER_DEVICE_NAME` - Audio device name for Akane
-- `AOI_SPEAKER_DEVICE_NAME` - Audio device name for Aoi
+- `AKANE_SPEAKER_DEVICE_ID` - Audio device ID for Akane
+- `AOI_SPEAKER_DEVICE_ID` - Audio device ID for Aoi
 
 ## Testing
 

@@ -144,8 +144,8 @@ namespace KotonohaAssistant.VoiceServer
         private static bool InitializeSpeakerSwitching()
         {
             _isSpeakerSwitchingEnabled = GetBoolVarOrDefault("ENABLE_SPEAKER_SWITCHING", false);
-            var akaneSpeakerDeviceName = GetStringVarOrDefault("AKANE_SPEAKER_DEVICE_NAME", string.Empty);
-            var aoiSpeakerDeviceName = GetStringVarOrDefault("AOI_SPEAKER_DEVICE_NAME", string.Empty);
+            var akaneSpeakerDeviceId = GetStringVarOrDefault("AKANE_SPEAKER_DEVICE_ID", string.Empty);
+            var aoiSpeakerDeviceId = GetStringVarOrDefault("AOI_SPEAKER_DEVICE_ID", string.Empty);
 
             if (!_isSpeakerSwitchingEnabled)
             {
@@ -160,26 +160,25 @@ namespace KotonohaAssistant.VoiceServer
                 return true;
             }
 
-            var endpoints = deviceEnumerator
-                .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
-                .ToList();
-            if (string.IsNullOrWhiteSpace(akaneSpeakerDeviceName) || string.IsNullOrWhiteSpace(aoiSpeakerDeviceName))
+            try
             {
-                Console.WriteLine("No speaker devices specified. You can use the following devices:");
-                foreach (var endpoint in endpoints)
-                {
-                    Console.WriteLine($"- {endpoint.DeviceFriendlyName}");
-                }
-
+                var trimmedId = Regex.Replace(akaneSpeakerDeviceId, @"^SWD\\MMDEVAPI\\", string.Empty);
+                _akaneDevice = deviceEnumerator.GetDevice(trimmedId);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine($"Device not found: '{akaneSpeakerDeviceId}'");
                 return true;
             }
 
-            _akaneDevice = endpoints.FirstOrDefault(ep => ep.DeviceFriendlyName == akaneSpeakerDeviceName);
-            _aoiDevice = endpoints.FirstOrDefault(ep => ep.DeviceFriendlyName == aoiSpeakerDeviceName);
-
-            if (_akaneDevice is null || _aoiDevice is null)
+            try
             {
-                Console.WriteLine($"The speaker devices not found: {akaneSpeakerDeviceName}, {aoiSpeakerDeviceName}");
+                var trimmedId = Regex.Replace(aoiSpeakerDeviceId, @"^SWD\\MMDEVAPI\\", string.Empty);
+                _aoiDevice = deviceEnumerator.GetDevice(trimmedId);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine($"Device not found: '{aoiSpeakerDeviceId}'");
                 return true;
             }
 

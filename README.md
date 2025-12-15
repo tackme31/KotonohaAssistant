@@ -190,18 +190,16 @@ INACTIVITY_NOTIFY_TIME=通知チェックの時刻 (HH:mm)
 設定例：
 ```
 ENABLE_SPEAKER_SWITCHING=true
-AKANE_SPEAKER_DEVICE_NAME=スピーカー 1
-AOI_SPEAKER_DEVICE_NAME=スピーカー 2
+AKANE_SPEAKER_DEVICE_ID=スピーカー 1
+AOI_SPEAKER_DEVICE_ID=スピーカー 2
 ```
 
-デバイス名の確認方法：
-1. VoiceServer を起動
-2. `.env` でデバイス名を未設定にすると、利用可能なデバイス一覧が表示されます
+デバイスIDの確認方法：
+PowerShellで以下のコマンドを実行してください。`InstanceId`がデバイスIDです。
 
-> ⚠️ 注意
-> - プログラム終了時に自動的にデフォルトデバイスへ戻ります
-> - デバイス名は Windows のオーディオ設定に表示される名前と一致させてください
-
+```ps1
+> Get-PnpDevice -Class AudioEndpoint | Select-Object FriendlyName, InstanceId
+```
 
 ## 作者
 

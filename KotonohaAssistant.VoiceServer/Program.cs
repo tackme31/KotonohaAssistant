@@ -30,36 +30,35 @@ namespace KotonohaAssistant.VoiceServer
         private static readonly int WaitTimeout = 15 * 1000;
         private static readonly ILogger Logger = new Logger(LogPath, isConsoleLoggingEnabled: true);
 
-        private static bool EnableChannelSwitching;
-
-        /// <summary>
-        /// スピーカー
-        /// </summary>
-        private static MMDevice SpeakerDevice;
-
-        /// <summary>
-        /// デフォルトのボリューム設定
-        /// </summary>
-        private static readonly float[] InitialVolumeLevelScalars = new float[2];
+        private static bool _isSpeakerSwitchingEnabled = GetBoolVarOrDefault("ENABLE_SPEAKER_SWITCHING", false);
+        private static MMDevice _defaultDevice;
+        private static MMDevice _akaneDevice;
+        private static MMDevice _aoiDevice;
 
         static async Task Main(string[] args)
         {
             // load .env
             DotNetEnv.Env.TraversePath().Load();
 
-            EnableChannelSwitching = bool.TryParse(Environment.GetEnvironmentVariable("ENABLE_CHANNEL_SWITCHING"), out var enableChannelSwitching) && enableChannelSwitching;
-            SpeakerDevice = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            if (SpeakerDevice is null)
+            // コンソール終了時のクリーンアップ処理を登録
+            Console.CancelKeyPress += OnConsoleExit;
+            AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
+
+            _defaultDevice = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            if (_defaultDevice is null)
             {
                 Console.WriteLine("No audio output devices found. Press any key to exit.");
                 Console.ReadKey();
                 return;
             }
 
-            if (SpeakerDevice.AudioEndpointVolume.Channels.Count >= 2)
+            // Speaker switching settings
+            var hasError = InitializeSpeakerSwitching();
+            if (hasError)
             {
-                InitialVolumeLevelScalars[0] = SpeakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar;
-                InitialVolumeLevelScalars[1] = SpeakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar;
+                Console.WriteLine("Press any key to exit.");
+                Console.ReadKey();
+                return;
             }
 
             Console.WriteLine("Initializing editor host...");
@@ -150,6 +149,45 @@ namespace KotonohaAssistant.VoiceServer
             }
         }
 
+        private static bool InitializeSpeakerSwitching()
+        {
+            _isSpeakerSwitchingEnabled = GetBoolVarOrDefault("ENABLE_SPEAKER_SWITCHING", false);
+            var akaneSpeakerDeviceName = GetStringVarOrDefault("AKANE_SPEAKER_DEVICE_NAME", string.Empty);
+            var aoiSpeakerDeviceName = GetStringVarOrDefault("AOI_SPEAKER_DEVICE_NAME", string.Empty);
+
+            if (!_isSpeakerSwitchingEnabled)
+            {
+                return false;
+            }
+
+            var deviceEnumerator = new MMDeviceEnumerator();
+            var endpoints = deviceEnumerator
+                .EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active)
+                .ToList();
+
+            if (string.IsNullOrWhiteSpace(akaneSpeakerDeviceName) || string.IsNullOrWhiteSpace(aoiSpeakerDeviceName))
+            {
+                Console.WriteLine("No speaker devices specified. You can use the following devices:");
+                foreach (var endpoint in endpoints)
+                {
+                    Console.WriteLine($"- {endpoint.DeviceInterfaceFriendlyName}");
+                }
+
+                return true;
+            }
+
+            _akaneDevice = endpoints.FirstOrDefault(ep => ep.DeviceInterfaceFriendlyName == akaneSpeakerDeviceName);
+            _aoiDevice = endpoints.FirstOrDefault(ep => ep.DeviceInterfaceFriendlyName == aoiSpeakerDeviceName);
+
+            if (_akaneDevice is null || _aoiDevice is null)
+            {
+                Console.WriteLine($"The speaker devices not found: {akaneSpeakerDeviceName}, {aoiSpeakerDeviceName}");
+                return true;
+            }
+
+            return false;
+        }
+
         public static void InitializeEditorHost()
         {
             var availableHosts = TtsControl.GetAvailableHostNames();
@@ -190,10 +228,11 @@ namespace KotonohaAssistant.VoiceServer
         public static async Task SpeakAsync(Kotonoha sister, Emotion emotion, string message)
         {
             EnsureEditorConnected();
-            SwitchSpeakerChannelVolumeLevels(sister);
 
             try
             {
+                SwitchSpeakerDeviceTo(sister);
+
                 await WaitForStatusAsync(HostStatus.Idle);
 
                 var presetName = GetPresetName(sister);
@@ -209,8 +248,10 @@ namespace KotonohaAssistant.VoiceServer
             {
                 Logger.LogError(ex);
             }
-
-            ResetChannelVolumeLevels();
+            finally
+            {
+                ResetSpeakerDeviceToDefault();
+            }
         }
 
         public static async Task StopAsync()
@@ -237,7 +278,6 @@ namespace KotonohaAssistant.VoiceServer
         public static async Task ExportVoiceAsync(ExportVoiceRequest request)
         {
             EnsureEditorConnected();
-            SwitchSpeakerChannelVolumeLevels(request.SisterType);
 
             try
             {
@@ -262,8 +302,6 @@ namespace KotonohaAssistant.VoiceServer
             {
                 Logger.LogError(ex);
             }
-
-            ResetChannelVolumeLevels();
         }
 
         private static async Task WaitForStatusAsync(HostStatus status)
@@ -280,6 +318,36 @@ namespace KotonohaAssistant.VoiceServer
 
                 await Task.Delay(WaitCheckInterval);
             }
+        }
+
+        private static void SwitchSpeakerDeviceTo(Kotonoha sister)
+        {
+            if (!_isSpeakerSwitchingEnabled)
+            {
+                return;
+            }
+
+            var deviceEnumerator = new MMDeviceEnumerator();
+            switch (sister)
+            {
+                case Kotonoha.Akane:
+                    deviceEnumerator.SetDefaultAudioEndpoint(_akaneDevice);
+                    break;
+                case Kotonoha.Aoi:
+                    deviceEnumerator.SetDefaultAudioEndpoint(_aoiDevice);
+                    break;
+            }
+        }
+
+        private static void ResetSpeakerDeviceToDefault()
+        {
+            if (!_isSpeakerSwitchingEnabled)
+            {
+                return;
+            }
+
+            var deviceEnumerator = new MMDeviceEnumerator();
+            deviceEnumerator.SetDefaultAudioEndpoint(_defaultDevice);
         }
 
         public static void ChangeStyle(string presetName, Emotion emotion)
@@ -316,51 +384,6 @@ namespace KotonohaAssistant.VoiceServer
             TtsControl.SetVoicePreset(newPreset);
         }
 
-        private static void SwitchSpeakerChannelVolumeLevels(Kotonoha sister)
-        {
-            if (!EnableChannelSwitching || SpeakerDevice.AudioEndpointVolume.Channels.Count < 2)
-            {
-                return;
-            }
-
-            try
-            {
-                switch (sister)
-                {
-                    case Kotonoha.Akane:
-                        SpeakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = 1;
-                        SpeakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = 0;
-                        break;
-                    case Kotonoha.Aoi:
-                        SpeakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = 0;
-                        SpeakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = 1;
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex);
-            }
-        }
-
-        private static void ResetChannelVolumeLevels()
-        {
-            if (!EnableChannelSwitching || SpeakerDevice.AudioEndpointVolume.Channels.Count < 2)
-            {
-                return;
-            }
-
-            try
-            {
-                SpeakerDevice.AudioEndpointVolume.Channels[0].VolumeLevelScalar = InitialVolumeLevelScalars[0];
-                SpeakerDevice.AudioEndpointVolume.Channels[1].VolumeLevelScalar = InitialVolumeLevelScalars[1];
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex);
-            }
-        }
-
         private static string GetPresetName(Kotonoha sister)
         {
             switch (sister)
@@ -373,5 +396,51 @@ namespace KotonohaAssistant.VoiceServer
                     return TtsControl.CurrentVoicePresetName;
             }
         }
+
+        private static string GetStringVarOrDefault(string key, string defaultValue)
+        {
+            var value = Environment.GetEnvironmentVariable(key);
+            return string.IsNullOrEmpty(value) ? defaultValue : value;
+        }
+
+        private static bool GetBoolVarOrDefault(string key, bool defaultValue)
+        {
+            var value = Environment.GetEnvironmentVariable(key);
+            if (bool.TryParse(value, out bool result))
+            {
+                return result;
+            }
+            return defaultValue;
+        }
+
+        private static void OnConsoleExit(object sender, ConsoleCancelEventArgs e)
+        {
+            Console.WriteLine("\nShutting down gracefully...");
+            Cleanup();
+            
+            // Ctrl+C のデフォルト動作（プロセス終了）を許可
+            e.Cancel = false;
+        }
+
+        private static void OnProcessExit(object sender, EventArgs e)
+        {
+            Cleanup();
+        }
+
+        private static void Cleanup()
+        {
+            try
+            {
+                // スピーカーデバイスをデフォルトに戻す
+                ResetSpeakerDeviceToDefault();
+                Console.WriteLine("Speaker device reset to default.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex);
+                Console.WriteLine($"Error during cleanup: {ex.Message}");
+            }
+        }
+
     }
 }

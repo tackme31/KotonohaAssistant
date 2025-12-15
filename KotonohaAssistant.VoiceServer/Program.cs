@@ -44,14 +44,6 @@ namespace KotonohaAssistant.VoiceServer
             Console.CancelKeyPress += OnConsoleExit;
             AppDomain.CurrentDomain.ProcessExit += OnProcessExit;
 
-            _defaultDevice = new MMDeviceEnumerator().GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
-            if (_defaultDevice is null)
-            {
-                Console.WriteLine("No audio output devices found. Press any key to exit.");
-                Console.ReadKey();
-                return;
-            }
-
             // Speaker switching settings
             var hasError = InitializeSpeakerSwitching();
             if (hasError)
@@ -161,10 +153,16 @@ namespace KotonohaAssistant.VoiceServer
             }
 
             var deviceEnumerator = new MMDeviceEnumerator();
+            _defaultDevice = deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+            if (_defaultDevice is null)
+            {
+                Console.WriteLine("No audio output devices found.");
+                return true;
+            }
+
             var endpoints = deviceEnumerator
                 .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
                 .ToList();
-
             if (string.IsNullOrWhiteSpace(akaneSpeakerDeviceName) || string.IsNullOrWhiteSpace(aoiSpeakerDeviceName))
             {
                 Console.WriteLine("No speaker devices specified. You can use the following devices:");

@@ -162,7 +162,7 @@ namespace KotonohaAssistant.VoiceServer
 
             var deviceEnumerator = new MMDeviceEnumerator();
             var endpoints = deviceEnumerator
-                .EnumerateAudioEndPoints(DataFlow.All, DeviceState.Active)
+                .EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active)
                 .ToList();
 
             if (string.IsNullOrWhiteSpace(akaneSpeakerDeviceName) || string.IsNullOrWhiteSpace(aoiSpeakerDeviceName))
@@ -170,14 +170,14 @@ namespace KotonohaAssistant.VoiceServer
                 Console.WriteLine("No speaker devices specified. You can use the following devices:");
                 foreach (var endpoint in endpoints)
                 {
-                    Console.WriteLine($"- {endpoint.DeviceInterfaceFriendlyName}");
+                    Console.WriteLine($"- {endpoint.DeviceFriendlyName}");
                 }
 
                 return true;
             }
 
-            _akaneDevice = endpoints.FirstOrDefault(ep => ep.DeviceInterfaceFriendlyName == akaneSpeakerDeviceName);
-            _aoiDevice = endpoints.FirstOrDefault(ep => ep.DeviceInterfaceFriendlyName == aoiSpeakerDeviceName);
+            _akaneDevice = endpoints.FirstOrDefault(ep => ep.DeviceFriendlyName == akaneSpeakerDeviceName);
+            _aoiDevice = endpoints.FirstOrDefault(ep => ep.DeviceFriendlyName == aoiSpeakerDeviceName);
 
             if (_akaneDevice is null || _aoiDevice is null)
             {

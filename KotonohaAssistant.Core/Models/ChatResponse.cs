@@ -3,7 +3,7 @@ using Newtonsoft.Json.Converters;
 
 namespace KotonohaAssistant.Core.Models;
 
-public class ChatResponse
+public record ChatResponse
 {
     // JSONシリアライズ用設定
     protected static readonly JsonSerializerSettings Settings = new()

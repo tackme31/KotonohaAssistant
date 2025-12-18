@@ -14,6 +14,7 @@ public class ConversationService
     private const string LogPrefix = "[Conversation]";
 
     private readonly ConversationState _state;
+    private readonly ConversationState_ _state_;
     private readonly Dictionary<string, ToolFunction> _functions;
     private readonly ChatCompletionOptions _options;
 
@@ -21,6 +22,8 @@ public class ConversationService
     /// 会話の状態（読み取り専用）
     /// </summary>
     public IReadOnlyConversationState State => _state;
+
+    public ConversationState_ State_ => _state_;
 
     /// <summary>
     /// 最後に保存したメッセージのインデックス（次に保存すべき位置）
@@ -48,6 +51,12 @@ public class ConversationService
                 SystemMessageAkane = promptRepository.GetSystemMessage(Kotonoha.Akane),
                 SystemMessageAoi = promptRepository.GetSystemMessage(Kotonoha.Aoi)
             },
+            new ConversationState_()
+            {
+                CurrentSister = defaultSister,
+                SystemMessageAkane = promptRepository.GetSystemMessage(Kotonoha.Akane),
+                SystemMessageAoi = promptRepository.GetSystemMessage(Kotonoha.Aoi)
+            },
             chatMessageRepository,
             chatCompletionRepository,
             availableFunctions,
@@ -61,6 +70,7 @@ public class ConversationService
     /// </summary>
     internal ConversationService(
         ConversationState state,
+        ConversationState_ state_,
         IChatMessageRepository chatMessageRepository,
         IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
@@ -68,6 +78,7 @@ public class ConversationService
         ILogger logger)
     {
         _state = state;
+        _state_ = state_;
 
         _options = new ChatCompletionOptions
         {

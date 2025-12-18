@@ -1,10 +1,41 @@
-﻿using KotonohaAssistant.AI.Prompts;
+﻿using System.Collections.Immutable;
+using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Models;
 using OpenAI.Chat;
 
 namespace KotonohaAssistant.AI.Services;
+
+public record ConversationState_
+{
+    public required string SystemMessageAkane { get; init; }
+
+    public required string SystemMessageAoi { get; init; }
+
+    public int PatienceCount { get; set; }
+
+    public Kotonoha LastToolCallSister { get; set; }
+
+    public Kotonoha CurrentSister { get; set; }
+
+    public ImmutableList<ChatMessage> ChatMessages { get; set; } = [];
+
+    public ImmutableList<ChatMessage> FullChatMessages
+    {
+        get
+        {
+            var systemMessage = CurrentSister switch
+            {
+                Kotonoha.Akane => SystemMessageAkane,
+                Kotonoha.Aoi => SystemMessageAoi,
+                _ => throw new IndexOutOfRangeException()
+            };
+
+            return [.. ChatMessages.Prepend(new SystemChatMessage(systemMessage))];
+        }
+    }
+}
 
 public interface IReadOnlyConversationState
 {

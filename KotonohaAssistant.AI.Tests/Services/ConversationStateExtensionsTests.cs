@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using System.Text.Json.Nodes;
 using FluentAssertions;
+using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
 using OpenAI.Chat;
@@ -41,10 +42,10 @@ public class ConversationStateExtensionsTests
 
         var json = JsonNode.Parse(userMessage.Content[0].Text);
         json.Should().NotBeNull();
-        json!["InputType"]!.GetValue<string>().Should().Be("User");
-        json["Text"]!.GetValue<string>().Should().Be("こんにちは");
-        json["Today"]!.GetValue<string>().Should().Be("2025年1月1日 (水曜日)");
-        json["CurrentTime"]!.GetValue<string>().Should().Be("12時30分");
+        json.Should().HavePropertyWithStringValue("InputType", "User");
+        json.Should().HavePropertyWithStringValue("Text", "こんにちは");
+        json.Should().HavePropertyWithStringValue("Today", "2025年1月1日 (水曜日)");
+        json.Should().HavePropertyWithStringValue("CurrentTime", "12時30分");
     }
 
     #endregion
@@ -69,8 +70,8 @@ public class ConversationStateExtensionsTests
 
         var json = JsonNode.Parse(assistantMessage.Content[0].Text);
         json.Should().NotBeNull();
-        json!["Assistant"]!.GetValue<string>().Should().Be("Akane");
-        json["Text"]!.GetValue<string>().Should().Be("おはようさん");
+        json.Should().HavePropertyWithStringValue("Assistant", "Akane");
+        json.Should().HavePropertyWithStringValue("Text", "おはようさん");
     }
 
     [Fact]
@@ -91,8 +92,8 @@ public class ConversationStateExtensionsTests
 
         var json = JsonNode.Parse(assistantMessage.Content[0].Text);
         json.Should().NotBeNull();
-        json!["Assistant"]!.GetValue<string>().Should().Be("Aoi");
-        json["Text"]!.GetValue<string>().Should().Be("おはようございます");
+        json.Should().HavePropertyWithStringValue("Assistant", "Aoi");
+        json.Should().HavePropertyWithStringValue("Text", "おはようございます");
     }
 
     #endregion
@@ -118,10 +119,10 @@ public class ConversationStateExtensionsTests
 
         var json = JsonNode.Parse(userMessage.Content[0].Text);
         json.Should().NotBeNull();
-        json!["InputType"]!.GetValue<string>().Should().Be("Instruction");
-        json["Text"]!.GetValue<string>().Should().Be("テスト指示");
-        json["Today"]!.GetValue<string>().Should().Be("2025年1月1日 (水曜日)");
-        json["CurrentTime"]!.GetValue<string>().Should().Be("12時30分");
+        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        json.Should().HavePropertyWithStringValue("Text", "テスト指示");
+        json.Should().HavePropertyWithStringValue("Today", "2025年1月1日 (水曜日)");
+        json.Should().HavePropertyWithStringValue("CurrentTime", "12時30分");
     }
 
     #endregion
@@ -147,8 +148,8 @@ public class ConversationStateExtensionsTests
 
         var json = JsonNode.Parse(userMessage.Content[0].Text);
         json.Should().NotBeNull();
-        json!["InputType"]!.GetValue<string>().Should().Be("Instruction");
-        json["Text"]!.GetValue<string>().Should().Contain("葵、任せたで");
+        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        json.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
     }
 
     [Fact]
@@ -170,8 +171,8 @@ public class ConversationStateExtensionsTests
 
         var json = JsonNode.Parse(userMessage.Content[0].Text);
         json.Should().NotBeNull();
-        json!["InputType"]!.GetValue<string>().Should().Be("Instruction");
-        json["Text"]!.GetValue<string>().Should().Contain("お姉ちゃんお願い");
+        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        json.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAoi);
     }
 
     #endregion
@@ -197,8 +198,8 @@ public class ConversationStateExtensionsTests
 
         var json = JsonNode.Parse(userMessage.Content[0].Text);
         json.Should().NotBeNull();
-        json!["InputType"]!.GetValue<string>().Should().Be("Instruction");
-        json["Text"]!.GetValue<string>().Should().Contain("姉の茜があなたにタスクを押しつけました");
+        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        json.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAkane);
     }
 
     [Fact]
@@ -220,8 +221,8 @@ public class ConversationStateExtensionsTests
 
         var json = JsonNode.Parse(userMessage.Content[0].Text);
         json.Should().NotBeNull();
-        json!["InputType"]!.GetValue<string>().Should().Be("Instruction");
-        json["Text"]!.GetValue<string>().Should().Contain("妹の葵があなたにタスクを押しつけました");
+        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        json.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAoi);
     }
 
     #endregion
@@ -318,10 +319,8 @@ public class ConversationStateExtensionsTests
 
         var json = JsonNode.Parse(userMessage.Content[0].Text);
         json.Should().NotBeNull();
-        json!["InputType"]!.GetValue<string>().Should().Be("Instruction");
-        json["Text"]!.GetValue<string>().Should().Contain("姉妹が切り替わりました");
-        json["Text"]!.GetValue<string>().Should().Contain("茜");
-        json["Text"]!.GetValue<string>().Should().Contain("葵");
+        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        json.Should().HavePropertyWithStringValue("Text", Instruction.SwitchSisterTo(Kotonoha.Aoi));
     }
 
     #endregion

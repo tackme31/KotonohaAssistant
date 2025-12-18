@@ -20,9 +20,9 @@ public record ConversationState
 
     public Kotonoha CurrentSister { get; set; }
 
-    public ImmutableList<ChatMessage> ChatMessages { get; set; } = [];
+    public ImmutableArray<ChatMessage> ChatMessages { get; set; } = [];
 
-    public ImmutableList<ChatMessage> FullChatMessages
+    public ImmutableArray<ChatMessage> FullChatMessages
     {
         get
         {

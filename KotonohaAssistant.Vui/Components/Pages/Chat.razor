@@ -120,6 +120,8 @@
     /// </summary>
     private CancellationTokenSource? _conversationTimer;
 
+    private ConversationState? _state;
+
     protected override async Task OnInitializedAsync()
     {
         this.SpeechRecognition.Lang = "ja-JP";
@@ -129,8 +131,8 @@
         this.SpeechRecognition.End += OnSpeechEnded;
         _ = this.SpeechRecognition.StartAsync();
 
-        await ConversationService.LoadLatestConversation();
-        foreach (var (sister, message) in ConversationService.GetAllMessages())
+        _state = await ConversationService.LoadLatestConversation();
+        foreach (var (sister, message) in ConversationService.GetAllMessages(_state))
         {
             _messages.Add((message, sister, null));
         }
@@ -245,8 +247,15 @@
         ScrollToEnd();
 
         var forgotten = false;
-        await foreach (var result in ConversationService.TalkWithKotonohaSisters(message))
+        await foreach (var item in ConversationService.TalkWithKotonohaSisters(message, _state!))
         {
+            var result = item.result;
+            if (result is null)
+            {
+                continue;
+            }
+
+            _state = item.state;
             // 関数呼び出しがあった場合は個別に表示
             if (result.Functions is not null)
             {

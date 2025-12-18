@@ -71,23 +71,6 @@ if (enableWeatherFunction)
     ]);
 }
 
-var functionsDictionary = functions.ToDictionary(f => f.GetType().Name);
-var lazyModeHandler = new LazyModeHandler(functionsDictionary, logger);
-var service = new ConversationService(
-    promptRepository,
-    chatMessageRepository,
-    chatCompletionRepository,
-    functions,
-    lazyModeHandler,
-    logger);
-
-await service.LoadLatestConversation();
-foreach (var (sister, message) in service.GetAllMessages())
-{
-    var name = sister?.ToDisplayName() ?? "私";
-    Console.WriteLine($"{name}: {message}");
-}
-
 // InactivityNotificationServiceの開始
 if (enableInactivityNotification)
 {
@@ -116,6 +99,23 @@ if (enableInactivityNotification)
 
 try
 {
+    var functionsDictionary = functions.ToDictionary(f => f.GetType().Name);
+    var lazyModeHandler = new LazyModeHandler(functionsDictionary, logger);
+    var service = new ConversationService(
+        promptRepository,
+        chatMessageRepository,
+        chatCompletionRepository,
+        functions,
+        lazyModeHandler,
+        logger);
+
+    var state = await service.LoadLatestConversation();
+    foreach (var (sister, message) in service.GetAllMessages(state))
+    {
+        var name = sister?.ToDisplayName() ?? "私";
+        Console.WriteLine($"{name}: {message}");
+    }
+
     while (true)
     {
         Console.Write("私: ");
@@ -125,8 +125,15 @@ try
             continue;
         }
 
-        await foreach (var result in service.TalkWithKotonohaSisters(input))
+        await foreach (var item in service.TalkWithKotonohaSisters(input, state))
         {
+            var result = item.result;
+            if (result is null)
+            {
+                continue;
+            }
+
+            state = item.state;
             if (result.Functions is not null)
             {
                 foreach (var function in result.Functions)

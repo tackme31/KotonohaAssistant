@@ -19,8 +19,20 @@ public class ConversationService
 
     private readonly IChatMessageRepository _chatMessageRepositoriy;
     private readonly IChatCompletionRepository _chatCompletionRepository;
+    private readonly IPromptRepository _promptRepository;
     private readonly ILazyModeHandler _lazyModeHandler;
     private readonly ILogger _logger;
+
+    private ConversationState DefaultState => new ConversationState
+    {
+        SystemMessageAkane = _promptRepository.GetSystemMessage(Kotonoha.Akane),
+        SystemMessageAoi = _promptRepository.GetSystemMessage(Kotonoha.Aoi),
+        CurrentSister = Kotonoha.Akane,
+        LastToolCallSister = Kotonoha.Akane,
+        ConversationId = null,
+        LastSavedMessageIndex = 0,
+        PatienceCount = 0,
+    };
 
     public ConversationService(
         IPromptRepository promptRepository,
@@ -28,8 +40,7 @@ public class ConversationService
         IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
         ILazyModeHandler lazyModeHandler,
-        ILogger logger,
-        Kotonoha defaultSister = Kotonoha.Akane)
+        ILogger logger)
     {
         _options = new ChatCompletionOptions
         {
@@ -44,6 +55,7 @@ public class ConversationService
 
         _chatMessageRepositoriy = chatMessageRepository;
         _chatCompletionRepository = chatCompletionRepository;
+        _promptRepository = promptRepository;
         _lazyModeHandler = lazyModeHandler;
         _logger = logger;
     }
@@ -76,11 +88,12 @@ public class ConversationService
     /// 新しい会話を開始します
     /// </summary>
     /// <returns></returns>
-    private async Task<ConversationState> CreateNewConversationAsync(ConversationState state)
+    private async Task<ConversationState> CreateNewConversationAsync()
     {
         _logger.LogInformation($"{LogPrefix} Creating new conversation...");
 
         long? newConversationId = null;
+        var state = DefaultState;
         try
         {
             newConversationId = await _chatMessageRepositoriy.CreateNewConversationIdAsync();
@@ -109,7 +122,7 @@ public class ConversationService
     /// 直近の会話を読み込みます
     /// </summary>
     /// <returns></returns>
-    public async Task<ConversationState> LoadLatestConversation(ConversationState state)
+    public async Task<ConversationState> LoadLatestConversation()
     {
         _logger.LogInformation($"{LogPrefix} Loading latest conversation...");
 
@@ -124,10 +137,11 @@ public class ConversationService
         }
 
         // 会話履歴が存在しない場合
+        var state = DefaultState;
         if (conversationId < 0)
         {
             _logger.LogInformation($"{LogPrefix} No existing conversation found.");
-            state = await CreateNewConversationAsync(state);
+            state = await CreateNewConversationAsync();
             return state;
         }
 
@@ -237,7 +251,7 @@ public class ConversationService
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
-    public async IAsyncEnumerable<(ConversationResult? result, ConversationState state)> TalkWithKotonohaSisters(string input, ConversationState state)
+    public async IAsyncEnumerable<(ConversationState state, ConversationResult? result)> TalkWithKotonohaSisters(string input, ConversationState state)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
@@ -280,7 +294,7 @@ public class ConversationService
                 PatienceCount = 0
             };
 
-            yield return (lazyResult.LazyResponse, state);
+            yield return (state, lazyResult.LazyResponse);
         }
 
         // 最終的な完了結果を使用
@@ -309,9 +323,7 @@ public class ConversationService
                 Functions = functions
             };
 
-            yield return (
-                result,
-                state);
+            yield return (state, result);
         }
         else
         {
@@ -326,7 +338,7 @@ public class ConversationService
     {
         if (state.ConversationId is null)
         {
-            return await CreateNewConversationAsync(state);
+            return await CreateNewConversationAsync();
         }
         else
         {
@@ -352,7 +364,7 @@ public class ConversationService
         if (functions.Any(f => f.Name == nameof(ForgetMemory) && f.Result == ForgetMemory.SuccessMessage))
         {
             _logger.LogInformation($"{LogPrefix} Memory deletion detected. Creating new conversation...");
-            return await CreateNewConversationAsync(state);
+            return await CreateNewConversationAsync();
         }
         else
         {

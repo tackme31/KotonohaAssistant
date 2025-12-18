@@ -9,37 +9,10 @@ namespace KotonohaAssistant.AI.Services;
 
 public static class ConversationStateExtensions
 {
-    /// <summary>
-    /// 初期会話メッセージをConversationStateに読み込む
-    /// </summary>
-    public static void LoadInitialConversation(this ConversationState state)
-    {
-        foreach (var m in InitialConversation.Messages)
-        {
-            if (m.Request is not null)
-            {
-                switch (m.Request.InputType)
-                {
-                    case ChatInputType.Instruction:
-                        state.AddInstruction(m.Request.Text ?? string.Empty);
-                        continue;
-                    case ChatInputType.User:
-                        state.AddUserMessage(m.Request.Text ?? string.Empty);
-                        continue;
-                }
-            }
-
-            if (m.Response is not null)
-            {
-                state.AddAssistantMessage(m.Response.Assistant, m.Response.Text ?? string.Empty);
-            }
-        }
-    }
-
     private const string TodayFormat = "yyyy年M月d日 (dddd)";
     private const string CurrentTimeFormat = "H時m分";
 
-    public static ConversationState_ LoadInitialConversation(this ConversationState_ state)
+    public static ConversationState LoadInitialConversation(this ConversationState state)
     {
         var messages = new List<ChatMessage>();
         foreach (var m in InitialConversation.Messages)
@@ -63,7 +36,7 @@ public static class ConversationStateExtensions
         };
     }
 
-    public static ConversationState_ AddAssistantMessage(this ConversationState_ state, ChatCompletion completion)
+    public static ConversationState AddAssistantMessage(this ConversationState state, ChatCompletion completion)
     {
         return state with
         {
@@ -71,7 +44,7 @@ public static class ConversationStateExtensions
         };
     }
 
-    public static ConversationState_ AddAssistantMessage(this ConversationState_ state, Kotonoha sister, string text)
+    public static ConversationState AddAssistantMessage(this ConversationState state, Kotonoha sister, string text)
     {
         return state with
         {
@@ -79,7 +52,7 @@ public static class ConversationStateExtensions
         };
     }
 
-    public static ConversationState_ AddUserMessage(this ConversationState_ state, string text, DateTime dateTime)
+    public static ConversationState AddUserMessage(this ConversationState state, string text, DateTime dateTime)
     {
         return state with
         {
@@ -87,7 +60,7 @@ public static class ConversationStateExtensions
         };
     }
 
-    public static ConversationState_ AddInstruction(this ConversationState_ state, string text, DateTime dateTime)
+    public static ConversationState AddInstruction(this ConversationState state, string text, DateTime dateTime)
     {
         return state with
         {
@@ -95,7 +68,7 @@ public static class ConversationStateExtensions
         };
     }
 
-    public static ConversationState_ AddBeginLazyModeInstruction(this ConversationState_ state, DateTime dateTime)
+    public static ConversationState AddBeginLazyModeInstruction(this ConversationState state, DateTime dateTime)
     {
         var instruction = state.CurrentSister switch
         {
@@ -107,7 +80,7 @@ public static class ConversationStateExtensions
         return state.AddInstruction(instruction, dateTime);
     }
 
-    public static ConversationState_ AddEndLazyModeInstruction(this ConversationState_ state, DateTime dateTime)
+    public static ConversationState AddEndLazyModeInstruction(this ConversationState state, DateTime dateTime)
     {
         var instruction = state.CurrentSister switch
         {
@@ -119,7 +92,7 @@ public static class ConversationStateExtensions
         return state.AddInstruction(instruction, dateTime);
     }
 
-    public static ConversationState_ AddToolMessage(this ConversationState_ state, string toolCallId, string result)
+    public static ConversationState AddToolMessage(this ConversationState state, string toolCallId, string result)
     {
         return state with
         {
@@ -127,7 +100,7 @@ public static class ConversationStateExtensions
         };
     }
 
-    public static ConversationState_ SwitchToAnotherSister(this ConversationState_ state)
+    public static ConversationState SwitchToAnotherSister(this ConversationState state)
     {
         return state with
         {
@@ -135,7 +108,7 @@ public static class ConversationStateExtensions
         };
     }
 
-    public static ConversationState_ RecordToolCall(this ConversationState_ state)
+    public static ConversationState RecordToolCall(this ConversationState state)
     {
         var patienceCount = state.LastToolCallSister == state.CurrentSister ? state.PatienceCount + 1 : 1;
         return state with

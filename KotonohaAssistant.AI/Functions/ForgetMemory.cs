@@ -30,7 +30,7 @@ public class ForgetMemory(IPromptRepository promptRepository, IRandomGenerator r
         return true;
     }
 
-    public override Task<string> Invoke(IDictionary<string, object> arguments, ConversationState_ state)
+    public override Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state)
     {
         // 1/10の確率で失敗する。頑張ってもっかい説得してね。
         var r = new Random();

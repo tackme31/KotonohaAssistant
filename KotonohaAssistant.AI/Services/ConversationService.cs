@@ -48,7 +48,7 @@ public class ConversationService
         _logger = logger;
     }
 
-    public IEnumerable<(Kotonoha? sister, string message)> GetAllMessages(ConversationState_ state)
+    public IEnumerable<(Kotonoha? sister, string message)> GetAllMessages(ConversationState state)
     {
         foreach (var message in state.ChatMessages.Skip(InitialConversation.Count)) // CreateNewConversationAsyncで追加した生成参考用の会話をスキップ
         {
@@ -76,7 +76,7 @@ public class ConversationService
     /// 新しい会話を開始します
     /// </summary>
     /// <returns></returns>
-    private async Task<ConversationState_> CreateNewConversationAsync(ConversationState_ state)
+    private async Task<ConversationState> CreateNewConversationAsync(ConversationState state)
     {
         _logger.LogInformation($"{LogPrefix} Creating new conversation...");
 
@@ -109,7 +109,7 @@ public class ConversationService
     /// 直近の会話を読み込みます
     /// </summary>
     /// <returns></returns>
-    public async Task<ConversationState_> LoadLatestConversation(ConversationState_ state)
+    public async Task<ConversationState> LoadLatestConversation(ConversationState state)
     {
         _logger.LogInformation($"{LogPrefix} Loading latest conversation...");
 
@@ -178,7 +178,7 @@ public class ConversationService
         }
     }
 
-    private async Task<ConversationState_> SaveState(ConversationState_ state)
+    private async Task<ConversationState> SaveState(ConversationState state)
     {
         if (state.ConversationId is null)
         {
@@ -216,7 +216,7 @@ public class ConversationService
         }
     }
 
-    private async Task<ChatCompletion?> CompleteChatAsync(ConversationState_ state)
+    private async Task<ChatCompletion?> CompleteChatAsync(ConversationState state)
     {
         try
         {
@@ -237,7 +237,7 @@ public class ConversationService
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
-    public async IAsyncEnumerable<(ConversationResult? result, ConversationState_ state)> TalkWithKotonohaSisters(string input, ConversationState_ state)
+    public async IAsyncEnumerable<(ConversationResult? result, ConversationState state)> TalkWithKotonohaSisters(string input, ConversationState state)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
@@ -322,7 +322,7 @@ public class ConversationService
     /// <summary>
     /// 会話が存在しない場合は新規作成します
     /// </summary>
-    private async Task<ConversationState_> EnsureConversationExistsAsync(ConversationState_ state)
+    private async Task<ConversationState> EnsureConversationExistsAsync(ConversationState state)
     {
         if (state.ConversationId is null)
         {
@@ -337,7 +337,7 @@ public class ConversationService
     /// <summary>
     /// 忍耐値を更新します
     /// </summary>
-    private ConversationState_ UpdatePatienceCounter(ChatCompletion completion, ConversationState_ state)
+    private ConversationState UpdatePatienceCounter(ChatCompletion completion, ConversationState state)
     {
         return completion.FinishReason == ChatFinishReason.ToolCalls
             ? state.RecordToolCall()
@@ -347,7 +347,7 @@ public class ConversationService
     /// <summary>
     /// 記憶削除時は新しい会話を作成します
     /// </summary>
-    private async Task<ConversationState_> HandleMemoryDeletionAsync(List<ConversationFunction> functions, ConversationState_ state)
+    private async Task<ConversationState> HandleMemoryDeletionAsync(List<ConversationFunction> functions, ConversationState state)
     {
         if (functions.Any(f => f.Name == nameof(ForgetMemory) && f.Result == ForgetMemory.SuccessMessage))
         {
@@ -365,7 +365,7 @@ public class ConversationService
     /// </summary>
     /// <param name="completion"></param>
     /// <returns></returns>
-    private async Task<(ConversationState_ state, ChatCompletion result, List<ConversationFunction> functions)> InvokeFunctions(ChatCompletion completion, ConversationState_ state)
+    private async Task<(ConversationState state, ChatCompletion result, List<ConversationFunction> functions)> InvokeFunctions(ChatCompletion completion, ConversationState state)
     {
         var invokedFunctions = new List<ConversationFunction>();
         while (completion.FinishReason == ChatFinishReason.ToolCalls)
@@ -419,7 +419,7 @@ public class ConversationService
     /// </summary>
     /// <param name="userInput">ユーザーの入力テキスト</param>
     /// <returns>姉妹が切り替わった場合はtrue</returns>
-    public ConversationState_ TrySwitchSister(string userInput, ConversationState_ state)
+    public ConversationState TrySwitchSister(string userInput, ConversationState state)
     {
         var nextSister = GuessTargetSister(userInput);
         if (nextSister == null || nextSister == state.CurrentSister)

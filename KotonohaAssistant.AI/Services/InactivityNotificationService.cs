@@ -168,16 +168,20 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         };
 
         // ToolCallを要求されていない状態でTooLChatMessageを送信すると400エラーになるのでスキップ
+        var now = DateTime.Now;
         var recentMessages = allChatMessages.OfType<ChatMessage>().TakeLast(20).SkipWhile(m => m is ToolChatMessage).ToList();
-        state.LoadMessages(recentMessages);
-        state.AddInstruction(Instruction.SwitchSisterTo(sister));
-        state.AddInstruction(_promptRepository.InactiveNotification);
+        state = state with
+        {
+            ChatMessages = [.. recentMessages]
+        };
+        state = state.AddInstruction(Instruction.SwitchSisterTo(sister), now);
+        state = state.AddInstruction(_promptRepository.InactiveNotification, now);
 
         string lineMessage;
         try
         {
             // 通知メッセージを作成
-            var result = await _chatCompletionRepository.CompleteChatAsync(state.ChatMessagesWithSystemMessage, _options);
+            var result = await _chatCompletionRepository.CompleteChatAsync(state.FullChatMessages, _options);
             var message = new AssistantChatMessage(result.Value);
             var content = result.Value.Content[0].Text;
             if (!ChatResponse.TryParse(content, out var res))

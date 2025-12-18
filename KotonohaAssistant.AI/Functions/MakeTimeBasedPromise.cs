@@ -51,7 +51,7 @@ public class MakeTimeBasedPromise(IPromptRepository promptRepository, string voi
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, ConversationState_ state)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state)
     {
         var time = (TimeSpan)arguments["timeToCall"];
         var message = (string)arguments["messageForCallingWhenTheTimeComes"];

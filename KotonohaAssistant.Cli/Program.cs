@@ -125,7 +125,7 @@ try
             continue;
         }
 
-        await foreach (var item in service.TalkWithKotonohaSisters(input, state))
+        await foreach (var item in service.TalkAsync(input, state))
         {
             var result = item.result;
             if (result is null)

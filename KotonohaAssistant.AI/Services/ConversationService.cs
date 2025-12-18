@@ -251,7 +251,7 @@ public class ConversationService
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
-    public async IAsyncEnumerable<(ConversationState state, ConversationResult? result)> TalkWithKotonohaSisters(string input, ConversationState state)
+    public async IAsyncEnumerable<(ConversationState state, ConversationResult? result)> TalkAsync(string input, ConversationState state)
     {
         if (string.IsNullOrWhiteSpace(input))
         {

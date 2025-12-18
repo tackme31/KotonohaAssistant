@@ -247,7 +247,7 @@
         ScrollToEnd();
 
         var forgotten = false;
-        await foreach (var item in ConversationService.TalkWithKotonohaSisters(message, _state!))
+        await foreach (var item in ConversationService.TalkAsync(message, _state!))
         {
             var result = item.result;
             if (result is null)

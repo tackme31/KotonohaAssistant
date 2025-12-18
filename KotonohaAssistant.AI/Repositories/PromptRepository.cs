@@ -4,7 +4,7 @@ namespace KotonohaAssistant.AI.Repositories;
 
 public interface IPromptRepository
 {
-    string GetCharacterPrompt(Kotonoha sister);
+    string GetSystemMessage(Kotonoha sister);
     string MakeTimeBasedPromise { get; }
     string CreateCalendarEventDescription { get; }
     string ForgetMemoryDescription { get; }
@@ -30,7 +30,7 @@ public class PromptRepository(string promptPath) : IPromptRepository
     private static readonly string ToolStopTimer = "tool_stop_timer.md";
     private static readonly string InstructionInactiveNotification = "instruction_inactive_notification.md";
 
-    public string GetCharacterPrompt(Kotonoha sister) => sister switch
+    public string GetSystemMessage(Kotonoha sister) => sister switch
     {
         Kotonoha.Akane => SystemMessage.KotonohaAkane(GetPrompt(CharacterPromptAkane)),
         Kotonoha.Aoi => SystemMessage.KotonohaAoi(GetPrompt(CharacterPromptAoi)),

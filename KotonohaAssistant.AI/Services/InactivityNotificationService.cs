@@ -162,8 +162,8 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         var allChatMessages = await _chatMessageRepository.GetAllChatMessagesAsync(conversationId);
         var state = new ConversationState
         {
-            CharacterPromptAkane = _promptRepository.GetCharacterPrompt(Kotonoha.Akane),
-            CharacterPromptAoi = _promptRepository.GetCharacterPrompt(Kotonoha.Aoi),
+            SystemMessageAkane = _promptRepository.GetSystemMessage(Kotonoha.Akane),
+            SystemMessageAoi = _promptRepository.GetSystemMessage(Kotonoha.Aoi),
             CurrentSister = sister,
         };
 

@@ -21,8 +21,8 @@ public interface IReadOnlyConversationState
 
 public class ConversationState() : IReadOnlyConversationState
 {
-    public required string CharacterPromptAkane { get; init; }
-    public required string CharacterPromptAoi { get; init; }
+    public required string SystemMessageAkane { get; init; }
+    public required string SystemMessageAoi { get; init; }
 
     /// <summary>
     /// 同じ方に連続してお願いした回数。忍耐値。
@@ -46,11 +46,10 @@ public class ConversationState() : IReadOnlyConversationState
     {
         get
         {
-            var now = DateTime.Now;
             return CurrentSister switch
             {
-                Kotonoha.Akane => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAkane(CharacterPromptAkane))),
-                Kotonoha.Aoi => ChatMessages.Prepend(new SystemChatMessage(SystemMessage.KotonohaAoi(CharacterPromptAoi))),
+                Kotonoha.Akane => ChatMessages.Prepend(new SystemChatMessage(SystemMessageAkane)),
+                Kotonoha.Aoi => ChatMessages.Prepend(new SystemChatMessage(SystemMessageAoi)),
                 _ => throw new NotSupportedException()
             };
         }

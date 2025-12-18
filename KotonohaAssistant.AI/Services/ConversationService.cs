@@ -45,8 +45,8 @@ public class ConversationService
             new ConversationState()
             {
                 CurrentSister = defaultSister,
-                CharacterPromptAkane = promptRepository.GetCharacterPrompt(Kotonoha.Akane),
-                CharacterPromptAoi = promptRepository.GetCharacterPrompt(Kotonoha.Aoi)
+                SystemMessageAkane = promptRepository.GetSystemMessage(Kotonoha.Akane),
+                SystemMessageAoi = promptRepository.GetSystemMessage(Kotonoha.Aoi)
             },
             chatMessageRepository,
             chatCompletionRepository,

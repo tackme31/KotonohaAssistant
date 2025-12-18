@@ -247,7 +247,12 @@
         ScrollToEnd();
 
         var forgotten = false;
-        await foreach (var item in ConversationService.TalkAsync(message, _state!))
+
+        // Create immutable snapshot
+        ConversationState currentState = _state!;
+        ConversationState? latestState = null;
+
+        await foreach (var item in ConversationService.TalkAsync(message, currentState))
         {
             var result = item.result;
             if (result is null)
@@ -255,7 +260,9 @@
                 continue;
             }
 
-            _state = item.state;
+            // Accumulate latest state
+            latestState = item.state;
+
             // 関数呼び出しがあった場合は個別に表示
             if (result.Functions is not null)
             {
@@ -291,6 +298,12 @@
         _isThinking = false;
         _isMyTurn = true;
         _talkingText = "";
+
+        if (latestState is not null)
+        {
+            _state = latestState;
+        }
+
         if (forgotten)
         {
             _messages.Clear();

@@ -42,7 +42,7 @@ public class GetWeather(IPromptRepository promptRepository, IWeatherRepository w
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, ConversationState_ state)
     {
         try
         {

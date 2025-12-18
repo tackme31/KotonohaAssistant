@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Runtime.Serialization;
+using System.Text.Json;
 using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
@@ -13,23 +14,8 @@ public class ConversationService
 {
     private const string LogPrefix = "[Conversation]";
 
-    private readonly ConversationState _state;
-    private readonly ConversationState_ _state_;
     private readonly Dictionary<string, ToolFunction> _functions;
     private readonly ChatCompletionOptions _options;
-
-    /// <summary>
-    /// 会話の状態（読み取り専用）
-    /// </summary>
-    public IReadOnlyConversationState State => _state;
-
-    public ConversationState_ State_ => _state_;
-
-    /// <summary>
-    /// 最後に保存したメッセージのインデックス（次に保存すべき位置）
-    /// </summary>
-    private int _lastSavedMessageIndex = 0;
-    private long? _currentConversationId = null;
 
     private readonly IChatMessageRepository _chatMessageRepositoriy;
     private readonly IChatCompletionRepository _chatCompletionRepository;
@@ -44,42 +30,7 @@ public class ConversationService
         ILazyModeHandler lazyModeHandler,
         ILogger logger,
         Kotonoha defaultSister = Kotonoha.Akane)
-        : this(
-            new ConversationState()
-            {
-                CurrentSister = defaultSister,
-                SystemMessageAkane = promptRepository.GetSystemMessage(Kotonoha.Akane),
-                SystemMessageAoi = promptRepository.GetSystemMessage(Kotonoha.Aoi)
-            },
-            new ConversationState_()
-            {
-                CurrentSister = defaultSister,
-                SystemMessageAkane = promptRepository.GetSystemMessage(Kotonoha.Akane),
-                SystemMessageAoi = promptRepository.GetSystemMessage(Kotonoha.Aoi)
-            },
-            chatMessageRepository,
-            chatCompletionRepository,
-            availableFunctions,
-            lazyModeHandler,
-            logger)
     {
-    }
-
-    /// <summary>
-    /// テスト用のコンストラクタ（ConversationStateを外部から注入可能）
-    /// </summary>
-    internal ConversationService(
-        ConversationState state,
-        ConversationState_ state_,
-        IChatMessageRepository chatMessageRepository,
-        IChatCompletionRepository chatCompletionRepository,
-        IList<ToolFunction> availableFunctions,
-        ILazyModeHandler lazyModeHandler,
-        ILogger logger)
-    {
-        _state = state;
-        _state_ = state_;
-
         _options = new ChatCompletionOptions
         {
             AllowParallelToolCalls = true,
@@ -90,8 +41,6 @@ public class ConversationService
         }
 
         _functions = availableFunctions.ToDictionary(f => f.GetType().Name);
-        _state.PatienceCount = 0;
-        _state.LastToolCallSister = 0;
 
         _chatMessageRepositoriy = chatMessageRepository;
         _chatCompletionRepository = chatCompletionRepository;
@@ -99,9 +48,9 @@ public class ConversationService
         _logger = logger;
     }
 
-    public IEnumerable<(Kotonoha? sister, string message)> GetAllMessages()
+    public IEnumerable<(Kotonoha? sister, string message)> GetAllMessages(ConversationState_ state)
     {
-        foreach (var message in _state.ChatMessages.Skip(InitialConversation.Count)) // CreateNewConversationAsyncで追加した生成参考用の会話をスキップ
+        foreach (var message in state.ChatMessages.Skip(InitialConversation.Count)) // CreateNewConversationAsyncで追加した生成参考用の会話をスキップ
         {
             if (!message.Content.Any())
             {
@@ -127,37 +76,40 @@ public class ConversationService
     /// 新しい会話を開始します
     /// </summary>
     /// <returns></returns>
-    private async Task<long> CreateNewConversationAsync()
+    private async Task<ConversationState_> CreateNewConversationAsync(ConversationState_ state)
     {
         _logger.LogInformation($"{LogPrefix} Creating new conversation...");
 
-        long conversationId = -1;
+        long? newConversationId = null;
         try
         {
-            conversationId = await _chatMessageRepositoriy.CreateNewConversationIdAsync();
-            _logger.LogInformation($"{LogPrefix} New conversation created: ID={conversationId}");
+            newConversationId = await _chatMessageRepositoriy.CreateNewConversationIdAsync();
+            _logger.LogInformation($"{LogPrefix} New conversation created: ID={newConversationId}");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex);
-            return -1;
+            return state with
+            {
+                ConversationId = null
+            };
         }
 
-        _state.ClearChatMessages();
-
         // 生成時の参考のためにあらかじめ会話を入れておく
-        _state.LoadInitialConversation();
+        state = state.LoadInitialConversation();
 
-        _lastSavedMessageIndex = 0;
-
-        return conversationId;
+        return state with
+        {
+            ConversationId = newConversationId,
+            LastSavedMessageIndex = 0,
+        };
     }
 
     /// <summary>
     /// 直近の会話を読み込みます
     /// </summary>
     /// <returns></returns>
-    public async Task LoadLatestConversation()
+    public async Task<ConversationState_> LoadLatestConversation(ConversationState_ state)
     {
         _logger.LogInformation($"{LogPrefix} Loading latest conversation...");
 
@@ -175,8 +127,8 @@ public class ConversationService
         if (conversationId < 0)
         {
             _logger.LogInformation($"{LogPrefix} No existing conversation found.");
-            _currentConversationId = await CreateNewConversationAsync();
-            return;
+            state = await CreateNewConversationAsync(state);
+            return state;
         }
 
         IEnumerable<ChatMessage>? messages;
@@ -188,72 +140,88 @@ public class ConversationService
         catch (Exception ex)
         {
             _logger.LogError(ex);
-            return;
+            return state;
         }
 
-        _currentConversationId = conversationId;
-        _state.LoadMessages(messages);
-        _lastSavedMessageIndex = _state.ChatMessages.Count();
+        state = state with
+        {
+            ConversationId = conversationId,
+            LastSavedMessageIndex = messages.Count()
+        };
 
         var lastSavedMessage = messages.LastOrDefault();
         if (lastSavedMessage is null)
         {
-            return;
+            return state;
         }
 
         var lastText = lastSavedMessage.Content.FirstOrDefault()?.Text ?? "";
         if (ChatResponse.TryParse(lastText, out var response) && response is not null)
         {
-            _state.CurrentSister = response.Assistant;
             _logger.LogInformation($"{LogPrefix} Current sister set to: {response.Assistant}");
+
+            return state with
+            {
+                CurrentSister = response.Assistant,
+                ChatMessages = [.. messages],
+            };
         }
         else
         {
-            _state.CurrentSister = Kotonoha.Akane;
             _logger.LogInformation($"{LogPrefix} Current sister set to default: Akane");
+
+            return state with
+            {
+                CurrentSister = Kotonoha.Akane,
+                ChatMessages = [.. messages],
+            };
         }
     }
 
-    private async Task SaveState()
+    private async Task<ConversationState_> SaveState(ConversationState_ state)
     {
-        if (_currentConversationId is null)
+        if (state.ConversationId is null)
         {
-            return;
+            return state;
         }
 
         // インデックスベースで未保存メッセージを取得
-        var unsavedMessages = _state.ChatMessages
-            .Skip(_lastSavedMessageIndex)
+        var unsavedMessages = state.ChatMessages
+            .Skip(state.LastSavedMessageIndex)
             .ToList();
 
         if (unsavedMessages.Count == 0)
         {
-            return;
+            return state;
         }
 
-        _logger.LogInformation($"{LogPrefix} Saving state: ConversationID={_currentConversationId}, UnsavedMessageCount={unsavedMessages.Count}");
+        _logger.LogInformation($"{LogPrefix} Saving state: ConversationID={state.ConversationId}, UnsavedMessageCount={unsavedMessages.Count}");
 
         try
         {
-            await _chatMessageRepositoriy.InsertChatMessagesAsync(unsavedMessages, _currentConversationId.Value);
-
-            // インデックスを更新
-            _lastSavedMessageIndex = _state.ChatMessages.Count();
+            await _chatMessageRepositoriy.InsertChatMessagesAsync(unsavedMessages, state.ConversationId.Value);
 
             _logger.LogInformation($"{LogPrefix} State saved successfully.");
+            return state with
+            {
+                // インデックスを更新
+                LastSavedMessageIndex = state.ChatMessages.Count()
+            };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex);
+
+            return state;
         }
     }
 
-    private async Task<ChatCompletion?> CompleteChatAsync(IEnumerable<ChatMessage> messages)
+    private async Task<ChatCompletion?> CompleteChatAsync(ConversationState_ state)
     {
         try
         {
             // ToolCallを要求されていない状態でTooLChatMessageを送信すると400エラーになるのでスキップ
-            var recentMessages = messages.TakeLast(20).SkipWhile(m => m is ToolChatMessage).ToList();
+            var recentMessages = state.FullChatMessages.TakeLast(20).SkipWhile(m => m is ToolChatMessage).ToList();
             return await _chatCompletionRepository.CompleteChatAsync(recentMessages, _options);
         }
         catch (Exception ex)
@@ -269,7 +237,7 @@ public class ConversationService
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
-    public async IAsyncEnumerable<ConversationResult> TalkWithKotonohaSisters(string input)
+    public async IAsyncEnumerable<(ConversationResult? result, ConversationState_ state)> TalkWithKotonohaSisters(string input, ConversationState_ state)
     {
         if (string.IsNullOrWhiteSpace(input))
         {
@@ -278,35 +246,41 @@ public class ConversationService
 
         _logger.LogInformation($"{LogPrefix} Starting conversation with input: '{input}'");
 
-        await EnsureConversationExistsAsync();
+        state = await EnsureConversationExistsAsync(state);
 
         // 姉妹切り替え
-        TrySwitchSister(input);
+        state = TrySwitchSister(input, state);
 
         // 返信を生成
-        _state.AddUserMessage(input);
-        var completion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
+        var now = DateTime.Now;
+        state = state.AddUserMessage(input, now);
+        var completion = await CompleteChatAsync(state);
         if (completion is null)
         {
             yield break;
         }
 
         // 忍耐値の処理
-        UpdatePatienceCounter(completion);
+        state = UpdatePatienceCounter(completion, state);
 
         // 怠け癖モード処理
-        var lazyResult = await _lazyModeHandler.HandleLazyModeAsync(
+        LazyModeResult lazyResult;
+        (lazyResult, state) = await _lazyModeHandler.HandleLazyModeAsync(
             completion,
-            _state,
-            () => CompleteChatAsync(_state.ChatMessagesWithSystemMessage));
+            state,
+            now,
+            CompleteChatAsync);
 
         // 怠け癖時のタスク押し付け応答を返す
         if (lazyResult.LazyResponse is not null)
         {
             // 怠けると姉妹が入れ替わるのでカウンターをリセット
-            _state.ResetPatienceCount();
+            state = state with
+            {
+                PatienceCount = 0
+            };
 
-            yield return lazyResult.LazyResponse;
+            yield return (lazyResult.LazyResponse, state);
         }
 
         // 最終的な完了結果を使用
@@ -315,66 +289,74 @@ public class ConversationService
         {
             yield break;
         }
-        _state.AddAssistantMessage(completion);
+        state = state.AddAssistantMessage(completion);
 
         // 関数の実行
         List<ConversationFunction> functions;
-        (completion, functions) = await InvokeFunctions(completion);
-
-        // フロントに生成テキストを送信
-        {
-            if (ChatResponse.TryParse(completion.Content[0].Text, out var response))
-            {
-                yield return new ConversationResult
-                {
-                    Message = response?.Text ?? string.Empty,
-                    Sister = _state.CurrentSister,
-                    Functions = functions
-                };
-            }
-            else
-            {
-                _logger.LogError($"生成結果のパースに失敗しました: {completion.Content[0].Text}");
-            }
-        }
+        (state, completion, functions) = await InvokeFunctions(completion, state);
 
         // 記憶削除時は新しい会話にする
-        await HandleMemoryDeletionAsync(functions);
+        state = await HandleMemoryDeletionAsync(functions, state);
+        state = await SaveState(state);
 
-        await SaveState();
+        // フロントに生成テキストを送信
+        if (ChatResponse.TryParse(completion.Content[0].Text, out var response))
+        {
+            var result = new ConversationResult
+            {
+                Message = response?.Text ?? string.Empty,
+                Sister = state.CurrentSister,
+                Functions = functions
+            };
+
+            yield return (
+                result,
+                state);
+        }
+        else
+        {
+            _logger.LogError($"生成結果のパースに失敗しました: {completion.Content[0].Text}");
+        }
     }
 
     /// <summary>
     /// 会話が存在しない場合は新規作成します
     /// </summary>
-    private async Task EnsureConversationExistsAsync()
+    private async Task<ConversationState_> EnsureConversationExistsAsync(ConversationState_ state)
     {
-        if (_currentConversationId is null)
+        if (state.ConversationId is null)
         {
-            _currentConversationId = await CreateNewConversationAsync();
+            return await CreateNewConversationAsync(state);
+        }
+        else
+        {
+            return state;
         }
     }
 
     /// <summary>
     /// 忍耐値を更新します
     /// </summary>
-    private void UpdatePatienceCounter(ChatCompletion completion)
+    private ConversationState_ UpdatePatienceCounter(ChatCompletion completion, ConversationState_ state)
     {
-        if (completion.FinishReason == ChatFinishReason.ToolCalls)
-        {
-            _state.RecordToolCall(_state.CurrentSister);
-        }
+        return completion.FinishReason == ChatFinishReason.ToolCalls
+            ? state.RecordToolCall()
+            : state;
     }
 
     /// <summary>
     /// 記憶削除時は新しい会話を作成します
     /// </summary>
-    private async Task HandleMemoryDeletionAsync(List<ConversationFunction> functions)
+    private async Task<ConversationState_> HandleMemoryDeletionAsync(List<ConversationFunction> functions, ConversationState_ state)
     {
         if (functions.Any(f => f.Name == nameof(ForgetMemory) && f.Result == ForgetMemory.SuccessMessage))
         {
             _logger.LogInformation($"{LogPrefix} Memory deletion detected. Creating new conversation...");
-            _currentConversationId = await CreateNewConversationAsync();
+            return await CreateNewConversationAsync(state);
+        }
+        else
+        {
+            return state;
         }
     }
 
@@ -383,7 +365,7 @@ public class ConversationService
     /// </summary>
     /// <param name="completion"></param>
     /// <returns></returns>
-    private async Task<(ChatCompletion result, List<ConversationFunction> functions)> InvokeFunctions(ChatCompletion completion)
+    private async Task<(ConversationState_ state, ChatCompletion result, List<ConversationFunction> functions)> InvokeFunctions(ChatCompletion completion, ConversationState_ state)
     {
         var invokedFunctions = new List<ConversationFunction>();
         while (completion.FinishReason == ChatFinishReason.ToolCalls)
@@ -396,19 +378,19 @@ public class ConversationService
                 if (!_functions.TryGetValue(toolCall.FunctionName, out var function) || function is null)
                 {
                     _logger.LogWarning($"{LogPrefix} Function '{toolCall.FunctionName}' does not exist.");
-                    _state.AddToolMessage(toolCall.Id, $"Function '{toolCall.FunctionName} does not exist.'");
+                    state = state.AddToolMessage(toolCall.Id, $"Function '{toolCall.FunctionName} does not exist.'");
                     continue;
                 }
 
                 if (!function.TryParseArguments(doc, out var arguments))
                 {
                     _logger.LogWarning($"{LogPrefix} Failed to parse arguments of '{toolCall.FunctionName}'.");
-                    _state.AddToolMessage(toolCall.Id, $"Failed to parse arguments of '{toolCall.FunctionName}'.");
+                    state = state.AddToolMessage(toolCall.Id, $"Failed to parse arguments of '{toolCall.FunctionName}'.");
                     continue;
                 }
 
                 _logger.LogInformation($"{LogPrefix} Executing function: {toolCall.FunctionName}");
-                var result = await function.Invoke(arguments, _state);
+                var result = await function.Invoke(arguments, state);
                 invokedFunctions.Add(new ConversationFunction
                 {
                     Name = toolCall.FunctionName,
@@ -416,20 +398,20 @@ public class ConversationService
                     Result = result
                 });
 
-                _state.AddToolMessage(toolCall.Id, result);
+                state = state.AddToolMessage(toolCall.Id, result);
             }
 
-            var nextCompletion = await CompleteChatAsync(_state.ChatMessagesWithSystemMessage);
+            var nextCompletion = await CompleteChatAsync(state);
             if (nextCompletion is null)
             {
                 continue;
             }
 
             completion = nextCompletion;
-            _state.AddAssistantMessage(completion);
+            state = state.AddAssistantMessage(completion);
         }
 
-        return (completion, invokedFunctions);
+        return (state, completion, invokedFunctions);
     }
 
     /// <summary>
@@ -437,17 +419,19 @@ public class ConversationService
     /// </summary>
     /// <param name="userInput">ユーザーの入力テキスト</param>
     /// <returns>姉妹が切り替わった場合はtrue</returns>
-    public bool TrySwitchSister(string userInput)
+    public ConversationState_ TrySwitchSister(string userInput, ConversationState_ state)
     {
         var nextSister = GuessTargetSister(userInput);
-        if (nextSister == null || nextSister == _state.CurrentSister)
+        if (nextSister == null || nextSister == state.CurrentSister)
         {
-            return false;
+            return state;
         }
 
-        _logger.LogInformation($"{LogPrefix} Sister switch detected: {_state.CurrentSister} -> {nextSister.Value}");
-        _state.SwitchToSister(nextSister.Value);
-        return true;
+        _logger.LogInformation($"{LogPrefix} Sister switch detected: {state.CurrentSister} -> {nextSister.Value}");
+        return state with
+        {
+            CurrentSister = nextSister.Value
+        };
     }
 
     /// <summary>

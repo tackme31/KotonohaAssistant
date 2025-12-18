@@ -40,7 +40,7 @@ public abstract class ToolFunction(ILogger logger)
     /// <param name="arguments"></param>
     /// <param name="state"></param>
     /// <returns></returns>
-    public abstract Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state);
+    public abstract Task<string> Invoke(IDictionary<string, object> arguments, ConversationState_ state);
 
     public ChatTool CreateChatTool()
     {

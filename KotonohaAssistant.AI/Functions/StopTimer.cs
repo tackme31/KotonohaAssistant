@@ -26,7 +26,7 @@ public class StopTimer(IPromptRepository promptRepository, IAlarmClient alarmCli
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, ConversationState_ state)
     {
         try
         {

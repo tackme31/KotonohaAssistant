@@ -41,7 +41,7 @@ public class StartTimer(IPromptRepository promptRepository, IAlarmClient alarmCl
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, ConversationState_ state)
     {
         var seconds = (int)arguments["seconds"];
 

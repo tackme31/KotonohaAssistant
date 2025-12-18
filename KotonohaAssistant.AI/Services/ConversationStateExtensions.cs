@@ -1,6 +1,7 @@
 ﻿using System.Collections.Immutable;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.Core;
+using KotonohaAssistant.Core.Extensions;
 using KotonohaAssistant.Core.Models;
 using OpenAI.Chat;
 
@@ -126,13 +127,21 @@ public static class ConversationStateExtensions
         };
     }
 
-    public static ConversationState_ RecordToolCall(this ConversationState_ state, Kotonoha sister)
+    public static ConversationState_ SwitchToAnotherSister(this ConversationState_ state)
     {
-        var patienceCount = state.LastToolCallSister == sister ? state.PatienceCount + 1 : 1;
+        return state with
+        {
+            CurrentSister = state.CurrentSister.Switch()
+        };
+    }
+
+    public static ConversationState_ RecordToolCall(this ConversationState_ state)
+    {
+        var patienceCount = state.LastToolCallSister == state.CurrentSister ? state.PatienceCount + 1 : 1;
         return state with
         {
             PatienceCount = patienceCount,
-            LastToolCallSister = sister
+            LastToolCallSister = state.CurrentSister
         };
     }
 

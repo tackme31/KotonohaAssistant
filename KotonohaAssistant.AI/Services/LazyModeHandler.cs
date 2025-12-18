@@ -40,6 +40,12 @@ public interface ILazyModeHandler
         ChatCompletion completion,
         ConversationState state,
         Func<Task<ChatCompletion?>> regenerateCompletionAsync);
+
+    Task<(LazyModeResult result, ConversationState_ state)> HandleLazyModeAsync(
+        ChatCompletion completion,
+        ConversationState_ state,
+        DateTime dateTime,
+        Func<ConversationState_, Task<ChatCompletion?>> regenerateCompletionAsync);
 }
 
 public class LazyModeHandler : ILazyModeHandler
@@ -150,9 +156,144 @@ public class LazyModeHandler : ILazyModeHandler
     }
 
     /// <summary>
+    /// 怠け癖モードを処理します
+    /// </summary>
+    public async Task<(LazyModeResult result, ConversationState_ state)> HandleLazyModeAsync(
+        ChatCompletion completion,
+        ConversationState_ state,
+        DateTime dateTime,
+        Func<ConversationState_, Task<ChatCompletion?>> regenerateCompletionAsync)
+    {
+        // 怠け癖判定
+        if (!ShouldBeLazy(completion, state))
+        {
+            return (
+                new LazyModeResult
+                {
+                    FinalCompletion = completion,
+                    WasLazy = false,
+                    LazyResponse = null
+                },
+                state);
+        }
+
+        _logger.LogInformation($"{LogPrefix} Lazy mode activated for {state.CurrentSister}.");
+
+        // 怠け癖モード開始
+        state = state.AddBeginLazyModeInstruction(dateTime);
+
+        // 再度返信を生成（タスクを押し付ける）
+        _logger.LogInformation($"{LogPrefix} Generating refusal response...");
+        var lazyCompletion = await regenerateCompletionAsync(state);
+
+        // それでも関数呼び出しされることがあるのでチェック
+        if (lazyCompletion is null || lazyCompletion.FinishReason == ChatFinishReason.ToolCalls)
+        {
+            _logger.LogWarning($"{LogPrefix} Lazy mode cancelled: still received tool calls.");
+            state = state.AddInstruction(Prompts.Instruction.CancelLazyMode, dateTime);
+            return (
+                new LazyModeResult
+                {
+                    FinalCompletion = completion,
+                    WasLazy = false,
+                    LazyResponse = null
+                },
+                state);
+        }
+
+        // 実際に怠けた場合の処理
+        // 怠け癖応答を保存
+        state = state.AddAssistantMessage(lazyCompletion);
+
+        // 怠け癖応答をフロントに送信するため保存
+        ConversationResult? lazyResponse = null;
+        if (ChatResponse.TryParse(lazyCompletion.Content[0].Text, out var response))
+        {
+            lazyResponse = new ConversationResult
+            {
+                Message = response?.Text ?? string.Empty,
+                Sister = response?.Assistant ?? state.CurrentSister,
+                Functions = []
+            };
+        }
+
+        // 姉妹を切り替えて引き受けるモード
+        var previousSister = state.CurrentSister;
+        state = state.SwitchToAnotherSister();
+        state = state.AddEndLazyModeInstruction(dateTime);
+
+        _logger.LogInformation($"{LogPrefix} Switching sister: {previousSister} -> {state.CurrentSister}");
+
+        // 再度生成（引き受ける）
+        _logger.LogInformation($"{LogPrefix} Generating acceptance response...");
+        var acceptCompletion = await regenerateCompletionAsync(state);
+        if (acceptCompletion is null)
+        {
+            _logger.LogWarning($"{LogPrefix} Failed to generate acceptance response.");
+            // 生成失敗時は元の完了を返す
+            return (
+                new LazyModeResult
+                {
+                    FinalCompletion = completion,
+                    WasLazy = false,
+                    LazyResponse = null
+                },
+                state);
+        }
+
+        _logger.LogInformation($"{LogPrefix} Lazy mode completed successfully.");
+
+        return (
+            new LazyModeResult
+            {
+                FinalCompletion = acceptCompletion,
+                WasLazy = true,
+                LazyResponse = lazyResponse
+            },
+            state);
+    }
+
+    /// <summary>
     /// 怠け癖を発動すべきかどうかを判定します
     /// </summary>
     private bool ShouldBeLazy(ChatCompletion completionValue, IReadOnlyConversationState state)
+    {
+        // 関数呼び出し以外は怠けない
+        if (completionValue.FinishReason != ChatFinishReason.ToolCalls)
+        {
+            return false;
+        }
+
+        // 怠け癖対象外の関数が含まれていたら怠けない
+        var targetFunctions = completionValue.ToolCalls
+            .Where(toolCall => _functions.ContainsKey(toolCall.FunctionName))
+            .Select(toolCall => _functions[toolCall.FunctionName]);
+        if (targetFunctions.Any(func => !func.CanBeLazy))
+        {
+            _logger.LogInformation($"{LogPrefix} Lazy mode skipped: function cannot be lazy.");
+            return false;
+        }
+
+        // 4回以上同じ方にお願いすると怠ける
+        if (state.PatienceCount > 3)
+        {
+            _logger.LogInformation($"{LogPrefix} Lazy mode triggered: patience count exceeded ({state.PatienceCount}).");
+            return true;
+        }
+
+        // 1/10の確率で怠け癖発動
+        var lazy = _randomGenerator.NextDouble() < 1d / 10d;
+        if (lazy)
+        {
+            _logger.LogInformation($"{LogPrefix} Lazy mode triggered: random probability.");
+        }
+        return lazy;
+    }
+
+    /// <summary>
+    /// 怠け癖を発動すべきかどうかを判定します
+    /// </summary>
+    private bool ShouldBeLazy(ChatCompletion completionValue, ConversationState_ state)
     {
         // 関数呼び出し以外は怠けない
         if (completionValue.FinishReason != ChatFinishReason.ToolCalls)

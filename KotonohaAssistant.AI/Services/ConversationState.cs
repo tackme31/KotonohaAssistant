@@ -13,6 +13,10 @@ public record ConversationState_
 
     public required string SystemMessageAoi { get; init; }
 
+    public long? ConversationId { get; set; }
+
+    public int LastSavedMessageIndex { get; set; }
+
     public int PatienceCount { get; set; }
 
     public Kotonoha LastToolCallSister { get; set; }

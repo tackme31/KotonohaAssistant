@@ -61,7 +61,7 @@ public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEv
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override async Task<string> Invoke(IDictionary<string, object> arguments, ConversationState_ state)
     {
         var title = (string)arguments["title"];
         var date = (DateTime)arguments["date"];

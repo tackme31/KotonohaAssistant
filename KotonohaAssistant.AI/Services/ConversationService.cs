@@ -21,6 +21,7 @@ public class ConversationService
     private readonly IChatCompletionRepository _chatCompletionRepository;
     private readonly IPromptRepository _promptRepository;
     private readonly ILazyModeHandler _lazyModeHandler;
+    private readonly IDateTimeProvider _dateTimeProvider;
     private readonly ILogger _logger;
 
     private ConversationState DefaultState => new ConversationState
@@ -40,6 +41,7 @@ public class ConversationService
         IChatCompletionRepository chatCompletionRepository,
         IList<ToolFunction> availableFunctions,
         ILazyModeHandler lazyModeHandler,
+        IDateTimeProvider dateTimeProvider,
         ILogger logger)
     {
         _options = new ChatCompletionOptions
@@ -57,6 +59,7 @@ public class ConversationService
         _chatCompletionRepository = chatCompletionRepository;
         _promptRepository = promptRepository;
         _lazyModeHandler = lazyModeHandler;
+        _dateTimeProvider = dateTimeProvider;
         _logger = logger;
     }
 
@@ -109,7 +112,7 @@ public class ConversationService
         }
 
         // 生成時の参考のためにあらかじめ会話を入れておく
-        state = state.LoadInitialConversation();
+        state = state.LoadInitialConversation(_dateTimeProvider.Now);
 
         return state with
         {
@@ -264,7 +267,7 @@ public class ConversationService
         state = await EnsureConversationExistsAsync(state);
 
         // 姉妹切り替え
-        var now = DateTime.Now;
+        var now = _dateTimeProvider.Now;
         state = TrySwitchSister(input, now, state);
 
         // 返信を生成

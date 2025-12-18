@@ -86,6 +86,7 @@ public static class ServiceCollectionExtensions
                     promptRepository,
                     logger,
                     lineRepository,
+                    new DateTimeProvider(),
                     LineUserId ?? string.Empty);
 
                 inactivityService.Start(TimeSpan.FromDays(InactivityNotifyIntervalDays), InactivityNotifyTime);
@@ -119,6 +120,7 @@ public static class ServiceCollectionExtensions
                 chatCompletionRepository,
                 functions,
                 lazyModeHandler,
+                new DateTimeProvider(),
                 logger);
         });
     }

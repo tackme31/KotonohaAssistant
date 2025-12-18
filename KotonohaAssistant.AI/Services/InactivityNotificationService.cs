@@ -24,6 +24,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
     private readonly IPromptRepository _promptRepository;
     private readonly ILogger _logger;
     private readonly ILineMessagingRepository _lineMessagingRepository;
+    private readonly IDateTimeProvider _dateTimeProvider;
     private readonly string _lineUserId;
     private Timer? _timer;
 
@@ -34,6 +35,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         IPromptRepository promptRepository,
         ILogger logger,
         ILineMessagingRepository lineMessagingRepository,
+        IDateTimeProvider dateTimeProvider,
         string lineUserId)
     {
         _chatMessageRepository = chatMessageRepository;
@@ -41,6 +43,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         _promptRepository = promptRepository;
         _logger = logger;
         _lineMessagingRepository = lineMessagingRepository;
+        _dateTimeProvider = dateTimeProvider;
         _lineUserId = lineUserId;
 
         _options = new()
@@ -61,7 +64,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
 
     private void ScheduleNextRun(TimeSpan notifyInterval, TimeSpan notifyTime)
     {
-        var now = DateTime.Now;
+        var now = _dateTimeProvider.Now;
         var todayTarget = now.Date.Add(notifyTime);
 
         DateTime next;
@@ -115,7 +118,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         }
 
         var (createdAt, sister, convId) = lastActivity.Value;
-        var now = DateTime.Now;
+        var now = _dateTimeProvider.Now;
         var elapsed = now - createdAt;
 
         _logger.LogInformation($"{LogPrefix} Last active: {createdAt}, elapsed: {elapsed}");
@@ -168,7 +171,7 @@ public class InactivityNotificationService : IInactivityNotificationService, IDi
         };
 
         // ToolCallを要求されていない状態でTooLChatMessageを送信すると400エラーになるのでスキップ
-        var now = DateTime.Now;
+        var now = _dateTimeProvider.Now;
         var recentMessages = allChatMessages.OfType<ChatMessage>().TakeLast(20).SkipWhile(m => m is ToolChatMessage).ToList();
         state = state with
         {

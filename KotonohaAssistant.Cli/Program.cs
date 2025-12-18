@@ -92,6 +92,7 @@ if (enableInactivityNotification)
         promptRepository,
         logger,
         lineRepository,
+        new DateTimeProvider(),
         lineUserId ?? string.Empty);
     inactivityNotificationService.Start(TimeSpan.FromDays(inactivityNotifyIntervalDays), inactivityNotifyTime);
     logger.LogInformation($"[Inactivity] InactivityNotificationService started. Interval: {inactivityNotifyIntervalDays} days, Time: {inactivityNotifyTime}");
@@ -107,6 +108,7 @@ try
         chatCompletionRepository,
         functions,
         lazyModeHandler,
+        new DateTimeProvider(),
         logger);
 
     var state = await service.LoadLatestConversation();

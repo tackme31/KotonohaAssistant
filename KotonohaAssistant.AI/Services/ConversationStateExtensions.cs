@@ -12,14 +12,14 @@ public static class ConversationStateExtensions
     private const string TodayFormat = "yyyy年M月d日 (dddd)";
     private const string CurrentTimeFormat = "H時m分";
 
-    public static ConversationState LoadInitialConversation(this ConversationState state)
+    public static ConversationState LoadInitialConversation(this ConversationState state, DateTime dateTime)
     {
         var messages = new List<ChatMessage>();
         foreach (var m in InitialConversation.Messages)
         {
             if (m.Request is { InputType: not null, Text: not null })
             {
-                var message = CreateUserMessage(m.Request.InputType.Value, m.Request.Text, DateTime.Now);
+                var message = CreateUserMessage(m.Request.InputType.Value, m.Request.Text, dateTime);
                 messages.Add(message);
             }
 

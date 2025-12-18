@@ -323,8 +323,7 @@ The AI uses structured JSON for all inputs/outputs (`SystemMessage.cs`):
 ```json
 {
   "Assistant": "Akane|Aoi",
-  "Text": "茜ちゃんの返答やで",
-  "Emotion": "Calm|Joy|Anger|Sadness"
+  "Text": "茜ちゃんの返答やで"
 }
 ```
 

@@ -189,6 +189,7 @@ The system uses a **multi-process architecture** with Named Pipe IPC:
 |---------|-----------|---------|
 | **KotonohaAssistant\.Core** | .NET 9.0 | Shared models, IPC clients (VoiceClient/AlarmClient), utilities |
 | **KotonohaAssistant\.AI** | .NET 9.0 | OpenAI integration, conversation logic, function calling |
+| **KotonohaAssistant\.AI\.Tests** | .NET 9.0 | Unit tests for AI services |
 | **KotonohaAssistant\.Cli** | .NET 9.0 | Console REPL interface |
 | **KotonohaAssistant\.Vui** | .NET 9.0 MAUI+Blazor | Voice-activated UI with speech recognition |
 | **KotonohaAssistant\.VoiceServer** | .NET Framework 4.8.1 | Named Pipe server wrapping A.I. VOICE Editor API |
@@ -201,60 +202,90 @@ The A.I. VOICE Editor API is **only available for .NET Framework**. VoiceServer 
 
 ## Key Architectural Patterns
 
-### 1. Dual-Personality Conversation System
+### 1. Stateless Dual-Personality Conversation System
 
-`ConversationService` (in `KotonohaAssistant.AI/Services/ConversationService.cs`) manages conversations with two distinct AI personalities sharing one conversation context:
+`ConversationService` is **stateless** and manages conversations with two distinct AI personalities sharing one conversation context:
 
-- **ConversationState** tracks:
-  - `CurrentSister` - Active character (Akane or Aoi)
-  - `PatienceCount` - Consecutive requests to same sister (triggers laziness)
-  - `ChatMessages` - OpenAI-format conversation history
+**Architecture**:
+- `ConversationService` does NOT hold internal state
+- Calling code (CLI/VUI) manages conversation state
+- `TalkAsync` signature: `IAsyncEnumerable<(ConversationState state, ConversationResult? result)> TalkAsync(string input, ConversationState state)`
+  - Receives current state as input
+  - Returns updated state with each result
+  - Calling code must preserve the returned state for next call
 
-- **System prompts** are dynamically injected per request based on `CurrentSister`, not stored in history
+**ConversationState** (immutable record):
+- `CurrentSister` - Active character (Akane or Aoi)
+- `PatienceCount` - Consecutive requests to same sister (triggers laziness)
+- `ChatMessages` - OpenAI-format conversation history (ImmutableArray)
+- `SystemMessageAkane` / `SystemMessageAoi` - Character-specific prompts
+- `FullChatMessages` - Property that dynamically prepends system message based on `CurrentSister`
 
-- **Character switching** happens via:
-  - Automatic: Detecting "茜ちゃん" or "葵ちゃん" in user input
-  - Laziness: Sister refuses task and delegates to the other
+**State Management**:
+- State updates use immutable patterns: `state = state with { Property = newValue }`
+- Helper methods in `ConversationStateExtensions` create new states:
+  - `AddUserMessage()` / `AddAssistantMessage()` / `AddToolMessage()`
+  - `SwitchToSister()` / `SwitchToAnotherSister()`
+  - `AddBeginLazyModeInstruction()` / `AddEndLazyModeInstruction()`
+
+**System prompts** are dynamically injected per request based on `CurrentSister`, not stored in chat history
+
+**Character switching** happens via:
+- Automatic: Detecting "茜ちゃん" or "葵ちゃん" in user input
+- Laziness: Sister refuses task and delegates to the other
 
 ### 2. "Laziness" Feature
 
-Sisters occasionally refuse tasks and pass them to each other (`ConversationService.cs:441-467`):
+Sisters occasionally refuse tasks and pass them to each other. This logic is handled by `LazyModeHandler` class:
 
 **Trigger Conditions**:
 - 10% random probability on function calls
-- After 4+ consecutive function calls to same sister
+- After 4+ consecutive function calls to same sister (`PatienceCount` threshold)
 - Only for functions with `CanBeLazy = true`
 
 **Never lazy for**: StopAlarm, StartTimer, StopTimer, ForgetMemory
 
 **Implementation Flow**:
-1. `ShouldBeLazy()` returns true
-2. Add instruction to current sister to refuse task
-3. Generate refusal response (e.g., "葵、任せたで")
-4. Switch to other sister
-5. Add instruction to accept task
-6. Generate acceptance response and execute function
+1. `LazyModeHandler.HandleLazyModeAsync()` receives completion and state
+2. Checks if laziness should trigger
+3. If lazy:
+   - Adds `BeginLazyModeInstruction` to current sister
+   - Generates refusal response (e.g., "葵、任せたで")
+   - Switches to other sister
+   - Adds `EndLazyModeInstruction` to accept task
+   - Re-generates completion with new sister
+4. Returns `LazyModeResult` containing:
+   - `LazyResponse` - Refusal message (if lazy mode triggered)
+   - `FinalCompletion` - Final completion to use
+5. Calling code resets `PatienceCount` if laziness occurred
 
 ### 3. Function Calling Architecture
 
 Base class: `ToolFunction` (in `KotonohaAssistant.AI/Functions/ToolFunction.cs`)
 
 **Available Functions**:
-- `CallMaster` - Set alarm with custom AI-generated voice message
+- `MakeTimeBasedPromise` - Set alarm with custom AI-generated voice message
 - `StopAlarm` - Stop playing alarm
 - `StartTimer` / `StopTimer` - Timer management
 - `ForgetMemory` - Clear conversation history
 - `GetCalendarEvent` / `CreateCalendarEvent` - Google Calendar (optional)
 - `GetWeather` - OpenWeatherMap weather data (optional)
 
-**Function Execution Loop** (`ConversationService.cs:333-381`):
+**Function Execution Loop** (in `ConversationService.TalkAsync`):
 ```
-User Input → OpenAI Chat Completion
-           → If tool_calls exist:
-              ├─ Check ShouldBeLazy()
-              │  ├─ Yes: Refuse → Switch Sister → Accept → Execute
-              │  └─ No: Execute directly
-              └─ Loop until no more tool_calls
+User Input → Update State (add user message)
+           → OpenAI Chat Completion
+           → Update Patience Counter
+           → LazyModeHandler.HandleLazyModeAsync()
+              ├─ Check if should be lazy
+              │  ├─ Yes: Refuse → Switch Sister → Accept → Re-generate
+              │  └─ No: Return original completion
+           → If lazy: Yield refusal response, reset patience
+           → Add assistant message to state
+           → InvokeFunctions() - Execute tool calls
+           → Handle memory deletion (if ForgetMemory called)
+           → Save state to database
+           → Yield final result
 ```
 
 ### 4. Named Pipe Communication
@@ -330,11 +361,15 @@ Defined in `SystemMessage.cs`:
 
 ### Character Switching Logic
 
-When modifying `ConversationService.cs`:
+When modifying conversation state handling:
+- **ConversationService is stateless** - always work with `ConversationState` parameter
 - Sister changes must add an `Instruction` message to conversation history
-- Use `Instruction.SwitchSisterTo()` for explicit switches
-- Update `_state.CurrentSister` immediately before adding instruction
-- Reset `PatienceCount` only after function execution
+- Use `ConversationStateExtensions.SwitchToSister()` or `SwitchToAnotherSister()`:
+  - These methods return a new state with updated `CurrentSister`
+  - They automatically add appropriate instruction messages
+- Always use immutable update pattern: `state = state.SwitchToSister(Kotonoha.Akane)`
+- Reset `PatienceCount` only after lazy mode delegation
+- Calling code (CLI/VUI) must preserve returned state for next interaction
 
 ### Adding New Functions
 
@@ -391,7 +426,32 @@ Configuration is loaded from `.env` file (not committed to git):
 
 ## Testing
 
-Run individual functions by simulating conversations through the CLI app:
+### Unit Tests
+
+Run unit tests for AI services:
+
+```bash
+# Run all tests
+dotnet test KotonohaAssistant.AI.Tests/KotonohaAssistant.AI.Tests.csproj
+
+# Run specific test class
+dotnet test --filter FullyQualifiedName~ConversationStateExtensionsTests
+```
+
+**Test Coverage**:
+- `ConversationStateExtensionsTests` - Tests for state manipulation methods
+  - Sister switching with instruction messages
+  - Adding user/assistant/tool messages
+  - Lazy mode instruction handling
+  - Message creation and validation
+
+**Testing Utilities**:
+- `IDateTimeProvider` interface allows injecting fixed timestamps in tests
+- Immutable `ConversationState` makes testing pure functions straightforward
+
+### Integration Testing
+
+Test features through the CLI app:
 
 ```bash
 dotnet run --project KotonohaAssistant.Cli/KotonohaAssistant.Cli.csproj
@@ -418,6 +478,8 @@ When debugging in Visual Studio:
 
 1. **VoiceServer not responding**: Ensure A.I. VOICE Editor is running and DLLs are copied
 2. **Function calls looping**: Check `Invoke()` returns valid JSON and doesn't throw
-3. **Sister not switching**: Verify instruction messages are added before generating response
+3. **Sister not switching**: Verify instruction messages are added via `ConversationStateExtensions` methods
 4. **Laziness not working**: Confirm function has `CanBeLazy = true` and patience counter > 3
 5. **Database errors**: Ensure `%LocalAppData%/Kotonoha Assistant/` directory exists
+6. **State not persisting**: In CLI/VUI, ensure returned `state` from `TalkAsync` is saved for next call
+7. **State corruption in VUI**: Create immutable snapshot before async iteration to prevent mid-loop state changes

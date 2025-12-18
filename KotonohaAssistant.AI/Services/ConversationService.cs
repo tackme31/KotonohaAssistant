@@ -255,6 +255,7 @@ public class ConversationService
     {
         if (string.IsNullOrWhiteSpace(input))
         {
+            yield return (state, null);
             yield break;
         }
 
@@ -271,6 +272,7 @@ public class ConversationService
         var completion = await CompleteChatAsync(state);
         if (completion is null)
         {
+            yield return (state, null);
             yield break;
         }
 
@@ -301,6 +303,7 @@ public class ConversationService
         completion = lazyResult.FinalCompletion;
         if (completion is null)
         {
+            yield return (state, null);
             yield break;
         }
         state = state.AddAssistantMessage(completion);
@@ -328,6 +331,8 @@ public class ConversationService
         else
         {
             _logger.LogError($"生成結果のパースに失敗しました: {completion.Content[0].Text}");
+
+            yield return (state, null);
         }
     }
 

@@ -10,9 +10,4 @@ public static class FluentAssertionsExtensions
     {
         should.HaveProperty(propertyName).Which.ToString().Should().Be(expectedValue);
     }
-
-    public static void HavePropertyWithSubstringValue(this JsonNodeAssertions<JsonNode> should, string propertyName, string expectedValue)
-    {
-        should.HaveProperty(propertyName).Which.ToString().Should().Contain(expectedValue);
-    }
 }

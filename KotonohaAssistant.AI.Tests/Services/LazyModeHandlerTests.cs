@@ -1,11 +1,13 @@
 ﻿using FluentAssertions;
 using KotonohaAssistant.AI.Functions;
+using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
 using System.Collections.Immutable;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace KotonohaAssistant.AI.Tests.Services;
 
@@ -442,18 +444,24 @@ public class LazyModeHandlerTests
         // 1. CurrentSister = Akane の状態で怠け癖発動
         state.CurrentSister.Should().Be(Kotonoha.Akane);
 
-        // 2. BeginLazyMode instruction に「葵に押し付けてください」が含まれる
+        // 2. BeginLazyModeAkane instructionが挿入される
         var firstCallState = capturedStates[0];
         var beginLazyMessage = firstCallState.ChatMessages[0];
-        beginLazyMessage.Content[0].Text.Should().Contain("葵に押し付けてください");
+        var beginLazyJson = JsonNode.Parse(beginLazyMessage.Content[0].Text);
+        beginLazyJson.Should().NotBeNull();
+        beginLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        beginLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
 
         // 3. 姉妹が Aoi に切り替わる
         var secondCallState = capturedStates[1];
         secondCallState.CurrentSister.Should().Be(Kotonoha.Aoi);
 
-        // 4. EndLazyMode instruction に「妹の葵があなたにタスクを押しつけました」が含まれる
+        // 4. EndLazyModeAoi instructionが挿入される
         var endLazyMessage = secondCallState.ChatMessages[2];
-        endLazyMessage.Content[0].Text.Should().Contain("妹の葵があなたにタスクを押しつけました");
+        var endLazyJson = JsonNode.Parse(endLazyMessage.Content[0].Text);
+        endLazyJson.Should().NotBeNull();
+        endLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        endLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAoi);
 
         // 5. 怠け癖が正常に完了
         result.WasLazy.Should().BeTrue();
@@ -497,18 +505,24 @@ public class LazyModeHandlerTests
         // 1. CurrentSister = Aoi の状態で怠け癖発動
         state.CurrentSister.Should().Be(Kotonoha.Aoi);
 
-        // 2. BeginLazyMode instruction に「茜に押し付けてください」が含まれる
+        // 2. BeginLazyModeAoi instructionが挿入される
         var firstCallState = capturedStates[0];
         var beginLazyMessage = firstCallState.ChatMessages[0];
-        beginLazyMessage.Content[0].Text.Should().Contain("茜に押し付けてください");
+        var beginLazyJson = JsonNode.Parse(beginLazyMessage.Content[0].Text);
+        beginLazyJson.Should().NotBeNull();
+        beginLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        beginLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAoi);
 
         // 3. 姉妹が Akane に切り替わる
         var secondCallState = capturedStates[1];
         secondCallState.CurrentSister.Should().Be(Kotonoha.Akane);
 
-        // 4. EndLazyMode instruction に「姉の茜があなたにタスクを押しつけました」が含まれる
+        // 4. EndLazyModeAkane instructionが挿入される
         var endLazyMessage = secondCallState.ChatMessages[2];
-        endLazyMessage.Content[0].Text.Should().Contain("姉の茜があなたにタスクを押しつけました");
+        var endLazyJson = JsonNode.Parse(endLazyMessage.Content[0].Text);
+        endLazyJson.Should().NotBeNull();
+        endLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        endLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAkane);
 
         // 5. 怠け癖が正常に完了
         result.WasLazy.Should().BeTrue();

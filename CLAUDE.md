@@ -175,6 +175,7 @@ The system uses a **multi-process architecture** with Named Pipe IPC:
 │ - A.I. VOICE API    │  │ - Timer/Alarm UI     │
 │ - TTS synthesis     │  │ - SQLite storage     │
 │ - Audio playback    │  │ - Audio playback     │
+│ - Speaker switching │  │                      │
 └─────────────────────┘  └──────────────────────┘
 ```
 
@@ -354,6 +355,27 @@ VoiceServer requires these DLLs copied from A.I. VOICE installation:
 
 Located in: `%PROGRAMFILES%/AI/AIVoice/AIVoiceEditor/`
 
+### VoiceServer Speaker Switching
+
+VoiceServer supports switching the default audio output device per character:
+
+**Implementation** (`Program.cs:318-346`):
+- Uses `CoreAudio` library (`MMDeviceEnumerator`, `MMDevice`)
+- Switches default audio endpoint before TTS playback
+- Resets to original default device after playback (in `finally` block)
+- Graceful cleanup on console exit (Ctrl+C or window close)
+
+**Lifecycle**:
+1. `InitializeSpeakerSwitching()` - Load device references at startup
+2. `SwitchSpeakerDeviceTo()` - Set system default before each speech
+3. `ResetSpeakerDeviceToDefault()` - Restore original default after speech
+4. `OnConsoleExit/OnProcessExit` - Cleanup handlers ensure device reset on termination
+
+**Error Handling**:
+- If devices are not configured or not found, speaker switching is disabled
+- Device list is displayed to help users configure `.env` correctly
+- MMDeviceEnumerator is NOT IDisposable (no need for using statement)
+
 ### Environment Variables
 
 Configuration is loaded from `.env` file (not committed to git):
@@ -363,7 +385,9 @@ Configuration is loaded from `.env` file (not committed to git):
 - `GOOGLE_API_KEY` - Path to Google credentials JSON
 - `CALENDAR_ID` - Google Calendar ID
 - `OWM_API_KEY`, `OWM_LAT`, `OWM_LON` - OpenWeatherMap config
-- `ENABLE_CHANNEL_SWITCHING` - Stereo audio (Akane=Left, Aoi=Right)
+- `ENABLE_SPEAKER_SWITCHING` - Enable switching audio output device per character
+- `AKANE_SPEAKER_DEVICE_ID` - Audio device ID for Akane
+- `AOI_SPEAKER_DEVICE_ID` - Audio device ID for Aoi
 
 ## Testing
 

@@ -182,14 +182,24 @@ INACTIVITY_NOTIFY_TIME=通知チェックの時刻 (HH:mm)
 ```
 
 
-### ステレオ分離再生（右/左チャンネル分け）
+### スピーカーデバイス切り替え
 
-`.env` の `ENABLE_CHANNEL_SWITCHING = true` で
-茜と葵の音声をスピーカーの左右に分けて再生できます。
+`.env` の `ENABLE_SPEAKER_SWITCHING = true` で
+茜と葵の音声を別々のスピーカーデバイスで再生できます。
 
-> ⚠️ 注意
-> 再生中にプログラムを終了すると、一方のチャンネルが無音のままになる可能性があります。
+設定例：
+```
+ENABLE_SPEAKER_SWITCHING=true
+AKANE_SPEAKER_DEVICE_ID=スピーカー 1
+AOI_SPEAKER_DEVICE_ID=スピーカー 2
+```
 
+デバイスIDの確認方法：
+PowerShellで以下のコマンドを実行してください。`InstanceId`がデバイスIDです。
+
+```ps1
+> Get-PnpDevice -Class AudioEndpoint | ? InstanceId -Like "*{0.0.0.00000000}*" | select FriendlyName, InstanceId
+```
 
 ## 作者
 

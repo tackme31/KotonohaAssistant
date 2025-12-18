@@ -108,6 +108,21 @@ public static class ConversationStateExtensions
         };
     }
 
+    public static ConversationState SwitchToSister(this ConversationState state, Kotonoha sister, DateTime dateTime)
+    {
+        if (state.CurrentSister == sister)
+            return state;
+
+        var instruction = Instruction.SwitchSisterTo(sister);
+        return state
+            .AddInstruction(instruction, dateTime)
+            with
+        {
+            CurrentSister = sister,
+            PatienceCount = 0
+        };
+    }
+
     public static ConversationState RecordToolCall(this ConversationState state)
     {
         var patienceCount = state.LastToolCallSister == state.CurrentSister ? state.PatienceCount + 1 : 1;

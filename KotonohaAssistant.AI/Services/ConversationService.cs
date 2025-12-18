@@ -263,10 +263,10 @@ public class ConversationService
         state = await EnsureConversationExistsAsync(state);
 
         // 姉妹切り替え
-        state = TrySwitchSister(input, state);
+        var now = DateTime.Now;
+        state = TrySwitchSister(input, now, state);
 
         // 返信を生成
-        var now = DateTime.Now;
         state = state.AddUserMessage(input, now);
         var completion = await CompleteChatAsync(state);
         if (completion is null)
@@ -431,7 +431,7 @@ public class ConversationService
     /// </summary>
     /// <param name="userInput">ユーザーの入力テキスト</param>
     /// <returns>姉妹が切り替わった場合はtrue</returns>
-    public ConversationState TrySwitchSister(string userInput, ConversationState state)
+    public ConversationState TrySwitchSister(string userInput, DateTime dateTime, ConversationState state)
     {
         var nextSister = GuessTargetSister(userInput);
         if (nextSister == null || nextSister == state.CurrentSister)
@@ -440,10 +440,9 @@ public class ConversationService
         }
 
         _logger.LogInformation($"{LogPrefix} Sister switch detected: {state.CurrentSister} -> {nextSister.Value}");
-        return state with
-        {
-            CurrentSister = nextSister.Value
-        };
+
+        // Atomic state update with instruction
+        return state.SwitchToSister(nextSister.Value, dateTime);
     }
 
     /// <summary>

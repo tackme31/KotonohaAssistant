@@ -726,65 +726,140 @@ public class ConversationServiceTests
     [Fact]
     public void TrySwitchSister_同じ姉妹の場合_何も変更しないこと()
     {
-        // 試験内容: CurrentSisterがAkaneで「茜ちゃん」を含む入力でTrySwitchSisterを呼び出す
-        // 期待される結果: Stateがそのまま返され、変更されない
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState(currentSister: Kotonoha.Akane);
+
+        // Act
+        var result = service.TrySwitchSister("茜ちゃん、おはよう", dateTime, state);
+
+        // Assert
+        result.Should().Be(state);
+        result.CurrentSister.Should().Be(Kotonoha.Akane);
+        result.ChatMessages.Should().BeEmpty();
     }
 
     [Fact]
     public void TrySwitchSister_茜ちゃん指定で茜に切り替わること()
     {
-        // 試験内容: CurrentSisterがAoiで「茜ちゃん」を含む入力でTrySwitchSisterを呼び出す
-        // 期待される結果: CurrentSisterがAkaneに切り替わり、インストラクションが追加される
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState(currentSister: Kotonoha.Aoi);
+
+        // Act
+        var result = service.TrySwitchSister("茜ちゃん、お願い", dateTime, state);
+
+        // Assert
+        result.CurrentSister.Should().Be(Kotonoha.Akane);
+        result.PatienceCount.Should().Be(0);
+        result.ChatMessages.Should().HaveCount(1);
+        result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
     }
 
     [Fact]
     public void TrySwitchSister_葵ちゃん指定で葵に切り替わること()
     {
-        // 試験内容: CurrentSisterがAkaneで「葵ちゃん」を含む入力でTrySwitchSisterを呼び出す
-        // 期待される結果: CurrentSisterがAoiに切り替わり、インストラクションが追加される
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState(currentSister: Kotonoha.Akane);
+
+        // Act
+        var result = service.TrySwitchSister("葵ちゃん、教えて", dateTime, state);
+
+        // Assert
+        result.CurrentSister.Should().Be(Kotonoha.Aoi);
+        result.PatienceCount.Should().Be(0);
+        result.ChatMessages.Should().HaveCount(1);
+        result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
     }
 
     [Fact]
     public void TrySwitchSister_あかねちゃん指定で茜に切り替わること()
     {
-        // 試験内容: CurrentSisterがAoiで「あかねちゃん」を含む入力でTrySwitchSisterを呼び出す
-        // 期待される結果: CurrentSisterがAkaneに切り替わる
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState(currentSister: Kotonoha.Aoi);
+
+        // Act
+        var result = service.TrySwitchSister("あかねちゃん、お願い", dateTime, state);
+
+        // Assert
+        result.CurrentSister.Should().Be(Kotonoha.Akane);
+        result.PatienceCount.Should().Be(0);
+        result.ChatMessages.Should().HaveCount(1);
+        result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
     }
 
     [Fact]
     public void TrySwitchSister_あおいちゃん指定で葵に切り替わること()
     {
-        // 試験内容: CurrentSisterがAkaneで「あおいちゃん」を含む入力でTrySwitchSisterを呼び出す
-        // 期待される結果: CurrentSisterがAoiに切り替わる
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState(currentSister: Kotonoha.Akane);
+
+        // Act
+        var result = service.TrySwitchSister("あおいちゃん、教えて", dateTime, state);
+
+        // Assert
+        result.CurrentSister.Should().Be(Kotonoha.Aoi);
+        result.PatienceCount.Should().Be(0);
+        result.ChatMessages.Should().HaveCount(1);
+        result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
     }
 
     [Fact]
     public void TrySwitchSister_どちらも含まれていない場合_何も変更しないこと()
     {
-        // 試験内容: 姉妹名を含まない入力でTrySwitchSisterを呼び出す
-        // 期待される結果: Stateがそのまま返される
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState(currentSister: Kotonoha.Akane);
+
+        // Act
+        var result = service.TrySwitchSister("こんにちは", dateTime, state);
+
+        // Assert
+        result.Should().Be(state);
+        result.CurrentSister.Should().Be(Kotonoha.Akane);
+        result.ChatMessages.Should().BeEmpty();
     }
 
     [Fact]
     public void TrySwitchSister_両方含まれている場合_最初にヒットした方に切り替わること()
     {
-        // 試験内容: 「茜ちゃんと葵ちゃん」のように両方を含む入力でTrySwitchSisterを呼び出す
-        // 期待される結果: 最初に出現した方（茜）に切り替わる
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState(currentSister: Kotonoha.Aoi);
+
+        // Act - 「茜ちゃん」が先に出現
+        var result = service.TrySwitchSister("茜ちゃんと葵ちゃん", dateTime, state);
+
+        // Assert
+        result.CurrentSister.Should().Be(Kotonoha.Akane);
+        result.ChatMessages.Should().HaveCount(1);
     }
 
     [Fact]
     public void TrySwitchSister_GuessTargetSisterがnullを返す場合_何も変更しないこと()
     {
-        // 試験内容: GuessTargetSisterがnullを返す入力でTrySwitchSisterを呼び出す
-        // 期待される結果: Stateがそのまま返される
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState(currentSister: Kotonoha.Akane);
+
+        // Act - 姉妹名を含まない入力
+        var result = service.TrySwitchSister("今日の天気は？", dateTime, state);
+
+        // Assert
+        result.Should().Be(state);
+        result.CurrentSister.Should().Be(Kotonoha.Akane);
+        result.ChatMessages.Should().BeEmpty();
     }
 
     #endregion

@@ -1,13 +1,13 @@
-﻿using FluentAssertions;
+﻿using System.Collections.Immutable;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using FluentAssertions;
 using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
-using System.Collections.Immutable;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace KotonohaAssistant.AI.Tests.Services;
 

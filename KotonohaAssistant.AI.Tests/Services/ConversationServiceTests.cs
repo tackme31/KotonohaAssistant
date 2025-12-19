@@ -1,4 +1,4 @@
-using System.ClientModel;
+﻿using System.ClientModel;
 using System.Collections.Immutable;
 using System.Text.Json;
 using FluentAssertions;
@@ -222,10 +222,10 @@ public class ConversationServiceTests
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
         var state = CreateTestState();
-        
+
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
-        
+
         // 実際のユーザーメッセージを1つ追加
         state = state.AddUserMessage("こんにちは", dateTime);
 
@@ -246,20 +246,20 @@ public class ConversationServiceTests
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
         var state = CreateTestState();
-        
+
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
-        
+
         // 正常なユーザーメッセージを追加
         state = state.AddUserMessage("正常なメッセージ", dateTime);
-        
+
         // Content配列が空のメッセージを手動で追加
         var emptyContentMessage = new UserChatMessage(Array.Empty<ChatMessageContentPart>());
         state = state with
         {
             ChatMessages = state.ChatMessages.Add(emptyContentMessage)
         };
-        
+
         // 別の正常なメッセージを追加
         state = state.AddUserMessage("もう一つの正常なメッセージ", dateTime);
 
@@ -280,7 +280,7 @@ public class ConversationServiceTests
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
         var state = CreateTestState();
-        
+
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
         state = state.AddUserMessage("テストメッセージ", dateTime);
@@ -301,7 +301,7 @@ public class ConversationServiceTests
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
         var state = CreateTestState();
-        
+
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
         state = state.AddAssistantMessage(Kotonoha.Akane, "茜のメッセージやで");
@@ -322,10 +322,10 @@ public class ConversationServiceTests
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
         var state = CreateTestState();
-        
+
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
-        
+
         state = state.AddUserMessage("メッセージ1", dateTime);
         state = state.AddToolMessage("call_123", "ツール実行結果");
         state = state.AddUserMessage("メッセージ2", dateTime);
@@ -347,10 +347,10 @@ public class ConversationServiceTests
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
         var state = CreateTestState();
-        
+
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
-        
+
         // 複数のメッセージタイプを混在させる
         state = state.AddUserMessage("ユーザー1", dateTime);
         state = state.AddAssistantMessage(Kotonoha.Akane, "茜の返答");
@@ -364,16 +364,16 @@ public class ConversationServiceTests
         // Assert
         // ToolChatMessage以外が順番通りに返される
         result.Should().HaveCount(4);
-        
+
         result[0].sister.Should().BeNull();
         result[0].message.Should().Be("ユーザー1");
-        
+
         result[1].sister.Should().Be(Kotonoha.Akane);
         result[1].message.Should().Be("茜の返答");
-        
+
         result[2].sister.Should().BeNull();
         result[2].message.Should().Be("ユーザー2");
-        
+
         result[3].sister.Should().Be(Kotonoha.Aoi);
         result[3].message.Should().Be("葵の返答");
     }

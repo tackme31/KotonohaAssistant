@@ -236,45 +236,132 @@ public class InactivityNotificationServiceTests
     [Fact]
     public void Start_notifyTimeが現在時刻より前の場合_翌日にスケジュールされること()
     {
-        // テスト内容:
-        // - 現在時刻が 12:00 の場合
-        // - notifyTime が 09:00 (現在時刻より前) の場合
-        // - 翌日の 09:00 にタイマーがスケジュールされること
-        //
-        // 期待される値:
-        // - ログに「Next check scheduled at: {翌日の09:00}」が出力される
-        // - タイマーの遅延時間が (24 - 3) * 60 * 60 = 75600 秒であること
+        // Arrange
+        // 現在時刻を 12:00 に設定
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        var chatMessageRepository = new MockChatMessageRepository();
+        var chatCompletionRepository = new MockChatCompletionRepository();
+        var promptRepository = new MockPromptRepository();
+        var logger = new MockLogger();
+        var lineMessagingRepository = new MockLineMessagingRepository();
+        var availableFunctions = new List<ToolFunction>();
+
+        var service = new InactivityNotificationService(
+            chatMessageRepository,
+            chatCompletionRepository,
+            availableFunctions,
+            promptRepository,
+            logger,
+            lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        // notifyTime を 09:00 (現在時刻より前) に設定
+        var notifyTime = TimeSpan.FromHours(9);
+        var notifyInterval = TimeSpan.FromHours(1);
+
+        // Act
+        service.Start(notifyInterval, notifyTime);
+
+        // Assert
+        // 翌日の 09:00 がスケジュールされることを確認
+        var expectedNextRun = new DateTime(2025, 1, 2, 9, 0, 0);
+        logger.InformationLogs.Should().Contain(log =>
+            log.Contains("Next check scheduled at") &&
+            log.Contains(expectedNextRun.ToString()));
     }
 
     [Fact]
     public void Start_notifyTimeが現在時刻より後の場合_当日にスケジュールされること()
     {
-        // テスト内容:
-        // - 現在時刻が 12:00 の場合
-        // - notifyTime が 15:00 (現在時刻より後) の場合
-        // - 当日の 15:00 にタイマーがスケジュールされること
-        //
-        // 期待される値:
-        // - ログに「Next check scheduled at: {当日の15:00}」が出力される
-        // - タイマーの遅延時間が 3 * 60 * 60 = 10800 秒であること
+        // Arrange
+        // 現在時刻を 12:00 に設定
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        var chatMessageRepository = new MockChatMessageRepository();
+        var chatCompletionRepository = new MockChatCompletionRepository();
+        var promptRepository = new MockPromptRepository();
+        var logger = new MockLogger();
+        var lineMessagingRepository = new MockLineMessagingRepository();
+        var availableFunctions = new List<ToolFunction>();
+
+        var service = new InactivityNotificationService(
+            chatMessageRepository,
+            chatCompletionRepository,
+            availableFunctions,
+            promptRepository,
+            logger,
+            lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        // notifyTime を 15:00 (現在時刻より後) に設定
+        var notifyTime = TimeSpan.FromHours(15);
+        var notifyInterval = TimeSpan.FromHours(1);
+
+        // Act
+        service.Start(notifyInterval, notifyTime);
+
+        // Assert
+        // 当日の 15:00 がスケジュールされることを確認
+        var expectedNextRun = new DateTime(2025, 1, 1, 15, 0, 0);
+        logger.InformationLogs.Should().Contain(log =>
+            log.Contains("Next check scheduled at") &&
+            log.Contains(expectedNextRun.ToString()));
     }
 
     [Fact]
     public void Start_複数回呼び出し_既存のタイマーが破棄されること()
     {
-        // テスト内容:
-        // - Start メソッドを 2 回呼び出す
-        // - 1 回目のタイマーが破棄され、2 回目のタイマーが設定されること
-        //
-        // 期待される値:
-        // - 例外が発生しないこと
-        // - 最後に設定されたタイマーのみが有効であること
+        // Arrange
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        var chatMessageRepository = new MockChatMessageRepository();
+        var chatCompletionRepository = new MockChatCompletionRepository();
+        var promptRepository = new MockPromptRepository();
+        var logger = new MockLogger();
+        var lineMessagingRepository = new MockLineMessagingRepository();
+        var availableFunctions = new List<ToolFunction>();
+
+        var service = new InactivityNotificationService(
+            chatMessageRepository,
+            chatCompletionRepository,
+            availableFunctions,
+            promptRepository,
+            logger,
+            lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        var notifyTime1 = TimeSpan.FromHours(15);
+        var notifyTime2 = TimeSpan.FromHours(18);
+        var notifyInterval = TimeSpan.FromHours(1);
+
+        // Act
+        // 1回目のStart呼び出し
+        service.Start(notifyInterval, notifyTime1);
+        var logCountAfterFirst = logger.InformationLogs.Count;
+
+        // 2回目のStart呼び出し (既存のタイマーが破棄される)
+        service.Start(notifyInterval, notifyTime2);
+        var logCountAfterSecond = logger.InformationLogs.Count;
+
+        // Assert
+        // 例外が発生しないこと
+        logCountAfterFirst.Should().Be(1);
+        logCountAfterSecond.Should().Be(2);
+
+        // 最後にスケジュールされたのが18:00であることを確認
+        var expectedNextRun = new DateTime(2025, 1, 1, 18, 0, 0);
+        logger.InformationLogs[1].Should().Contain("Next check scheduled at");
+        logger.InformationLogs[1].Should().Contain(expectedNextRun.ToString());
     }
 
     #endregion

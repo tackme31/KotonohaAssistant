@@ -1,4 +1,5 @@
 ﻿using System.ClientModel;
+using System.ClientModel.Primitives;
 using System.Collections.Immutable;
 using System.Text.Json;
 using FluentAssertions;
@@ -150,6 +151,34 @@ public class ConversationServiceTests
     }
 
     /// <summary>
+    /// テスト用のモック ToolFunction
+    /// </summary>
+    private class MockToolFunction : ToolFunction
+    {
+        private readonly bool _canBeLazy;
+
+        public MockToolFunction(bool canBeLazy, ILogger logger) : base(logger)
+        {
+            _canBeLazy = canBeLazy;
+        }
+
+        public override bool CanBeLazy => _canBeLazy;
+        public override string Description => "Mock function";
+        public override string Parameters => "{}";
+
+        public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+        {
+            arguments = new Dictionary<string, object>();
+            return true;
+        }
+
+        public override Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state)
+        {
+            return Task.FromResult("{}");
+        }
+    }
+
+    /// <summary>
     /// テスト用の ConversationState を作成
     /// </summary>
     private ConversationState CreateTestState(
@@ -195,6 +224,168 @@ public class ConversationServiceTests
             dateTimeProvider,
             new MockLogger()
         );
+    }
+
+    /// <summary>
+    /// テスト用の ChatCompletion を作成
+    /// </summary>
+    private ChatCompletion CreateChatCompletion(
+        Kotonoha sister,
+        string text,
+        ChatFinishReason finishReason = ChatFinishReason.Stop)
+    {
+        var response = new ChatResponse
+        {
+            Assistant = sister,
+            Text = text
+        };
+
+        var contentJson = response.ToJson();
+
+        return OpenAIChatModelFactory.ChatCompletion(
+            id: "test-completion-id",
+            model: "gpt-4",
+            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
+            finishReason: finishReason,
+            role: ChatMessageRole.Assistant,
+            content: [ChatMessageContentPart.CreateTextPart(contentJson)]
+        );
+    }
+
+    /// <summary>
+    /// テスト用の ClientResult&lt;ChatCompletion&gt; を作成
+    /// </summary>
+    private ClientResult<ChatCompletion> CreateChatCompletionResult(
+        Kotonoha sister,
+        string text,
+        ChatFinishReason finishReason = ChatFinishReason.Stop)
+    {
+        var completion = CreateChatCompletion(sister, text, finishReason);
+        return ClientResult.FromValue(completion, new MockPipelineResponse());
+    }
+
+    /// <summary>
+    /// テスト用の ChatCompletion を無効な JSON で作成
+    /// </summary>
+    private ChatCompletion CreateInvalidChatCompletion(string invalidJson)
+    {
+        return OpenAIChatModelFactory.ChatCompletion(
+            id: "test-completion-id",
+            model: "gpt-4",
+            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
+            finishReason: ChatFinishReason.Stop,
+            role: ChatMessageRole.Assistant,
+            content: [ChatMessageContentPart.CreateTextPart(invalidJson)]
+        );
+    }
+
+    /// <summary>
+    /// テスト用の ClientResult&lt;ChatCompletion&gt; を無効な JSON で作成
+    /// </summary>
+    private ClientResult<ChatCompletion> CreateInvalidChatCompletionResult(string invalidJson)
+    {
+        var completion = CreateInvalidChatCompletion(invalidJson);
+        return ClientResult.FromValue(completion, new MockPipelineResponse());
+    }
+
+    /// <summary>
+    /// テスト用の ChatCompletion を ToolCalls 付きで作成
+    /// </summary>
+    private ChatCompletion CreateChatCompletionWithToolCalls(
+        Kotonoha sister,
+        string text,
+        params (string id, string name, string arguments)[] toolCalls)
+    {
+        var response = new ChatResponse
+        {
+            Assistant = sister,
+            Text = text
+        };
+
+        var contentJson = response.ToJson();
+
+        var toolCallsList = toolCalls.Select(tc =>
+            ChatToolCall.CreateFunctionToolCall(
+                tc.id,
+                tc.name,
+                BinaryData.FromString(tc.arguments)
+            )).ToArray();
+
+        return OpenAIChatModelFactory.ChatCompletion(
+            id: "test-completion-id",
+            model: "gpt-4",
+            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
+            finishReason: ChatFinishReason.ToolCalls,
+            role: ChatMessageRole.Assistant,
+            content: [ChatMessageContentPart.CreateTextPart(contentJson)],
+            toolCalls: toolCallsList
+        );
+    }
+
+    /// <summary>
+    /// テスト用の ClientResult&lt;ChatCompletion&gt; を ToolCalls 付きで作成
+    /// </summary>
+    private ClientResult<ChatCompletion> CreateChatCompletionResultWithToolCalls(
+        Kotonoha sister,
+        string text,
+        params (string id, string name, string arguments)[] toolCalls)
+    {
+        var completion = CreateChatCompletionWithToolCalls(sister, text, toolCalls);
+        return ClientResult.FromValue(completion, new MockPipelineResponse());
+    }
+
+    /// <summary>
+    /// テスト用の PipelineResponse (ClientResult作成に必要)
+    /// </summary>
+    private class MockPipelineResponse : PipelineResponse
+    {
+        public override int Status => 200;
+        public override string ReasonPhrase => "OK";
+        public override Stream? ContentStream { get; set; }
+        public override BinaryData Content => BinaryData.FromString("{}");
+
+        protected override PipelineResponseHeaders HeadersCore => new MockPipelineResponseHeaders();
+
+        public override BinaryData BufferContent(CancellationToken cancellationToken = default)
+        {
+            return Content;
+        }
+
+        public override ValueTask<BinaryData> BufferContentAsync(CancellationToken cancellationToken = default)
+        {
+            return new ValueTask<BinaryData>(Content);
+        }
+
+        public override void Dispose() { }
+    }
+
+    /// <summary>
+    /// テスト用の PipelineResponseHeaders
+    /// </summary>
+    private class MockPipelineResponseHeaders : PipelineResponseHeaders
+    {
+        private readonly Dictionary<string, string> _headers = new();
+
+        public override IEnumerator<KeyValuePair<string, string>> GetEnumerator()
+        {
+            return _headers.GetEnumerator();
+        }
+
+        public override bool TryGetValue(string name, out string? value)
+        {
+            return _headers.TryGetValue(name, out value);
+        }
+
+        public override bool TryGetValues(string name, out IEnumerable<string>? values)
+        {
+            if (_headers.TryGetValue(name, out var value))
+            {
+                values = new[] { value };
+                return true;
+            }
+            values = null;
+            return false;
+        }
     }
 
     #endregion
@@ -594,129 +785,693 @@ public class ConversationServiceTests
     [Fact]
     public async Task TalkAsync_空の入力で何も返さないこと()
     {
-        // 試験内容: 空文字列またはnullを入力としてTalkAsyncを呼び出す
-        // 期待される結果: (state, null) が1回だけ返される
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var state = CreateTestState();
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].result.Should().BeNull();
+        results[0].state.Should().BeEquivalentTo(state); // 状態は変更されない
     }
 
     [Fact]
     public async Task TalkAsync_ConversationIdがnullの場合_新しい会話を作成すること()
     {
-        // 試験内容: ConversationIdがnullの状態でTalkAsyncを呼び出す
-        // 期待される結果: CreateNewConversationAsyncが呼ばれ、ConversationIdが設定される
-        throw new NotImplementedException();
+        // Arrange
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            CreateNewConversationIdAsyncFunc = () => Task.FromResult(42)
+        };
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "こんにちはやで"))
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo, chatCompletionRepo: chatCompletionRepo);
+        var state = CreateTestState(conversationId: null);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("こんにちは", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().NotBeEmpty();
+        results.Last().state.ConversationId.Should().Be(42);
     }
 
     [Fact]
     public async Task TalkAsync_姉妹切り替えが実行されること()
     {
-        // 試験内容: 「茜ちゃん」を含む入力でTalkAsyncを呼び出す
-        // 期待される結果: TrySwitchSisterが呼ばれ、CurrentSisterが更新される
-        throw new NotImplementedException();
+        // Arrange
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "はいはい、茜やで"))
+        };
+        var service = CreateService(chatCompletionRepo: chatCompletionRepo);
+        var state = CreateTestState(currentSister: Kotonoha.Aoi, conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("茜ちゃん、お願い", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().NotBeEmpty();
+        var finalState = results.Last().state;
+        
+        // 葵 → 茜 に切り替わっていることを確認
+        finalState.CurrentSister.Should().Be(Kotonoha.Akane);
+        
+        // ChatMessages に姉妹切り替えのメッセージが追加されていることを確認
+        var userMessages = finalState.ChatMessages
+            .OfType<UserChatMessage>()
+            .ToList();
+        userMessages.Should().HaveCountGreaterThanOrEqualTo(1);
     }
 
     [Fact]
     public async Task TalkAsync_ユーザーメッセージが追加されること()
     {
-        // 試験内容: 通常の入力でTalkAsyncを呼び出す
-        // 期待される結果: ChatMessagesにUserChatMessageが追加される
-        throw new NotImplementedException();
+        // Arrange
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "わかったで"))
+        };
+        var service = CreateService(chatCompletionRepo: chatCompletionRepo);
+        var state = CreateTestState(conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("テスト入力", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().NotBeEmpty();
+        var finalState = results.Last().state;
+        
+        // ChatMessages に UserChatMessage が追加されていることを確認
+        var userMessages = finalState.ChatMessages
+            .OfType<UserChatMessage>()
+            .ToList();
+        userMessages.Should().NotBeEmpty();
+        
+        // 最後に追加されたユーザーメッセージの内容を確認
+        var lastUserMessage = userMessages.Last();
+        lastUserMessage.Content.Should().NotBeEmpty();
+        lastUserMessage.Content[0].Text.Should().Contain("テスト入力");
     }
 
     [Fact]
     public async Task TalkAsync_CompleteChatAsyncがnullを返す場合_nullを返すこと()
     {
-        // 試験内容: CompleteChatAsyncがnullを返す場合にTalkAsyncを呼び出す
-        // 期待される結果: (state, null) が返される
-        throw new NotImplementedException();
+        // Arrange
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+                throw new Exception("API Error")
+        };
+        var service = CreateService(chatCompletionRepo: chatCompletionRepo);
+        var state = CreateTestState(conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("テスト入力", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].result.Should().BeNull();
     }
 
     [Fact]
     public async Task TalkAsync_PatienceCountが正しく更新されること()
     {
-        // 試験内容: FinishReason=ToolCallsのCompletionが返される場合にTalkAsyncを呼び出す
-        // 期待される結果: PatienceCountがインクリメントされる
-        throw new NotImplementedException();
+        // Arrange
+        var mockFunction = new MockToolFunction(canBeLazy: true, new MockLogger());
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+            {
+                // 最初の呼び出し: ToolCallsを含むCompletion
+                if (!messages.Any(m => m is ToolChatMessage))
+                {
+                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                        Kotonoha.Akane,
+                        "関数を実行するで",
+                        ("call_123", "MockToolFunction", "{}")
+                    ));
+                }
+                // 2回目の呼び出し: 通常の応答
+                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "完了したで"));
+            }
+        };
+        var promptRepo = new MockPromptRepository();
+        var service = new ConversationService(
+            promptRepo,
+            new MockChatMessageRepository(),
+            chatCompletionRepo,
+            new List<ToolFunction> { mockFunction },
+            new MockLazyModeHandler(),
+            new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
+            new MockLogger()
+        );
+        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0, conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("テスト", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().NotBeEmpty();
+        var finalState = results.Last().state;
+
+        // PatienceCountがインクリメントされていることを確認
+        finalState.PatienceCount.Should().Be(1);
     }
 
     [Fact]
     public async Task TalkAsync_LazyModeHandlerが呼ばれること()
     {
-        // 試験内容: ToolCallsを含むCompletionでTalkAsyncを呼び出す
-        // 期待される結果: LazyModeHandler.HandleLazyModeAsyncが呼ばれる
-        throw new NotImplementedException();
+        // Arrange
+        var handlerCalled = false;
+        var mockFunction = new MockToolFunction(canBeLazy: true, new MockLogger());
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+            {
+                // 最初の呼び出し: ToolCallsを含むCompletion
+                if (!messages.Any(m => m is ToolChatMessage))
+                {
+                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                        Kotonoha.Akane,
+                        "関数を実行するで",
+                        ("call_123", "MockToolFunction", "{}")
+                    ));
+                }
+                // 2回目の呼び出し: 通常の応答
+                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "完了したで"));
+            }
+        };
+        var lazyModeHandler = new MockLazyModeHandler
+        {
+            HandleLazyModeAsyncFunc = (completion, state, dateTime, regenerateFunc) =>
+            {
+                handlerCalled = true;
+                var result = new LazyModeResult
+                {
+                    WasLazy = false,
+                    LazyResponse = null,
+                    FinalCompletion = completion
+                };
+                return Task.FromResult((result, state));
+            }
+        };
+        var service = new ConversationService(
+            new MockPromptRepository(),
+            new MockChatMessageRepository(),
+            chatCompletionRepo,
+            new List<ToolFunction> { mockFunction },
+            lazyModeHandler,
+            new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
+            new MockLogger()
+        );
+        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("テスト", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        handlerCalled.Should().BeTrue("LazyModeHandler.HandleLazyModeAsync が呼ばれるべき");
     }
 
     [Fact]
     public async Task TalkAsync_怠け癖応答が返されること()
     {
-        // 試験内容: LazyModeHandlerがLazyResponseを返す場合にTalkAsyncを呼び出す
-        // 期待される結果: LazyResponseが返され、PatienceCountがリセットされる
-        throw new NotImplementedException();
+        // Arrange
+        var mockFunction = new MockToolFunction(canBeLazy: true, new MockLogger());
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+            {
+                // 最初の呼び出し: ToolCallsを含むCompletion
+                if (!messages.Any(m => m is ToolChatMessage))
+                {
+                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                        Kotonoha.Akane,
+                        "関数を実行するで",
+                        ("call_123", "MockToolFunction", "{}")
+                    ));
+                }
+                // 2回目の呼び出し: 怠け癖後の応答
+                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Aoi, "わかりました、やります"));
+            }
+        };
+        var lazyModeHandler = new MockLazyModeHandler
+        {
+            HandleLazyModeAsyncFunc = (completion, state, dateTime, regenerateFunc) =>
+            {
+                // 怠け癖モードを発動
+                var lazyResponse = new ConversationResult
+                {
+                    Sister = Kotonoha.Akane,
+                    Message = "葵、任せたで",
+                    Functions = null
+                };
+                var lazyResult = new LazyModeResult
+                {
+                    WasLazy = true,
+                    LazyResponse = lazyResponse,
+                    FinalCompletion = CreateChatCompletion(Kotonoha.Aoi, "わかりました、やります")
+                };
+                var newState = state.SwitchToSister(Kotonoha.Aoi, dateTime);
+                return Task.FromResult((lazyResult, newState));
+            }
+        };
+        var service = new ConversationService(
+            new MockPromptRepository(),
+            new MockChatMessageRepository(),
+            chatCompletionRepo,
+            new List<ToolFunction> { mockFunction },
+            lazyModeHandler,
+            new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
+            new MockLogger()
+        );
+        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 5, conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("テスト", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().HaveCountGreaterThanOrEqualTo(2);
+
+        // 怠け癖応答が含まれていることを確認
+        var lazyResponse = results.FirstOrDefault(r => r.result?.Message == "葵、任せたで");
+        lazyResponse.result.Should().NotBeNull("怠け癖応答が返されるべき");
+
+        // PatienceCountがリセットされていることを確認
+        var finalState = results.Last().state;
+        finalState.PatienceCount.Should().Be(0, "怠け癖発動後はPatienceCountがリセットされるべき");
     }
 
     [Fact]
     public async Task TalkAsync_FinalCompletionがnullの場合_nullを返すこと()
     {
-        // 試験内容: LazyModeHandlerがFinalCompletion=nullを返す場合にTalkAsyncを呼び出す
-        // 期待される結果: (state, null) が返される
-        throw new NotImplementedException();
+        // Arrange
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "テスト"))
+        };
+        var lazyModeHandler = new MockLazyModeHandler
+        {
+            HandleLazyModeAsyncFunc = (completion, state, dateTime, regenerateFunc) =>
+            {
+                var result = new LazyModeResult
+                {
+                    WasLazy = false,
+                    LazyResponse = null,
+                    FinalCompletion = null! // FinalCompletion を null に設定
+                };
+                return Task.FromResult((result, state));
+            }
+        };
+        var service = CreateService(chatCompletionRepo: chatCompletionRepo, lazyModeHandler: lazyModeHandler);
+        var state = CreateTestState(conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("こんにちは", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].result.Should().BeNull();
     }
 
     [Fact]
     public async Task TalkAsync_AssistantMessageが追加されること()
     {
-        // 試験内容: 正常なCompletionが返される場合にTalkAsyncを呼び出す
-        // 期待される結果: ChatMessagesにAssistantChatMessageが追加される
-        throw new NotImplementedException();
+        // Arrange
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "こんにちはやで"))
+        };
+        var service = CreateService(chatCompletionRepo: chatCompletionRepo);
+        var state = CreateTestState(conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("こんにちは", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().NotBeEmpty();
+        var finalState = results.Last().state;
+        
+        // ChatMessages に AssistantChatMessage が追加されていることを確認
+        var assistantMessages = finalState.ChatMessages
+            .OfType<AssistantChatMessage>()
+            .ToList();
+        assistantMessages.Should().NotBeEmpty();
+        
+        // 最後に追加されたアシスタントメッセージの内容を確認
+        var lastAssistantMessage = assistantMessages.Last();
+        lastAssistantMessage.Content.Should().NotBeEmpty();
+        lastAssistantMessage.Content[0].Text.Should().Contain("Akane");
     }
 
     [Fact]
     public async Task TalkAsync_関数が実行されること()
     {
-        // 試験内容: ToolCallsを含むCompletionでTalkAsyncを呼び出す
-        // 期待される結果: InvokeFunctionsが呼ばれ、関数が実行される
-        throw new NotImplementedException();
+        // Arrange
+        var functionInvoked = false;
+        var mockFunction = new MockToolFunction(canBeLazy: false, new MockLogger());
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+            {
+                // 最初の呼び出し: ToolCallsを含むCompletion
+                if (!messages.Any(m => m is ToolChatMessage))
+                {
+                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                        Kotonoha.Akane,
+                        "関数を実行するで",
+                        ("call_123", "MockToolFunction", "{}")
+                    ));
+                }
+                // 2回目の呼び出し: ToolChatMessageが追加された後の応答
+                functionInvoked = true;
+                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "完了したで"));
+            }
+        };
+        var service = new ConversationService(
+            new MockPromptRepository(),
+            new MockChatMessageRepository(),
+            chatCompletionRepo,
+            new List<ToolFunction> { mockFunction },
+            new MockLazyModeHandler(),
+            new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
+            new MockLogger()
+        );
+        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("テスト", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().NotBeEmpty();
+        functionInvoked.Should().BeTrue("関数が実行され、2回目のCompleteChatAsyncが呼ばれるべき");
+
+        // ChatMessagesにToolChatMessageが追加されていることを確認
+        var finalState = results.Last().state;
+        var toolMessages = finalState.ChatMessages.OfType<ToolChatMessage>().ToList();
+        toolMessages.Should().NotBeEmpty("関数実行結果がToolChatMessageとして追加されるべき");
     }
 
     [Fact]
     public async Task TalkAsync_ForgetMemory実行時_新しい会話が作成されること()
     {
-        // 試験内容: ForgetMemoryが成功した場合にTalkAsyncを呼び出す
-        // 期待される結果: CreateNewConversationAsyncが呼ばれ、ConversationIdが新しくなる
-        throw new NotImplementedException();
+        // Arrange
+        var createNewConversationCalled = false;
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            CreateNewConversationIdAsyncFunc = () =>
+            {
+                createNewConversationCalled = true;
+                return Task.FromResult(999);
+            }
+        };
+
+        // IRandomGeneratorのモック（常に成功するように設定）
+        var randomGenerator = new MockRandomGenerator(returnValue: 0.5); // 1/10未満でないので成功
+
+        var forgetMemoryFunction = new ForgetMemory(new MockPromptRepository(), randomGenerator, new MockLogger());
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+            {
+                // 最初の呼び出し: ForgetMemoryのToolCallsを含むCompletion
+                if (!messages.Any(m => m is ToolChatMessage))
+                {
+                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                        Kotonoha.Akane,
+                        "記憶を消すで",
+                        ("call_123", "ForgetMemory", "{}")
+                    ));
+                }
+                // 2回目の呼び出し: 削除後の応答
+                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "忘れたで"));
+            }
+        };
+
+        var service = new ConversationService(
+            new MockPromptRepository(),
+            chatMessageRepo,
+            chatCompletionRepo,
+            new List<ToolFunction> { forgetMemoryFunction },
+            new MockLazyModeHandler(),
+            new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
+            new MockLogger()
+        );
+        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("記憶を消して", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        createNewConversationCalled.Should().BeTrue("ForgetMemory成功時にCreateNewConversationAsyncが呼ばれるべき");
+
+        var finalState = results.Last().state;
+        finalState.ConversationId.Should().Be(999, "新しい会話IDが設定されるべき");
+    }
+
+    /// <summary>
+    /// テスト用のモック IRandomGenerator
+    /// </summary>
+    private class MockRandomGenerator : IRandomGenerator
+    {
+        private readonly double _returnValue;
+
+        public MockRandomGenerator(double returnValue)
+        {
+            _returnValue = returnValue;
+        }
+
+        public double NextDouble() => _returnValue;
     }
 
     [Fact]
     public async Task TalkAsync_状態が保存されること()
     {
-        // 試験内容: 正常にTalkAsyncが完了する
-        // 期待される結果: SaveStateが呼ばれ、未保存メッセージがデータベースに保存される
-        throw new NotImplementedException();
+        // Arrange
+        var insertCalled = false;
+        var insertedMessages = new List<ChatMessage>();
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            InsertChatMessagesAsyncFunc = (messages, conversationId) =>
+            {
+                insertCalled = true;
+                insertedMessages.AddRange(messages);
+                return Task.CompletedTask;
+            }
+        };
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "わかったで"))
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo, chatCompletionRepo: chatCompletionRepo);
+        var state = CreateTestState(conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("こんにちは", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        insertCalled.Should().BeTrue("InsertChatMessagesAsync が呼ばれるべき");
+        insertedMessages.Should().NotBeEmpty("未保存メッセージが保存されるべき");
+        
+        // ユーザーメッセージとアシスタントメッセージが保存されていることを確認
+        insertedMessages.Should().HaveCountGreaterThanOrEqualTo(2);
     }
 
     [Fact]
     public async Task TalkAsync_最終結果が正しく返されること()
     {
-        // 試験内容: 正常なCompletionでTalkAsyncを呼び出す
-        // 期待される結果: ConversationResultが返され、Message、Sister、Functionsが設定される
-        throw new NotImplementedException();
+        // Arrange
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "こんにちはやで"))
+        };
+        var service = CreateService(chatCompletionRepo: chatCompletionRepo);
+        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("こんにちは", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().NotBeEmpty();
+        var finalResult = results.Last();
+        
+        // ConversationResult が返されることを確認
+        finalResult.result.Should().NotBeNull();
+        
+        // Message が正しく設定されていることを確認
+        finalResult.result!.Message.Should().Be("こんにちはやで");
+        
+        // Sister が正しく設定されていることを確認
+        finalResult.result.Sister.Should().Be(Kotonoha.Akane);
+        
+        // Functions は null または空のリストであることを確認（ツール呼び出しなし）
+        (finalResult.result.Functions == null || finalResult.result.Functions.Count == 0).Should().BeTrue();
     }
 
     [Fact]
     public async Task TalkAsync_ChatResponseのパースに失敗した場合_nullを返すこと()
     {
-        // 試験内容: CompletionのContentがChatResponseとしてパースできない場合にTalkAsyncを呼び出す
-        // 期待される結果: (state, null) が返される
-        throw new NotImplementedException();
+        // Arrange
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+                Task.FromResult(CreateInvalidChatCompletionResult("This is not a valid JSON"))
+        };
+        var service = CreateService(chatCompletionRepo: chatCompletionRepo);
+        var state = CreateTestState(conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("こんにちは", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().HaveCount(1);
+        results[0].result.Should().BeNull();
     }
 
     [Fact]
     public async Task TalkAsync_複数回の関数呼び出しループが処理されること()
     {
-        // 試験内容: InvokeFunctionsで複数回ToolCallsが返される場合にTalkAsyncを呼び出す
-        // 期待される結果: すべての関数呼び出しが処理され、最終的にStopになるまで繰り返される
-        throw new NotImplementedException();
+        // Arrange
+        var callCount = 0;
+        var mockFunction = new MockToolFunction(canBeLazy: false, new MockLogger());
+        var chatCompletionRepo = new MockChatCompletionRepository
+        {
+            CompleteChatAsyncFunc = (messages, options) =>
+            {
+                callCount++;
+                var toolMessages = messages.OfType<ToolChatMessage>().ToList();
+
+                // 最初の呼び出し: ToolCallsを含むCompletion
+                if (toolMessages.Count == 0)
+                {
+                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                        Kotonoha.Akane,
+                        "最初の関数を実行するで",
+                        ("call_1", "MockToolFunction", "{}")
+                    ));
+                }
+                // 2回目の呼び出し: さらにToolCallsを含むCompletion
+                else if (toolMessages.Count == 1)
+                {
+                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                        Kotonoha.Akane,
+                        "次の関数も実行するで",
+                        ("call_2", "MockToolFunction", "{}")
+                    ));
+                }
+                // 3回目の呼び出し: 通常の応答（Stop）
+                else
+                {
+                    return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "全部完了したで"));
+                }
+            }
+        };
+        var service = new ConversationService(
+            new MockPromptRepository(),
+            new MockChatMessageRepository(),
+            chatCompletionRepo,
+            new List<ToolFunction> { mockFunction },
+            new MockLazyModeHandler(),
+            new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
+            new MockLogger()
+        );
+        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+
+        // Act
+        var results = new List<(ConversationState state, ConversationResult? result)>();
+        await foreach (var item in service.TalkAsync("テスト", state))
+        {
+            results.Add(item);
+        }
+
+        // Assert
+        results.Should().NotBeEmpty();
+
+        // CompleteChatAsyncが3回呼ばれることを確認
+        callCount.Should().Be(3, "関数呼び出しループが2回 + 最終応答で合計3回呼ばれるべき");
+
+        // ChatMessagesに2つのToolChatMessageが追加されていることを確認
+        var finalState = results.Last().state;
+        var toolMessages = finalState.ChatMessages.OfType<ToolChatMessage>().ToList();
+        toolMessages.Should().HaveCount(2, "2回の関数呼び出し結果が追加されるべき");
+
+        // 最終的な結果が返されることを確認
+        var finalResult = results.Last().result;
+        finalResult.Should().NotBeNull();
+        finalResult!.Message.Should().Be("全部完了したで");
     }
 
     #endregion

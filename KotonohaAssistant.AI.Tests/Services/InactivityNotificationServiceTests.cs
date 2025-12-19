@@ -10,6 +10,31 @@ namespace KotonohaAssistant.AI.Tests.Services;
 
 public class InactivityNotificationServiceTests
 {
+    #region Fields
+
+    private readonly MockChatMessageRepository _chatMessageRepository;
+    private readonly MockChatCompletionRepository _chatCompletionRepository;
+    private readonly MockPromptRepository _promptRepository;
+    private readonly MockLogger _logger;
+    private readonly MockLineMessagingRepository _lineMessagingRepository;
+    private readonly List<ToolFunction> _availableFunctions;
+
+    #endregion
+
+    #region Constructor
+
+    public InactivityNotificationServiceTests()
+    {
+        _chatMessageRepository = new MockChatMessageRepository();
+        _chatCompletionRepository = new MockChatCompletionRepository();
+        _promptRepository = new MockPromptRepository();
+        _logger = new MockLogger();
+        _lineMessagingRepository = new MockLineMessagingRepository();
+        _availableFunctions = new List<ToolFunction>();
+    }
+
+    #endregion
+
     #region Test Helpers
 
     /// <summary>
@@ -241,20 +266,13 @@ public class InactivityNotificationServiceTests
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
         var dateTimeProvider = new MockDateTimeProvider(now);
 
-        var chatMessageRepository = new MockChatMessageRepository();
-        var chatCompletionRepository = new MockChatCompletionRepository();
-        var promptRepository = new MockPromptRepository();
-        var logger = new MockLogger();
-        var lineMessagingRepository = new MockLineMessagingRepository();
-        var availableFunctions = new List<ToolFunction>();
-
         var service = new InactivityNotificationService(
-            chatMessageRepository,
-            chatCompletionRepository,
-            availableFunctions,
-            promptRepository,
-            logger,
-            lineMessagingRepository,
+            _chatMessageRepository,
+            _chatCompletionRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
             dateTimeProvider,
             "test-user-id"
         );
@@ -269,7 +287,7 @@ public class InactivityNotificationServiceTests
         // Assert
         // 翌日の 09:00 がスケジュールされることを確認
         var expectedNextRun = new DateTime(2025, 1, 2, 9, 0, 0);
-        logger.InformationLogs.Should().Contain(log =>
+        _logger.InformationLogs.Should().Contain(log =>
             log.Contains("Next check scheduled at") &&
             log.Contains(expectedNextRun.ToString()));
     }
@@ -282,20 +300,13 @@ public class InactivityNotificationServiceTests
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
         var dateTimeProvider = new MockDateTimeProvider(now);
 
-        var chatMessageRepository = new MockChatMessageRepository();
-        var chatCompletionRepository = new MockChatCompletionRepository();
-        var promptRepository = new MockPromptRepository();
-        var logger = new MockLogger();
-        var lineMessagingRepository = new MockLineMessagingRepository();
-        var availableFunctions = new List<ToolFunction>();
-
         var service = new InactivityNotificationService(
-            chatMessageRepository,
-            chatCompletionRepository,
-            availableFunctions,
-            promptRepository,
-            logger,
-            lineMessagingRepository,
+            _chatMessageRepository,
+            _chatCompletionRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
             dateTimeProvider,
             "test-user-id"
         );
@@ -310,7 +321,7 @@ public class InactivityNotificationServiceTests
         // Assert
         // 当日の 15:00 がスケジュールされることを確認
         var expectedNextRun = new DateTime(2025, 1, 1, 15, 0, 0);
-        logger.InformationLogs.Should().Contain(log =>
+        _logger.InformationLogs.Should().Contain(log =>
             log.Contains("Next check scheduled at") &&
             log.Contains(expectedNextRun.ToString()));
     }
@@ -322,20 +333,13 @@ public class InactivityNotificationServiceTests
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
         var dateTimeProvider = new MockDateTimeProvider(now);
 
-        var chatMessageRepository = new MockChatMessageRepository();
-        var chatCompletionRepository = new MockChatCompletionRepository();
-        var promptRepository = new MockPromptRepository();
-        var logger = new MockLogger();
-        var lineMessagingRepository = new MockLineMessagingRepository();
-        var availableFunctions = new List<ToolFunction>();
-
         var service = new InactivityNotificationService(
-            chatMessageRepository,
-            chatCompletionRepository,
-            availableFunctions,
-            promptRepository,
-            logger,
-            lineMessagingRepository,
+            _chatMessageRepository,
+            _chatCompletionRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
             dateTimeProvider,
             "test-user-id"
         );
@@ -347,11 +351,11 @@ public class InactivityNotificationServiceTests
         // Act
         // 1回目のStart呼び出し
         service.Start(notifyInterval, notifyTime1);
-        var logCountAfterFirst = logger.InformationLogs.Count;
+        var logCountAfterFirst = _logger.InformationLogs.Count;
 
         // 2回目のStart呼び出し (既存のタイマーが破棄される)
         service.Start(notifyInterval, notifyTime2);
-        var logCountAfterSecond = logger.InformationLogs.Count;
+        var logCountAfterSecond = _logger.InformationLogs.Count;
 
         // Assert
         // 例外が発生しないこと
@@ -360,8 +364,8 @@ public class InactivityNotificationServiceTests
 
         // 最後にスケジュールされたのが18:00であることを確認
         var expectedNextRun = new DateTime(2025, 1, 1, 18, 0, 0);
-        logger.InformationLogs[1].Should().Contain("Next check scheduled at");
-        logger.InformationLogs[1].Should().Contain(expectedNextRun.ToString());
+        _logger.InformationLogs[1].Should().Contain("Next check scheduled at");
+        _logger.InformationLogs[1].Should().Contain(expectedNextRun.ToString());
     }
 
     #endregion
@@ -378,7 +382,6 @@ public class InactivityNotificationServiceTests
         var dateTimeProvider = new MockDateTimeProvider(now);
 
         // 2時間前の茜のメッセージを追加
-        var chatMessageRepository = new MockChatMessageRepository();
         var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
         var message = new Message
         {
@@ -390,7 +393,7 @@ public class InactivityNotificationServiceTests
             ToolCalls = "[]",
             CreatedAt = twoHoursAgo
         };
-        chatMessageRepository.AddMessage(message);
+        _chatMessageRepository.AddMessage(message);
 
         // AI が生成する通知メッセージをモック
         var notificationResponseJson = """{"Assistant":"Akane","Text":"久しぶりやな！"}""";
@@ -399,18 +402,13 @@ public class InactivityNotificationServiceTests
             (messages, options) => Task.FromResult<ChatCompletion?>(completionResponse)
         );
 
-        var promptRepository = new MockPromptRepository();
-        var logger = new MockLogger();
-        var lineMessagingRepository = new MockLineMessagingRepository();
-        var availableFunctions = new List<ToolFunction>();
-
         var service = new InactivityNotificationService(
-            chatMessageRepository,
+            _chatMessageRepository,
             chatCompletionRepository,
-            availableFunctions,
-            promptRepository,
-            logger,
-            lineMessagingRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
             dateTimeProvider,
             "test-user-id"
         );
@@ -425,11 +423,11 @@ public class InactivityNotificationServiceTests
 
         // Assert
         // LINE 通知が送信されたことを検証
-        lineMessagingRepository.SentMessages.Should().HaveCount(1);
-        lineMessagingRepository.SentMessages[0].userId.Should().Be("test-user-id");
-        lineMessagingRepository.SentMessages[0].message.Should().Be("久しぶりやな！");
+        _lineMessagingRepository.SentMessages.Should().HaveCount(1);
+        _lineMessagingRepository.SentMessages[0].userId.Should().Be("test-user-id");
+        _lineMessagingRepository.SentMessages[0].message.Should().Be("久しぶりやな！");
 
-        logger.InformationLogs.Should().Contain(log => log.Contains("Sending inactivity reminder"));
+        _logger.InformationLogs.Should().Contain(log => log.Contains("Sending inactivity reminder"));
     }
 
     [Fact]

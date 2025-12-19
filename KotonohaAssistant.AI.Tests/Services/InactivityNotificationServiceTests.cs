@@ -1,10 +1,8 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using KotonohaAssistant.AI.Functions;
-using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
-using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
 
@@ -39,8 +37,8 @@ public class InactivityNotificationServiceTests
     /// </summary>
     private class MockChatMessageRepository : IChatMessageRepository
     {
-        private readonly List<Message> _messages = new();
-        private long _conversationId = 1;
+        private readonly List<Message> _messages = [];
+        private readonly long _conversationId = 1;
 
         public void AddMessage(Message message)
         {
@@ -110,17 +108,17 @@ public class InactivityNotificationServiceTests
     {
         public override int Status => 200;
         public override string ReasonPhrase => "OK";
-        public override System.IO.Stream? ContentStream { get; set; }
-        public override System.BinaryData Content => BinaryData.FromString("{}");
+        public override Stream? ContentStream { get; set; }
+        public override BinaryData Content => BinaryData.FromString("{}");
 
         protected override System.ClientModel.Primitives.PipelineResponseHeaders HeadersCore => new MockPipelineResponseHeaders();
 
-        public override System.BinaryData BufferContent(CancellationToken cancellationToken = default)
+        public override BinaryData BufferContent(CancellationToken cancellationToken = default)
         {
             return Content;
         }
 
-        public override async ValueTask<System.BinaryData> BufferContentAsync(CancellationToken cancellationToken = default)
+        public override async ValueTask<BinaryData> BufferContentAsync(CancellationToken cancellationToken = default)
         {
             return await ValueTask.FromResult(Content);
         }
@@ -177,9 +175,9 @@ public class InactivityNotificationServiceTests
     /// </summary>
     private class MockLogger : ILogger
     {
-        public List<string> InformationLogs { get; } = new();
-        public List<string> WarningLogs { get; } = new();
-        public List<Exception> Errors { get; } = new();
+        public List<string> InformationLogs { get; } = [];
+        public List<string> WarningLogs { get; } = [];
+        public List<Exception> Errors { get; } = [];
 
         public void LogInformation(string message)
         {
@@ -207,13 +205,28 @@ public class InactivityNotificationServiceTests
     /// </summary>
     private class MockLineMessagingRepository : ILineMessagingRepository
     {
-        public List<(string userId, string message)> SentMessages { get; } = new();
+        public List<(string userId, string message)> SentMessages { get; } = [];
 
         public Task SendTextMessageAsync(string userId, string message)
         {
             SentMessages.Add((userId, message));
             return Task.CompletedTask;
         }
+    }
+
+    /// <summary>
+    /// テスト用の ChatCompletion を作成（テキスト応答）
+    /// </summary>
+    private ChatCompletion CreateTextCompletion(string text)
+    {
+        return OpenAIChatModelFactory.ChatCompletion(
+            id: "test-id",
+            model: "gpt-4",
+            createdAt: DateTimeOffset.Now,
+            finishReason: ChatFinishReason.Stop,
+            role: ChatMessageRole.Assistant,
+            content: [ChatMessageContentPart.CreateTextPart(text)]
+        );
     }
 
     #endregion
@@ -271,17 +284,65 @@ public class InactivityNotificationServiceTests
     [Fact]
     public async Task CheckInactivityAsync_非アクティブ期間経過_LINE通知が送信されること()
     {
-        // テスト内容:
-        // - 最後のアクティビティが 2 時間前
-        // - notifyInterval が 1 時間の場合
-        // - LINE 通知が送信されること
-        //
-        // 期待される値:
-        // - LineMessagingRepository.SendTextMessageAsync が 1 回呼ばれる
-        // - ログに「Sending inactivity reminder...」が出力される
-        // - 送信されたメッセージが空でないこと
+        // Arrange
+        // 現在時刻を 12:00 に固定
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var twoHoursAgo = now.AddHours(-2);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        // 2時間前の茜のメッセージを追加
+        var chatMessageRepository = new MockChatMessageRepository();
+        var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
+        var message = new Message
+        {
+            Id = 1,
+            ConversationId = 1,
+            Type = "Assistant",
+            // Content は文字列の配列を JSON シリアライズしたもの（データベース保存形式）
+            Content = System.Text.Json.JsonSerializer.Serialize(new[] { chatResponseJson }),
+            ToolCalls = "[]",
+            CreatedAt = twoHoursAgo
+        };
+        chatMessageRepository.AddMessage(message);
+
+        // AI が生成する通知メッセージをモック
+        var notificationResponseJson = """{"Assistant":"Akane","Text":"久しぶりやな！"}""";
+        var completionResponse = CreateTextCompletion(notificationResponseJson);
+        var chatCompletionRepository = new MockChatCompletionRepository(
+            (messages, options) => Task.FromResult<ChatCompletion?>(completionResponse)
+        );
+
+        var promptRepository = new MockPromptRepository();
+        var logger = new MockLogger();
+        var lineMessagingRepository = new MockLineMessagingRepository();
+        var availableFunctions = new List<ToolFunction>();
+
+        var service = new InactivityNotificationService(
+            chatMessageRepository,
+            chatCompletionRepository,
+            availableFunctions,
+            promptRepository,
+            logger,
+            lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        // Act
+        // notifyInterval (1時間) を超えているので通知が送信されるはず
+        var notifyInterval = TimeSpan.FromHours(1);
+        var checkInactivityMethod = typeof(InactivityNotificationService)
+            .GetMethod("CheckInactivityAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        await (Task)checkInactivityMethod!.Invoke(service, [notifyInterval])!;
+
+        // Assert
+        // LINE 通知が送信されたことを検証
+        lineMessagingRepository.SentMessages.Should().HaveCount(1);
+        lineMessagingRepository.SentMessages[0].userId.Should().Be("test-user-id");
+        lineMessagingRepository.SentMessages[0].message.Should().Be("久しぶりやな！");
+
+        logger.InformationLogs.Should().Contain(log => log.Contains("Sending inactivity reminder"));
     }
 
     [Fact]

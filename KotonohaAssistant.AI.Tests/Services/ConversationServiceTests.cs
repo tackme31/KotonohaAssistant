@@ -204,57 +204,178 @@ public class ConversationServiceTests
     [Fact]
     public void GetAllMessages_空の状態で空のリストを返すこと()
     {
-        // 試験内容: ChatMessagesが空の状態でGetAllMessagesを呼び出す
-        // 期待される結果: 空のコレクションが返される
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var state = CreateTestState();
+
+        // Act
+        var result = service.GetAllMessages(state);
+
+        // Assert
+        result.Should().BeEmpty();
     }
 
     [Fact]
     public void GetAllMessages_InitialConversationをスキップすること()
     {
-        // 試験内容: InitialConversationを含む状態でGetAllMessagesを呼び出す
-        // 期待される結果: InitialConversation.Countの分だけメッセージがスキップされる
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState();
+        
+        // InitialConversationを読み込む
+        state = state.LoadInitialConversation(dateTime);
+        
+        // 実際のユーザーメッセージを1つ追加
+        state = state.AddUserMessage("こんにちは", dateTime);
+
+        // Act
+        var result = service.GetAllMessages(state).ToList();
+
+        // Assert
+        // InitialConversationのメッセージ数だけスキップされるので、追加した1つだけが返される
+        result.Should().HaveCount(1);
+        result[0].sister.Should().BeNull();
+        result[0].message.Should().Be("こんにちは");
     }
 
     [Fact]
     public void GetAllMessages_Contentが空のメッセージをスキップすること()
     {
-        // 試験内容: Content配列が空のメッセージを含む状態でGetAllMessagesを呼び出す
-        // 期待される結果: そのメッセージがスキップされる
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState();
+        
+        // InitialConversationを読み込む
+        state = state.LoadInitialConversation(dateTime);
+        
+        // 正常なユーザーメッセージを追加
+        state = state.AddUserMessage("正常なメッセージ", dateTime);
+        
+        // Content配列が空のメッセージを手動で追加
+        var emptyContentMessage = new UserChatMessage(Array.Empty<ChatMessageContentPart>());
+        state = state with
+        {
+            ChatMessages = state.ChatMessages.Add(emptyContentMessage)
+        };
+        
+        // 別の正常なメッセージを追加
+        state = state.AddUserMessage("もう一つの正常なメッセージ", dateTime);
+
+        // Act
+        var result = service.GetAllMessages(state).ToList();
+
+        // Assert
+        // 空のContentを持つメッセージはスキップされる
+        result.Should().HaveCount(2);
+        result[0].message.Should().Be("正常なメッセージ");
+        result[1].message.Should().Be("もう一つの正常なメッセージ");
     }
 
     [Fact]
     public void GetAllMessages_ユーザーメッセージを正しく返すこと()
     {
-        // 試験内容: UserChatMessageを含む状態でGetAllMessagesを呼び出す
-        // 期待される結果: (sister: null, message: テキスト) のタプルが返される
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState();
+        
+        // InitialConversationを読み込む
+        state = state.LoadInitialConversation(dateTime);
+        state = state.AddUserMessage("テストメッセージ", dateTime);
+
+        // Act
+        var result = service.GetAllMessages(state).ToList();
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].sister.Should().BeNull(); // ユーザーメッセージはsisterがnull
+        result[0].message.Should().Be("テストメッセージ");
     }
 
     [Fact]
     public void GetAllMessages_アシスタントメッセージを正しく返すこと()
     {
-        // 試験内容: AssistantChatMessageを含む状態でGetAllMessagesを呼び出す
-        // 期待される結果: (sister: Kotonoha, message: テキスト) のタプルが返される
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState();
+        
+        // InitialConversationを読み込む
+        state = state.LoadInitialConversation(dateTime);
+        state = state.AddAssistantMessage(Kotonoha.Akane, "茜のメッセージやで");
+
+        // Act
+        var result = service.GetAllMessages(state).ToList();
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].sister.Should().Be(Kotonoha.Akane);
+        result[0].message.Should().Be("茜のメッセージやで");
     }
 
     [Fact]
     public void GetAllMessages_ツールメッセージをスキップすること()
     {
-        // 試験内容: ToolChatMessageを含む状態でGetAllMessagesを呼び出す
-        // 期待される結果: ToolChatMessageがスキップされ、返されない
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState();
+        
+        // InitialConversationを読み込む
+        state = state.LoadInitialConversation(dateTime);
+        
+        state = state.AddUserMessage("メッセージ1", dateTime);
+        state = state.AddToolMessage("call_123", "ツール実行結果");
+        state = state.AddUserMessage("メッセージ2", dateTime);
+
+        // Act
+        var result = service.GetAllMessages(state).ToList();
+
+        // Assert
+        // ToolChatMessageはスキップされ、UserChatMessageのみが返される
+        result.Should().HaveCount(2);
+        result[0].message.Should().Be("メッセージ1");
+        result[1].message.Should().Be("メッセージ2");
     }
 
     [Fact]
     public void GetAllMessages_複数の種類のメッセージを正しく処理すること()
     {
-        // 試験内容: ユーザー、アシスタント、ツールメッセージが混在する状態でGetAllMessagesを呼び出す
-        // 期待される結果: ツールメッセージ以外が順番通りに返される
-        throw new NotImplementedException();
+        // Arrange
+        var service = CreateService();
+        var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
+        var state = CreateTestState();
+        
+        // InitialConversationを読み込む
+        state = state.LoadInitialConversation(dateTime);
+        
+        // 複数のメッセージタイプを混在させる
+        state = state.AddUserMessage("ユーザー1", dateTime);
+        state = state.AddAssistantMessage(Kotonoha.Akane, "茜の返答");
+        state = state.AddToolMessage("call_123", "ツール結果");
+        state = state.AddUserMessage("ユーザー2", dateTime);
+        state = state.AddAssistantMessage(Kotonoha.Aoi, "葵の返答");
+
+        // Act
+        var result = service.GetAllMessages(state).ToList();
+
+        // Assert
+        // ToolChatMessage以外が順番通りに返される
+        result.Should().HaveCount(4);
+        
+        result[0].sister.Should().BeNull();
+        result[0].message.Should().Be("ユーザー1");
+        
+        result[1].sister.Should().Be(Kotonoha.Akane);
+        result[1].message.Should().Be("茜の返答");
+        
+        result[2].sister.Should().BeNull();
+        result[2].message.Should().Be("ユーザー2");
+        
+        result[3].sister.Should().Be(Kotonoha.Aoi);
+        result[3].message.Should().Be("葵の返答");
     }
 
     #endregion

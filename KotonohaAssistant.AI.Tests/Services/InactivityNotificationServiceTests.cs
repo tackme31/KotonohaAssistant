@@ -433,88 +433,294 @@ public class InactivityNotificationServiceTests
     [Fact]
     public async Task CheckInactivityAsync_非アクティブ期間未経過_通知が送信されないこと()
     {
-        // テスト内容:
-        // - 最後のアクティビティが 30 分前
-        // - notifyInterval が 1 時間の場合
-        // - LINE 通知が送信されないこと
-        //
-        // 期待される値:
-        // - LineMessagingRepository.SendTextMessageAsync が呼ばれない
-        // - ログに「Not enough time elapsed. No notification.」が出力される
+        // Arrange
+        // 現在時刻を 12:00 に固定
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var thirtyMinutesAgo = now.AddMinutes(-30);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        // 30分前の茜のメッセージを追加
+        var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
+        var message = new Message
+        {
+            Id = 1,
+            ConversationId = 1,
+            Type = "Assistant",
+            Content = System.Text.Json.JsonSerializer.Serialize(new[] { chatResponseJson }),
+            ToolCalls = "[]",
+            CreatedAt = thirtyMinutesAgo
+        };
+        _chatMessageRepository.AddMessage(message);
+
+        var service = new InactivityNotificationService(
+            _chatMessageRepository,
+            _chatCompletionRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        // Act
+        // notifyInterval (1時間) を超えていないので通知は送信されないはず
+        var notifyInterval = TimeSpan.FromHours(1);
+        var checkInactivityMethod = typeof(InactivityNotificationService)
+            .GetMethod("CheckInactivityAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        await (Task)checkInactivityMethod!.Invoke(service, [notifyInterval])!;
+
+        // Assert
+        // LINE 通知が送信されていないことを検証
+        _lineMessagingRepository.SentMessages.Should().BeEmpty();
+
+        // ログに「Not enough time elapsed. No notification.」が出力されることを検証
+        _logger.InformationLogs.Should().Contain(log => log.Contains("Not enough time elapsed. No notification."));
     }
 
     [Fact]
     public async Task CheckInactivityAsync_アクティビティが見つからない_通知をスキップすること()
     {
-        // テスト内容:
-        // - ChatMessageRepository が空のメッセージリストを返す
-        // - 通知がスキップされること
-        //
-        // 期待される値:
-        // - LineMessagingRepository.SendTextMessageAsync が呼ばれない
-        // - ログに「No activity found. Skipping.」が出力される
+        // Arrange
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        // メッセージを追加しない（空のリポジトリ）
+
+        var service = new InactivityNotificationService(
+            _chatMessageRepository,
+            _chatCompletionRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        // Act
+        var notifyInterval = TimeSpan.FromHours(1);
+        var checkInactivityMethod = typeof(InactivityNotificationService)
+            .GetMethod("CheckInactivityAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        await (Task)checkInactivityMethod!.Invoke(service, [notifyInterval])!;
+
+        // Assert
+        // LINE 通知が送信されていないことを検証
+        _lineMessagingRepository.SentMessages.Should().BeEmpty();
+
+        // ログに「No activity found. Skipping.」が出力されることを検証
+        _logger.WarningLogs.Should().Contain(log => log.Contains("No activity found. Skipping."));
     }
 
     [Fact]
     public async Task CheckInactivityAsync_通知メッセージが空_通知をスキップすること()
     {
-        // テスト内容:
-        // - ChatCompletionRepository が空のテキストを返す
-        // - 通知がスキップされること
-        //
-        // 期待される値:
-        // - LineMessagingRepository.SendTextMessageAsync が呼ばれない
-        // - ログに「Generated message is empty. Skipping notification.」が出力される
+        // Arrange
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var twoHoursAgo = now.AddHours(-2);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        // 2時間前の茜のメッセージを追加
+        var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
+        var message = new Message
+        {
+            Id = 1,
+            ConversationId = 1,
+            Type = "Assistant",
+            Content = System.Text.Json.JsonSerializer.Serialize(new[] { chatResponseJson }),
+            ToolCalls = "[]",
+            CreatedAt = twoHoursAgo
+        };
+        _chatMessageRepository.AddMessage(message);
+
+        // AI が空のテキストを返すようにモック
+        var emptyResponseJson = """{"Assistant":"Akane","Text":""}""";
+        var completionResponse = CreateTextCompletion(emptyResponseJson);
+        var chatCompletionRepository = new MockChatCompletionRepository(
+            (messages, options) => Task.FromResult<ChatCompletion?>(completionResponse)
+        );
+
+        var service = new InactivityNotificationService(
+            _chatMessageRepository,
+            chatCompletionRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        // Act
+        var notifyInterval = TimeSpan.FromHours(1);
+        var checkInactivityMethod = typeof(InactivityNotificationService)
+            .GetMethod("CheckInactivityAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        await (Task)checkInactivityMethod!.Invoke(service, [notifyInterval])!;
+
+        // Assert
+        // LINE 通知が送信されていないことを検証
+        _lineMessagingRepository.SentMessages.Should().BeEmpty();
+
+        // ログに「Generated message is empty. Skipping notification.」が出力されることを検証
+        _logger.WarningLogs.Should().Contain(log => log.Contains("Generated message is empty. Skipping notification."));
     }
 
     [Fact]
     public async Task CheckInactivityAsync_ChatResponseパース失敗_通知をスキップすること()
     {
-        // テスト内容:
-        // - 最後のアクティビティのメッセージが ChatResponse としてパースできない
-        // - GetLastActivity が null を返すこと
-        // - 通知がスキップされること
-        //
-        // 期待される値:
-        // - LineMessagingRepository.SendTextMessageAsync が呼ばれない
-        // - ログに「No activity found. Skipping.」が出力される
+        // Arrange
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var twoHoursAgo = now.AddHours(-2);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        // ChatResponse としてパースできない無効なメッセージを追加
+        var invalidJson = """not a json at all""";
+        var message = new Message
+        {
+            Id = 1,
+            ConversationId = 1,
+            Type = "Assistant",
+            Content = System.Text.Json.JsonSerializer.Serialize(new[] { invalidJson }),
+            ToolCalls = "[]",
+            CreatedAt = twoHoursAgo
+        };
+        _chatMessageRepository.AddMessage(message);
+
+        var service = new InactivityNotificationService(
+            _chatMessageRepository,
+            _chatCompletionRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        // Act
+        var notifyInterval = TimeSpan.FromHours(1);
+        var checkInactivityMethod = typeof(InactivityNotificationService)
+            .GetMethod("CheckInactivityAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        await (Task)checkInactivityMethod!.Invoke(service, [notifyInterval])!;
+
+        // Assert
+        // LINE 通知が送信されていないことを検証
+        _lineMessagingRepository.SentMessages.Should().BeEmpty();
+
+        // ログに「No activity found. Skipping.」が出力されることを検証
+        _logger.WarningLogs.Should().Contain(log => log.Contains("No activity found. Skipping."));
     }
 
     [Fact]
     public async Task CheckInactivityAsync_通知生成時のChatResponseパース失敗_通知をスキップすること()
     {
-        // テスト内容:
-        // - SendInactivityNotificationAsync 内で生成された通知メッセージが
-        //   ChatResponse としてパースできない
-        // - 通知がスキップされること
-        //
-        // 期待される値:
-        // - LineMessagingRepository.SendTextMessageAsync が呼ばれない
-        // - ログに「The response couldn't be parsed to ChatResponse」が出力される
+        // Arrange
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var twoHoursAgo = now.AddHours(-2);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        // 2時間前の茜のメッセージを追加（有効なメッセージ）
+        var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
+        var message = new Message
+        {
+            Id = 1,
+            ConversationId = 1,
+            Type = "Assistant",
+            Content = System.Text.Json.JsonSerializer.Serialize(new[] { chatResponseJson }),
+            ToolCalls = "[]",
+            CreatedAt = twoHoursAgo
+        };
+        _chatMessageRepository.AddMessage(message);
+
+        // AI が無効なフォーマットの応答を返すようにモック
+        var invalidResponseJson = """not a json at all""";
+        var completionResponse = CreateTextCompletion(invalidResponseJson);
+        var chatCompletionRepository = new MockChatCompletionRepository(
+            (messages, options) => Task.FromResult<ChatCompletion?>(completionResponse)
+        );
+
+        var service = new InactivityNotificationService(
+            _chatMessageRepository,
+            chatCompletionRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        // Act
+        var notifyInterval = TimeSpan.FromHours(1);
+        var checkInactivityMethod = typeof(InactivityNotificationService)
+            .GetMethod("CheckInactivityAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        await (Task)checkInactivityMethod!.Invoke(service, [notifyInterval])!;
+
+        // Assert
+        // LINE 通知が送信されていないことを検証
+        _lineMessagingRepository.SentMessages.Should().BeEmpty();
+
+        // ログに「The response couldn't be parsed to ChatResponse」が出力されることを検証
+        _logger.WarningLogs.Should().Contain(log => log.Contains("The response couldn't be parsed to ChatResponse"));
     }
 
     [Fact]
     public async Task CheckInactivityAsync_通知生成時に例外発生_通知をスキップすること()
     {
-        // テスト内容:
-        // - ChatCompletionRepository.CompleteChatAsync が例外をスローする
-        // - 通知がスキップされること
-        //
-        // 期待される値:
-        // - LineMessagingRepository.SendTextMessageAsync が呼ばれない
-        // - Logger.LogError(Exception) が呼ばれる
+        // Arrange
+        var now = new DateTime(2025, 1, 1, 12, 0, 0);
+        var twoHoursAgo = now.AddHours(-2);
+        var dateTimeProvider = new MockDateTimeProvider(now);
 
-        throw new NotImplementedException();
+        // 2時間前の茜のメッセージを追加
+        var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
+        var message = new Message
+        {
+            Id = 1,
+            ConversationId = 1,
+            Type = "Assistant",
+            Content = System.Text.Json.JsonSerializer.Serialize(new[] { chatResponseJson }),
+            ToolCalls = "[]",
+            CreatedAt = twoHoursAgo
+        };
+        _chatMessageRepository.AddMessage(message);
+
+        // ChatCompletionRepository が例外をスローするようにモック
+        var chatCompletionRepository = new MockChatCompletionRepository(
+            (messages, options) => throw new InvalidOperationException("Test exception")
+        );
+
+        var service = new InactivityNotificationService(
+            _chatMessageRepository,
+            chatCompletionRepository,
+            _availableFunctions,
+            _promptRepository,
+            _logger,
+            _lineMessagingRepository,
+            dateTimeProvider,
+            "test-user-id"
+        );
+
+        // Act
+        var notifyInterval = TimeSpan.FromHours(1);
+        var checkInactivityMethod = typeof(InactivityNotificationService)
+            .GetMethod("CheckInactivityAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+
+        await (Task)checkInactivityMethod!.Invoke(service, [notifyInterval])!;
+
+        // Assert
+        // LINE 通知が送信されていないことを検証
+        _lineMessagingRepository.SentMessages.Should().BeEmpty();
+
+        // Logger.LogError(Exception) が呼ばれることを検証
+        _logger.Errors.Should().HaveCount(1);
+        _logger.Errors[0].Should().BeOfType<InvalidOperationException>();
+        _logger.Errors[0].Message.Should().Be("Test exception");
     }
 
     #endregion

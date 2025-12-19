@@ -385,65 +385,206 @@ public class ConversationServiceTests
     [Fact]
     public async Task LoadLatestConversation_会話履歴が存在しない場合_新しい会話を作成すること()
     {
-        // 試験内容: GetLatestConversationIdAsyncが-1を返す場合にLoadLatestConversationを呼び出す
-        // 期待される結果: CreateNewConversationAsyncが呼ばれ、新しいConversationIdが設定される
-        throw new NotImplementedException();
+        // Arrange
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            GetLatestConversationIdAsyncFunc = () => Task.FromResult(-1L),
+            CreateNewConversationIdAsyncFunc = () => Task.FromResult(42)
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo);
+
+        // Act
+        var result = await service.LoadLatestConversation();
+
+        // Assert
+        result.ConversationId.Should().Be(42);
+        result.ChatMessages.Should().NotBeEmpty(); // LoadInitialConversationが呼ばれるため
+        result.LastSavedMessageIndex.Should().Be(0);
     }
 
     [Fact]
     public async Task LoadLatestConversation_GetLatestConversationIdAsyncで例外発生時_新しい会話を作成すること()
     {
-        // 試験内容: GetLatestConversationIdAsyncが例外をスローした場合にLoadLatestConversationを呼び出す
-        // 期待される結果: 例外がキャッチされ、新しい会話が作成される
-        throw new NotImplementedException();
+        // Arrange
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            GetLatestConversationIdAsyncFunc = () => throw new Exception("Database error"),
+            CreateNewConversationIdAsyncFunc = () => Task.FromResult(42)
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo);
+
+        // Act
+        var result = await service.LoadLatestConversation();
+
+        // Assert
+        result.ConversationId.Should().Be(42);
+        result.ChatMessages.Should().NotBeEmpty(); // LoadInitialConversationが呼ばれるため
+        result.LastSavedMessageIndex.Should().Be(0);
     }
 
     [Fact]
     public async Task LoadLatestConversation_会話履歴が存在する場合_それを読み込むこと()
     {
-        // 試験内容: 有効なconversationIdが返され、メッセージが取得できる場合にLoadLatestConversationを呼び出す
-        // 期待される結果: ConversationStateにconversationIdとメッセージが設定される
-        throw new NotImplementedException();
+        // Arrange
+        var response = new ChatResponse
+        {
+            Assistant = Kotonoha.Akane,
+            Text = "こんにちはやで"
+        };
+        var messages = new List<ChatMessage>
+        {
+            new UserChatMessage("テストメッセージ"),
+            new AssistantChatMessage(response.ToJson())
+        };
+
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            GetLatestConversationIdAsyncFunc = () => Task.FromResult(123L),
+            GetAllChatMessagesAsyncFunc = (conversationId) => Task.FromResult<IEnumerable<ChatMessage>>(messages)
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo);
+
+        // Act
+        var result = await service.LoadLatestConversation();
+
+        // Assert
+        result.ConversationId.Should().Be(123);
+        result.ChatMessages.Should().HaveCount(2);
+        result.CurrentSister.Should().Be(Kotonoha.Akane);
+        result.LastSavedMessageIndex.Should().Be(2);
     }
 
     [Fact]
     public async Task LoadLatestConversation_GetAllChatMessagesAsyncで例外発生時_デフォルトStateを返すこと()
     {
-        // 試験内容: GetAllChatMessagesAsyncが例外をスローした場合にLoadLatestConversationを呼び出す
-        // 期待される結果: 例外がキャッチされ、デフォルトStateが返される
-        throw new NotImplementedException();
+        // Arrange
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            GetLatestConversationIdAsyncFunc = () => Task.FromResult(123L),
+            GetAllChatMessagesAsyncFunc = (conversationId) => throw new Exception("Database error")
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo);
+
+        // Act
+        var result = await service.LoadLatestConversation();
+
+        // Assert
+        result.ConversationId.Should().BeNull();
+        result.ChatMessages.Should().BeEmpty();
+        result.CurrentSister.Should().Be(Kotonoha.Akane); // デフォルト
+        result.LastSavedMessageIndex.Should().Be(0);
     }
 
     [Fact]
     public async Task LoadLatestConversation_最後のメッセージがない場合_デフォルトの姉妹を設定すること()
     {
-        // 試験内容: メッセージが空の場合にLoadLatestConversationを呼び出す
-        // 期待される結果: CurrentSisterがデフォルト（Akane）に設定される
-        throw new NotImplementedException();
+        // Arrange
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            GetLatestConversationIdAsyncFunc = () => Task.FromResult(123L),
+            GetAllChatMessagesAsyncFunc = (conversationId) => Task.FromResult(Enumerable.Empty<ChatMessage>())
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo);
+
+        // Act
+        var result = await service.LoadLatestConversation();
+
+        // Assert
+        result.ConversationId.Should().Be(123);
+        result.ChatMessages.Should().BeEmpty();
+        result.CurrentSister.Should().Be(Kotonoha.Akane); // デフォルト
+        result.LastSavedMessageIndex.Should().Be(0);
     }
 
     [Fact]
     public async Task LoadLatestConversation_最後のメッセージから現在の姉妹を復元すること()
     {
-        // 試験内容: 最後のメッセージがAssistantChatMessageで、Aoiの応答を含む場合にLoadLatestConversationを呼び出す
-        // 期待される結果: CurrentSisterがAoiに設定される
-        throw new NotImplementedException();
+        // Arrange
+        var response = new ChatResponse
+        {
+            Assistant = Kotonoha.Aoi,
+            Text = "はい、わかりました"
+        };
+        var messages = new List<ChatMessage>
+        {
+            new UserChatMessage("テストメッセージ"),
+            new AssistantChatMessage(response.ToJson())
+        };
+
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            GetLatestConversationIdAsyncFunc = () => Task.FromResult(123L),
+            GetAllChatMessagesAsyncFunc = (conversationId) => Task.FromResult<IEnumerable<ChatMessage>>(messages)
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo);
+
+        // Act
+        var result = await service.LoadLatestConversation();
+
+        // Assert
+        result.ConversationId.Should().Be(123);
+        result.CurrentSister.Should().Be(Kotonoha.Aoi);
+        result.ChatMessages.Should().HaveCount(2);
     }
 
     [Fact]
     public async Task LoadLatestConversation_最後のメッセージがパースできない場合_デフォルトの姉妹を設定すること()
     {
-        // 試験内容: 最後のメッセージのContentがChatResponseとしてパースできない場合にLoadLatestConversationを呼び出す
-        // 期待される結果: CurrentSisterがデフォルト（Akane）に設定される
-        throw new NotImplementedException();
+        // Arrange
+        var messages = new List<ChatMessage>
+        {
+            new UserChatMessage("テストメッセージ"),
+            new AssistantChatMessage("これは無効なJSON形式です")
+        };
+
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            GetLatestConversationIdAsyncFunc = () => Task.FromResult(123L),
+            GetAllChatMessagesAsyncFunc = (conversationId) => Task.FromResult<IEnumerable<ChatMessage>>(messages)
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo);
+
+        // Act
+        var result = await service.LoadLatestConversation();
+
+        // Assert
+        result.ConversationId.Should().Be(123);
+        result.CurrentSister.Should().Be(Kotonoha.Akane); // デフォルト
+        result.ChatMessages.Should().HaveCount(2);
     }
 
     [Fact]
     public async Task LoadLatestConversation_LastSavedMessageIndexが正しく設定されること()
     {
-        // 試験内容: メッセージが複数ある場合にLoadLatestConversationを呼び出す
-        // 期待される結果: LastSavedMessageIndexがメッセージ数と一致する
-        throw new NotImplementedException();
+        // Arrange
+        var response = new ChatResponse
+        {
+            Assistant = Kotonoha.Akane,
+            Text = "テスト応答"
+        };
+        var messages = new List<ChatMessage>
+        {
+            new UserChatMessage("メッセージ1"),
+            new AssistantChatMessage(response.ToJson()),
+            new UserChatMessage("メッセージ2"),
+            new AssistantChatMessage(response.ToJson()),
+            new UserChatMessage("メッセージ3")
+        };
+
+        var chatMessageRepo = new MockChatMessageRepository
+        {
+            GetLatestConversationIdAsyncFunc = () => Task.FromResult(123L),
+            GetAllChatMessagesAsyncFunc = (conversationId) => Task.FromResult<IEnumerable<ChatMessage>>(messages)
+        };
+        var service = CreateService(chatMessageRepo: chatMessageRepo);
+
+        // Act
+        var result = await service.LoadLatestConversation();
+
+        // Assert
+        result.ConversationId.Should().Be(123);
+        result.LastSavedMessageIndex.Should().Be(5); // メッセージ数と一致
+        result.ChatMessages.Should().HaveCount(5);
     }
 
     #endregion

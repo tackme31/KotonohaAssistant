@@ -2,8 +2,7 @@
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Tests.Helpers;
-using KotonohaAssistant.Core;
-using KotonohaAssistant.Core.Models;
+using KotonohaAssistant.AI.Functions;
 using OpenAI.Chat;
 
 namespace KotonohaAssistant.AI.Tests.Services;
@@ -17,7 +16,7 @@ public class InactivityNotificationServiceTests
     private readonly MockPromptRepository _promptRepository;
     private readonly MockLogger _logger;
     private readonly MockLineMessagingRepository _lineMessagingRepository;
-    private readonly List<Functions.ToolFunction> _availableFunctions;
+    private readonly List<ToolFunction> _availableFunctions;
 
     #endregion
 

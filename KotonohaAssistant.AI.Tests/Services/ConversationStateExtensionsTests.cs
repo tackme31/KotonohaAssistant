@@ -1,8 +1,8 @@
-﻿using System.Collections.Immutable;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using FluentAssertions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.AI.Tests.Helpers;
 using KotonohaAssistant.Core;
 using OpenAI.Chat;
 
@@ -10,16 +10,6 @@ namespace KotonohaAssistant.AI.Tests.Services;
 
 public class ConversationStateExtensionsTests
 {
-    private ConversationState CreateTestState(Kotonoha currentSister = Kotonoha.Akane)
-    {
-        return new ConversationState
-        {
-            SystemMessageAkane = "System message for Akane",
-            SystemMessageAoi = "System message for Aoi",
-            CurrentSister = currentSister,
-            ChatMessages = ImmutableArray<ChatMessage>.Empty
-        };
-    }
 
     #region AddUserMessage テスト
 
@@ -27,7 +17,7 @@ public class ConversationStateExtensionsTests
     public void AddUserMessage_ユーザーメッセージを追加できること()
     {
         // Arrange
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
 
         // Act
@@ -37,15 +27,12 @@ public class ConversationStateExtensionsTests
         result.ChatMessages.Should().HaveCount(1);
         result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
 
-        var userMessage = result.ChatMessages[0] as UserChatMessage;
-        userMessage!.Content.Should().NotBeEmpty();
-
-        var json = JsonNode.Parse(userMessage.Content[0].Text);
-        json.Should().NotBeNull();
-        json.Should().HavePropertyWithStringValue("InputType", "User");
-        json.Should().HavePropertyWithStringValue("Text", "こんにちは");
-        json.Should().HavePropertyWithStringValue("Today", "2025年1月1日 (水曜日)");
-        json.Should().HavePropertyWithStringValue("CurrentTime", "12時30分");
+        var userMessage = result.ChatMessages[0].Content.AsJson();
+        userMessage.Should().NotBeNull();
+        userMessage.Should().HavePropertyWithStringValue("InputType", "User");
+        userMessage.Should().HavePropertyWithStringValue("Text", "こんにちは");
+        userMessage.Should().HavePropertyWithStringValue("Today", "2025年1月1日 (水曜日)");
+        userMessage.Should().HavePropertyWithStringValue("CurrentTime", "12時30分");
     }
 
     #endregion
@@ -56,7 +43,7 @@ public class ConversationStateExtensionsTests
     public void AddAssistantMessage_Kotonoha版_茜のメッセージを追加できること()
     {
         // Arrange
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // Act
         var result = state.AddAssistantMessage(Kotonoha.Akane, "おはようさん");
@@ -65,20 +52,17 @@ public class ConversationStateExtensionsTests
         result.ChatMessages.Should().HaveCount(1);
         result.ChatMessages[0].Should().BeOfType<AssistantChatMessage>();
 
-        var assistantMessage = result.ChatMessages[0] as AssistantChatMessage;
-        assistantMessage!.Content.Should().NotBeEmpty();
-
-        var json = JsonNode.Parse(assistantMessage.Content[0].Text);
-        json.Should().NotBeNull();
-        json.Should().HavePropertyWithStringValue("Assistant", "Akane");
-        json.Should().HavePropertyWithStringValue("Text", "おはようさん");
+        var assistantMessage = result.ChatMessages[0].Content.AsJson();
+        assistantMessage.Should().NotBeNull();
+        assistantMessage.Should().HavePropertyWithStringValue("Assistant", "Akane");
+        assistantMessage.Should().HavePropertyWithStringValue("Text", "おはようさん");
     }
 
     [Fact]
     public void AddAssistantMessage_Kotonoha版_葵のメッセージを追加できること()
     {
         // Arrange
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // Act
         var result = state.AddAssistantMessage(Kotonoha.Aoi, "おはようございます");
@@ -87,13 +71,10 @@ public class ConversationStateExtensionsTests
         result.ChatMessages.Should().HaveCount(1);
         result.ChatMessages[0].Should().BeOfType<AssistantChatMessage>();
 
-        var assistantMessage = result.ChatMessages[0] as AssistantChatMessage;
-        assistantMessage!.Content.Should().NotBeEmpty();
-
-        var json = JsonNode.Parse(assistantMessage.Content[0].Text);
-        json.Should().NotBeNull();
-        json.Should().HavePropertyWithStringValue("Assistant", "Aoi");
-        json.Should().HavePropertyWithStringValue("Text", "おはようございます");
+        var assistantMessage = result.ChatMessages[0].Content.AsJson();
+        assistantMessage.Should().NotBeNull();
+        assistantMessage.Should().HavePropertyWithStringValue("Assistant", "Aoi");
+        assistantMessage.Should().HavePropertyWithStringValue("Text", "おはようございます");
     }
 
     #endregion
@@ -104,7 +85,7 @@ public class ConversationStateExtensionsTests
     public void AddInstruction_インストラクションを追加できること()
     {
         // Arrange
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
 
         // Act
@@ -114,15 +95,12 @@ public class ConversationStateExtensionsTests
         result.ChatMessages.Should().HaveCount(1);
         result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
 
-        var userMessage = result.ChatMessages[0] as UserChatMessage;
-        userMessage!.Content.Should().NotBeEmpty();
-
-        var json = JsonNode.Parse(userMessage.Content[0].Text);
-        json.Should().NotBeNull();
-        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        json.Should().HavePropertyWithStringValue("Text", "テスト指示");
-        json.Should().HavePropertyWithStringValue("Today", "2025年1月1日 (水曜日)");
-        json.Should().HavePropertyWithStringValue("CurrentTime", "12時30分");
+        var userMessage = result.ChatMessages[0].Content.AsJson();
+        userMessage.Should().NotBeNull();
+        userMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        userMessage.Should().HavePropertyWithStringValue("Text", "テスト指示");
+        userMessage.Should().HavePropertyWithStringValue("Today", "2025年1月1日 (水曜日)");
+        userMessage.Should().HavePropertyWithStringValue("CurrentTime", "12時30分");
     }
 
     #endregion
@@ -133,7 +111,7 @@ public class ConversationStateExtensionsTests
     public void AddBeginLazyModeInstruction_茜の場合_Lazyモード開始インストラクションを追加できること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Akane);
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
 
         // Act
@@ -143,20 +121,17 @@ public class ConversationStateExtensionsTests
         result.ChatMessages.Should().HaveCount(1);
         result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
 
-        var userMessage = result.ChatMessages[0] as UserChatMessage;
-        userMessage!.Content.Should().NotBeEmpty();
-
-        var json = JsonNode.Parse(userMessage.Content[0].Text);
-        json.Should().NotBeNull();
-        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        json.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
+        var userMessage = result.ChatMessages[0].Content.AsJson();
+        userMessage.Should().NotBeNull();
+        userMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        userMessage.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
     }
 
     [Fact]
     public void AddBeginLazyModeInstruction_葵の場合_Lazyモード開始インストラクションを追加できること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Aoi);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Aoi);
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
 
         // Act
@@ -166,13 +141,10 @@ public class ConversationStateExtensionsTests
         result.ChatMessages.Should().HaveCount(1);
         result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
 
-        var userMessage = result.ChatMessages[0] as UserChatMessage;
-        userMessage!.Content.Should().NotBeEmpty();
-
-        var json = JsonNode.Parse(userMessage.Content[0].Text);
-        json.Should().NotBeNull();
-        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        json.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAoi);
+        var userMessage = result.ChatMessages[0].Content.AsJson();
+        userMessage.Should().NotBeNull();
+        userMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        userMessage.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAoi);
     }
 
     #endregion
@@ -183,7 +155,7 @@ public class ConversationStateExtensionsTests
     public void AddEndLazyModeInstruction_茜の場合_Lazyモード終了インストラクションを追加できること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Akane);
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
 
         // Act
@@ -193,20 +165,17 @@ public class ConversationStateExtensionsTests
         result.ChatMessages.Should().HaveCount(1);
         result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
 
-        var userMessage = result.ChatMessages[0] as UserChatMessage;
-        userMessage!.Content.Should().NotBeEmpty();
-
-        var json = JsonNode.Parse(userMessage.Content[0].Text);
-        json.Should().NotBeNull();
-        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        json.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAkane);
+        var userMessage = result.ChatMessages[0].Content.AsJson();
+        userMessage.Should().NotBeNull();
+        userMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        userMessage.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAkane);
     }
 
     [Fact]
     public void AddEndLazyModeInstruction_葵の場合_Lazyモード終了インストラクションを追加できること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Aoi);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Aoi);
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
 
         // Act
@@ -216,13 +185,10 @@ public class ConversationStateExtensionsTests
         result.ChatMessages.Should().HaveCount(1);
         result.ChatMessages[0].Should().BeOfType<UserChatMessage>();
 
-        var userMessage = result.ChatMessages[0] as UserChatMessage;
-        userMessage!.Content.Should().NotBeEmpty();
-
-        var json = JsonNode.Parse(userMessage.Content[0].Text);
-        json.Should().NotBeNull();
-        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        json.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAoi);
+        var userMessage = result.ChatMessages[0].Content.AsJson();
+        userMessage.Should().NotBeNull();
+        userMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        userMessage.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAoi);
     }
 
     #endregion
@@ -233,7 +199,7 @@ public class ConversationStateExtensionsTests
     public void AddToolMessage_ツールメッセージを追加できること()
     {
         // Arrange
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
         var toolCallId = "call_abc123";
         var result = "処理が完了しました";
 
@@ -258,7 +224,7 @@ public class ConversationStateExtensionsTests
     public void SwitchToAnotherSister_茜から葵に切り替わること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Akane);
 
         // Act
         var result = state.SwitchToAnotherSister();
@@ -271,7 +237,7 @@ public class ConversationStateExtensionsTests
     public void SwitchToAnotherSister_葵から茜に切り替わること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Aoi);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Aoi);
 
         // Act
         var result = state.SwitchToAnotherSister();
@@ -288,7 +254,7 @@ public class ConversationStateExtensionsTests
     public void SwitchToSister_同じ姉妹の場合_何もしないこと()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Akane);
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
 
         // Act
@@ -303,7 +269,7 @@ public class ConversationStateExtensionsTests
     public void SwitchToSister_異なる姉妹の場合_切り替えること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Akane);
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
 
         // Act
@@ -314,13 +280,10 @@ public class ConversationStateExtensionsTests
         result.PatienceCount.Should().Be(0);
         result.ChatMessages.Should().HaveCount(1);
 
-        var userMessage = result.ChatMessages[0] as UserChatMessage;
-        userMessage!.Content.Should().NotBeEmpty();
-
-        var json = JsonNode.Parse(userMessage.Content[0].Text);
-        json.Should().NotBeNull();
-        json.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        json.Should().HavePropertyWithStringValue("Text", Instruction.SwitchSisterTo(Kotonoha.Aoi));
+        var userMessage = result.ChatMessages[0].Content.AsJson();
+        userMessage.Should().NotBeNull();
+        userMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        userMessage.Should().HavePropertyWithStringValue("Text", Instruction.SwitchSisterTo(Kotonoha.Aoi));
     }
 
     #endregion
@@ -331,7 +294,7 @@ public class ConversationStateExtensionsTests
     public void RecordToolCall_初回のツール呼び出しを記録できること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Akane);
 
         // Act
         var result = state.RecordToolCall();
@@ -345,7 +308,7 @@ public class ConversationStateExtensionsTests
     public void RecordToolCall_同じ姉妹の連続呼び出しでPatienceCountが増加すること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Akane) with
+        var state = TestStateFactory.CreateTestState(Kotonoha.Akane) with
         {
             LastToolCallSister = Kotonoha.Akane,
             PatienceCount = 2
@@ -363,7 +326,7 @@ public class ConversationStateExtensionsTests
     public void RecordToolCall_異なる姉妹の呼び出しでPatienceCountがリセットされること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Aoi) with
+        var state = TestStateFactory.CreateTestState(Kotonoha.Aoi) with
         {
             LastToolCallSister = Kotonoha.Akane,
             PatienceCount = 5
@@ -385,7 +348,7 @@ public class ConversationStateExtensionsTests
     public void FullChatMessages_茜の場合_茜のシステムメッセージが先頭に追加されること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Akane);
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
         state = state.AddUserMessage("テスト", dateTime);
 
@@ -405,7 +368,7 @@ public class ConversationStateExtensionsTests
     public void FullChatMessages_葵の場合_葵のシステムメッセージが先頭に追加されること()
     {
         // Arrange
-        var state = CreateTestState(Kotonoha.Aoi);
+        var state = TestStateFactory.CreateTestState(Kotonoha.Aoi);
         var dateTime = new DateTime(2025, 1, 1, 12, 30, 0);
         state = state.AddUserMessage("テスト", dateTime);
 

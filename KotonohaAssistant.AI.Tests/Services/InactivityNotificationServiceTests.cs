@@ -1,9 +1,9 @@
 ﻿using FluentAssertions;
-using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.AI.Tests.Helpers;
 using KotonohaAssistant.Core;
-using KotonohaAssistant.Core.Utils;
+using KotonohaAssistant.Core.Models;
 using OpenAI.Chat;
 
 namespace KotonohaAssistant.AI.Tests.Services;
@@ -12,12 +12,12 @@ public class InactivityNotificationServiceTests
 {
     #region Fields
 
-    private readonly MockChatMessageRepository _chatMessageRepository;
+    private readonly TestMockChatMessageRepository _chatMessageRepository;
     private readonly MockChatCompletionRepository _chatCompletionRepository;
     private readonly MockPromptRepository _promptRepository;
     private readonly MockLogger _logger;
     private readonly MockLineMessagingRepository _lineMessagingRepository;
-    private readonly List<ToolFunction> _availableFunctions;
+    private readonly List<Functions.ToolFunction> _availableFunctions;
 
     #endregion
 
@@ -25,12 +25,12 @@ public class InactivityNotificationServiceTests
 
     public InactivityNotificationServiceTests()
     {
-        _chatMessageRepository = new MockChatMessageRepository();
+        _chatMessageRepository = new TestMockChatMessageRepository();
         _chatCompletionRepository = new MockChatCompletionRepository();
         _promptRepository = new MockPromptRepository();
         _logger = new MockLogger();
         _lineMessagingRepository = new MockLineMessagingRepository();
-        _availableFunctions = new List<ToolFunction>();
+        _availableFunctions = [];
     }
 
     #endregion
@@ -38,220 +38,31 @@ public class InactivityNotificationServiceTests
     #region Test Helpers
 
     /// <summary>
-    /// テスト用のモック IDateTimeProvider
+    /// InactivityNotificationServiceTests専用のモック IChatMessageRepository
+    /// （メッセージ追加機能付き）
     /// </summary>
-    private class MockDateTimeProvider : IDateTimeProvider
-    {
-        private DateTime _now;
-
-        public MockDateTimeProvider(DateTime now)
-        {
-            _now = now;
-        }
-
-        public DateTime Now => _now;
-
-        public void SetNow(DateTime now)
-        {
-            _now = now;
-        }
-    }
-
-    /// <summary>
-    /// テスト用のモック IChatMessageRepository
-    /// </summary>
-    private class MockChatMessageRepository : IChatMessageRepository
+    private class TestMockChatMessageRepository : MockChatMessageRepository
     {
         private readonly List<Message> _messages = [];
         private readonly long _conversationId = 1;
+
+        public TestMockChatMessageRepository()
+        {
+            // 基底クラスのFuncプロパティを設定して、インターフェース経由でも正しく動作するようにする
+            GetLatestConversationIdAsyncFunc = () => Task.FromResult(_conversationId);
+            CreateNewConversationIdAsyncFunc = () => Task.FromResult((int)_conversationId);
+            GetAllMessageAsyncFunc = (conversationId) => Task.FromResult<IEnumerable<Message>>(_messages);
+            GetAllChatMessagesAsyncFunc = (conversationId) =>
+            {
+                var chatMessages = _messages.Select(m => m.ToChatMessage()).ToList();
+                return Task.FromResult<IEnumerable<ChatMessage>>(chatMessages);
+            };
+        }
 
         public void AddMessage(Message message)
         {
             _messages.Add(message);
         }
-
-        public Task<long> GetLatestConversationIdAsync()
-        {
-            return Task.FromResult(_conversationId);
-        }
-
-        public Task<int> CreateNewConversationIdAsync()
-        {
-            return Task.FromResult((int)_conversationId);
-        }
-
-        public Task<IEnumerable<Message>> GetAllMessageAsync(long conversationId)
-        {
-            return Task.FromResult<IEnumerable<Message>>(_messages);
-        }
-
-        public Task<IEnumerable<ChatMessage>> GetAllChatMessagesAsync(long conversationId)
-        {
-            var chatMessages = _messages.Select(m => m.ToChatMessage()).ToList();
-            return Task.FromResult<IEnumerable<ChatMessage>>(chatMessages);
-        }
-
-        public Task InsertChatMessagesAsync(IEnumerable<ChatMessage> chatMessages, long conversationId)
-        {
-            return Task.CompletedTask;
-        }
-    }
-
-    /// <summary>
-    /// テスト用のモック IChatCompletionRepository
-    /// </summary>
-    private class MockChatCompletionRepository : IChatCompletionRepository
-    {
-        private readonly Func<IEnumerable<ChatMessage>, ChatCompletionOptions, Task<ChatCompletion?>>? _completionFunc;
-
-        public MockChatCompletionRepository(
-            Func<IEnumerable<ChatMessage>, ChatCompletionOptions, Task<ChatCompletion?>>? completionFunc = null)
-        {
-            _completionFunc = completionFunc;
-        }
-
-        public async Task<System.ClientModel.ClientResult<ChatCompletion>> CompleteChatAsync(
-            IEnumerable<ChatMessage> messages,
-            ChatCompletionOptions? options = null)
-        {
-            if (_completionFunc != null)
-            {
-                var result = await _completionFunc(messages, options ?? new ChatCompletionOptions());
-                if (result != null)
-                {
-                    return System.ClientModel.ClientResult.FromValue(result, new MockPipelineResponse());
-                }
-            }
-            throw new InvalidOperationException("No completion result available");
-        }
-    }
-
-    /// <summary>
-    /// テスト用のモック PipelineResponse
-    /// </summary>
-    private class MockPipelineResponse : System.ClientModel.Primitives.PipelineResponse
-    {
-        public override int Status => 200;
-        public override string ReasonPhrase => "OK";
-        public override Stream? ContentStream { get; set; }
-        public override BinaryData Content => BinaryData.FromString("{}");
-
-        protected override System.ClientModel.Primitives.PipelineResponseHeaders HeadersCore => new MockPipelineResponseHeaders();
-
-        public override BinaryData BufferContent(CancellationToken cancellationToken = default)
-        {
-            return Content;
-        }
-
-        public override async ValueTask<BinaryData> BufferContentAsync(CancellationToken cancellationToken = default)
-        {
-            return await ValueTask.FromResult(Content);
-        }
-
-        public override void Dispose() { }
-    }
-
-    /// <summary>
-    /// テスト用のモック PipelineResponseHeaders
-    /// </summary>
-    private class MockPipelineResponseHeaders : System.ClientModel.Primitives.PipelineResponseHeaders
-    {
-        public override IEnumerator<KeyValuePair<string, string>> GetEnumerator() =>
-            new List<KeyValuePair<string, string>>().GetEnumerator();
-
-        public override bool TryGetValue(string name, out string? value)
-        {
-            value = null;
-            return false;
-        }
-
-        public override bool TryGetValues(string name, out IEnumerable<string>? values)
-        {
-            values = null;
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// テスト用のモック IPromptRepository
-    /// </summary>
-    private class MockPromptRepository : IPromptRepository
-    {
-        public string GetSystemMessage(Kotonoha kotonoha)
-        {
-            return kotonoha == Kotonoha.Akane
-                ? "System message for Akane"
-                : "System message for Aoi";
-        }
-
-        public string MakeTimeBasedPromise => "MakeTimeBasedPromise description";
-        public string CreateCalendarEventDescription => "CreateCalendarEvent description";
-        public string ForgetMemoryDescription => "ForgetMemory description";
-        public string GetCalendarEventDescription => "GetCalendarEvent description";
-        public string GetWeatherDescription => "GetWeather description";
-        public string StartTimerDescription => "StartTimer description";
-        public string StopAlarmDescription => "StopAlarm description";
-        public string StopTimerDescription => "StopTimer description";
-        public string InactiveNotification => "非アクティブ通知を送ってください";
-    }
-
-    /// <summary>
-    /// テスト用のモック ILogger
-    /// </summary>
-    private class MockLogger : ILogger
-    {
-        public List<string> InformationLogs { get; } = [];
-        public List<string> WarningLogs { get; } = [];
-        public List<Exception> Errors { get; } = [];
-
-        public void LogInformation(string message)
-        {
-            InformationLogs.Add(message);
-        }
-
-        public void LogWarning(string message)
-        {
-            WarningLogs.Add(message);
-        }
-
-        public void LogError(string message)
-        {
-            // Not used in tests
-        }
-
-        public void LogError(Exception exception)
-        {
-            Errors.Add(exception);
-        }
-    }
-
-    /// <summary>
-    /// テスト用のモック ILineMessagingRepository
-    /// </summary>
-    private class MockLineMessagingRepository : ILineMessagingRepository
-    {
-        public List<(string userId, string message)> SentMessages { get; } = [];
-
-        public Task SendTextMessageAsync(string userId, string message)
-        {
-            SentMessages.Add((userId, message));
-            return Task.CompletedTask;
-        }
-    }
-
-    /// <summary>
-    /// テスト用の ChatCompletion を作成（テキスト応答）
-    /// </summary>
-    private ChatCompletion CreateTextCompletion(string text)
-    {
-        return OpenAIChatModelFactory.ChatCompletion(
-            id: "test-id",
-            model: "gpt-4",
-            createdAt: DateTimeOffset.Now,
-            finishReason: ChatFinishReason.Stop,
-            role: ChatMessageRole.Assistant,
-            content: [ChatMessageContentPart.CreateTextPart(text)]
-        );
     }
 
     #endregion
@@ -264,7 +75,7 @@ public class InactivityNotificationServiceTests
         // Arrange
         // 現在時刻を 12:00 に設定
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         var service = new InactivityNotificationService(
             _chatMessageRepository,
@@ -298,7 +109,7 @@ public class InactivityNotificationServiceTests
         // Arrange
         // 現在時刻を 12:00 に設定
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         var service = new InactivityNotificationService(
             _chatMessageRepository,
@@ -331,7 +142,7 @@ public class InactivityNotificationServiceTests
     {
         // Arrange
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         var service = new InactivityNotificationService(
             _chatMessageRepository,
@@ -379,7 +190,7 @@ public class InactivityNotificationServiceTests
         // 現在時刻を 12:00 に固定
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
         var twoHoursAgo = now.AddHours(-2);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         // 2時間前の茜のメッセージを追加
         var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
@@ -397,10 +208,11 @@ public class InactivityNotificationServiceTests
 
         // AI が生成する通知メッセージをモック
         var notificationResponseJson = """{"Assistant":"Akane","Text":"久しぶりやな！"}""";
-        var completionResponse = CreateTextCompletion(notificationResponseJson);
-        var chatCompletionRepository = new MockChatCompletionRepository(
-            (messages, options) => Task.FromResult<ChatCompletion?>(completionResponse)
-        );
+        var completionResponse = ChatCompletionFactory.CreateRawTextCompletion(notificationResponseJson);
+        var chatCompletionRepository = new Helpers.MockChatCompletionRepository()
+        {
+            CompleteChatAsyncFunc = (messages, options) => Task.FromResult(completionResponse)
+        };
 
         var service = new InactivityNotificationService(
             _chatMessageRepository,
@@ -437,7 +249,7 @@ public class InactivityNotificationServiceTests
         // 現在時刻を 12:00 に固定
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
         var thirtyMinutesAgo = now.AddMinutes(-30);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         // 30分前の茜のメッセージを追加
         var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
@@ -484,7 +296,7 @@ public class InactivityNotificationServiceTests
     {
         // Arrange
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         // メッセージを追加しない（空のリポジトリ）
 
@@ -520,7 +332,7 @@ public class InactivityNotificationServiceTests
         // Arrange
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
         var twoHoursAgo = now.AddHours(-2);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         // 2時間前の茜のメッセージを追加
         var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
@@ -537,10 +349,11 @@ public class InactivityNotificationServiceTests
 
         // AI が空のテキストを返すようにモック
         var emptyResponseJson = """{"Assistant":"Akane","Text":""}""";
-        var completionResponse = CreateTextCompletion(emptyResponseJson);
-        var chatCompletionRepository = new MockChatCompletionRepository(
-            (messages, options) => Task.FromResult<ChatCompletion?>(completionResponse)
-        );
+        var completionResponse = ChatCompletionFactory.CreateRawTextCompletion(emptyResponseJson);
+        var chatCompletionRepository = new Helpers.MockChatCompletionRepository()
+        {
+            CompleteChatAsyncFunc = (messages, options) => Task.FromResult(completionResponse)
+        };
 
         var service = new InactivityNotificationService(
             _chatMessageRepository,
@@ -574,7 +387,7 @@ public class InactivityNotificationServiceTests
         // Arrange
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
         var twoHoursAgo = now.AddHours(-2);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         // ChatResponse としてパースできない無効なメッセージを追加
         var invalidJson = """not a json at all""";
@@ -621,7 +434,7 @@ public class InactivityNotificationServiceTests
         // Arrange
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
         var twoHoursAgo = now.AddHours(-2);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         // 2時間前の茜のメッセージを追加（有効なメッセージ）
         var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
@@ -638,10 +451,11 @@ public class InactivityNotificationServiceTests
 
         // AI が無効なフォーマットの応答を返すようにモック
         var invalidResponseJson = """not a json at all""";
-        var completionResponse = CreateTextCompletion(invalidResponseJson);
-        var chatCompletionRepository = new MockChatCompletionRepository(
-            (messages, options) => Task.FromResult<ChatCompletion?>(completionResponse)
-        );
+        var completionResponse = ChatCompletionFactory.CreateRawTextCompletion(invalidResponseJson);
+        var chatCompletionRepository = new Helpers.MockChatCompletionRepository()
+        {
+            CompleteChatAsyncFunc = (messages, options) => Task.FromResult(completionResponse)
+        };
 
         var service = new InactivityNotificationService(
             _chatMessageRepository,
@@ -675,7 +489,7 @@ public class InactivityNotificationServiceTests
         // Arrange
         var now = new DateTime(2025, 1, 1, 12, 0, 0);
         var twoHoursAgo = now.AddHours(-2);
-        var dateTimeProvider = new MockDateTimeProvider(now);
+        var dateTimeProvider = new Helpers.MockDateTimeProvider(now);
 
         // 2時間前の茜のメッセージを追加
         var chatResponseJson = """{"Assistant":"Akane","Text":"こんにちは"}""";
@@ -691,9 +505,10 @@ public class InactivityNotificationServiceTests
         _chatMessageRepository.AddMessage(message);
 
         // ChatCompletionRepository が例外をスローするようにモック
-        var chatCompletionRepository = new MockChatCompletionRepository(
-            (messages, options) => throw new InvalidOperationException("Test exception")
-        );
+        var chatCompletionRepository = new Helpers.MockChatCompletionRepository()
+        {
+            CompleteChatAsyncFunc = (messages, options) => throw new InvalidOperationException("Test exception")
+        };
 
         var service = new InactivityNotificationService(
             _chatMessageRepository,

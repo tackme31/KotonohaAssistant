@@ -1,12 +1,9 @@
 ﻿using System.ClientModel;
-using System.ClientModel.Primitives;
-using System.Collections.Immutable;
-using System.Text.Json;
+using System.Text.Json.Nodes;
 using FluentAssertions;
 using KotonohaAssistant.AI.Functions;
-using KotonohaAssistant.AI.Prompts;
-using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.AI.Tests.Helpers;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Models;
 using KotonohaAssistant.Core.Utils;
@@ -17,95 +14,6 @@ namespace KotonohaAssistant.AI.Tests.Services;
 public class ConversationServiceTests
 {
     #region Test Helpers
-
-    /// <summary>
-    /// テスト用のモック ILogger
-    /// </summary>
-    private class MockLogger : ILogger
-    {
-        public void LogInformation(string message) { }
-        public void LogWarning(string message) { }
-        public void LogError(string message) { }
-        public void LogError(Exception exception) { }
-    }
-
-    /// <summary>
-    /// テスト用のモック IChatMessageRepository
-    /// </summary>
-    private class MockChatMessageRepository : IChatMessageRepository
-    {
-        public Func<Task<int>>? CreateNewConversationIdAsyncFunc { get; set; }
-        public Func<Task<long>>? GetLatestConversationIdAsyncFunc { get; set; }
-        public Func<long, Task<IEnumerable<ChatMessage>>>? GetAllChatMessagesAsyncFunc { get; set; }
-        public Func<long, Task<IEnumerable<Message>>>? GetAllMessageAsyncFunc { get; set; }
-        public Func<IEnumerable<ChatMessage>, long, Task>? InsertChatMessagesAsyncFunc { get; set; }
-
-        public Task<int> CreateNewConversationIdAsync()
-        {
-            return CreateNewConversationIdAsyncFunc?.Invoke() ?? Task.FromResult(1);
-        }
-
-        public Task<long> GetLatestConversationIdAsync()
-        {
-            return GetLatestConversationIdAsyncFunc?.Invoke() ?? Task.FromResult(-1L);
-        }
-
-        public Task<IEnumerable<ChatMessage>> GetAllChatMessagesAsync(long conversationId)
-        {
-            return GetAllChatMessagesAsyncFunc?.Invoke(conversationId) ?? Task.FromResult(Enumerable.Empty<ChatMessage>());
-        }
-
-        public Task<IEnumerable<Message>> GetAllMessageAsync(long conversationId)
-        {
-            return GetAllMessageAsyncFunc?.Invoke(conversationId) ?? Task.FromResult(Enumerable.Empty<Message>());
-        }
-
-        public Task InsertChatMessagesAsync(IEnumerable<ChatMessage> messages, long conversationId)
-        {
-            return InsertChatMessagesAsyncFunc?.Invoke(messages, conversationId) ?? Task.CompletedTask;
-        }
-    }
-
-    /// <summary>
-    /// テスト用のモック IChatCompletionRepository
-    /// </summary>
-    private class MockChatCompletionRepository : IChatCompletionRepository
-    {
-        public Func<IEnumerable<ChatMessage>, ChatCompletionOptions?, Task<ClientResult<ChatCompletion>>>? CompleteChatAsyncFunc { get; set; }
-
-        public Task<ClientResult<ChatCompletion>> CompleteChatAsync(IEnumerable<ChatMessage> messages, ChatCompletionOptions? options = null)
-        {
-            if (CompleteChatAsyncFunc != null)
-            {
-                return CompleteChatAsyncFunc(messages, options);
-            }
-
-            throw new NotImplementedException("CompleteChatAsyncFunc is not set");
-        }
-    }
-
-    /// <summary>
-    /// テスト用のモック IPromptRepository
-    /// </summary>
-    private class MockPromptRepository : IPromptRepository
-    {
-        public string GetSystemMessage(Kotonoha kotonoha)
-        {
-            return kotonoha == Kotonoha.Akane
-                ? "System message for Akane"
-                : "System message for Aoi";
-        }
-
-        public string MakeTimeBasedPromise => "Mock MakeTimeBasedPromise";
-        public string CreateCalendarEventDescription => "Mock CreateCalendarEventDescription";
-        public string ForgetMemoryDescription => "Mock ForgetMemoryDescription";
-        public string GetCalendarEventDescription => "Mock GetCalendarEventDescription";
-        public string GetWeatherDescription => "Mock GetWeatherDescription";
-        public string StartTimerDescription => "Mock StartTimerDescription";
-        public string StopAlarmDescription => "Mock StopAlarmDescription";
-        public string StopTimerDescription => "Mock StopTimerDescription";
-        public string InactiveNotification => "Mock InactiveNotification";
-    }
 
     /// <summary>
     /// テスト用のモック ILazyModeHandler
@@ -136,70 +44,6 @@ public class ConversationServiceTests
     }
 
     /// <summary>
-    /// テスト用のモック IDateTimeProvider
-    /// </summary>
-    private class MockDateTimeProvider : IDateTimeProvider
-    {
-        private readonly DateTime _now;
-
-        public MockDateTimeProvider(DateTime now)
-        {
-            _now = now;
-        }
-
-        public DateTime Now => _now;
-    }
-
-    /// <summary>
-    /// テスト用のモック ToolFunction
-    /// </summary>
-    private class MockToolFunction : ToolFunction
-    {
-        private readonly bool _canBeLazy;
-
-        public MockToolFunction(bool canBeLazy, ILogger logger) : base(logger)
-        {
-            _canBeLazy = canBeLazy;
-        }
-
-        public override bool CanBeLazy => _canBeLazy;
-        public override string Description => "Mock function";
-        public override string Parameters => "{}";
-
-        public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
-        {
-            arguments = new Dictionary<string, object>();
-            return true;
-        }
-
-        public override Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state)
-        {
-            return Task.FromResult("{}");
-        }
-    }
-
-    /// <summary>
-    /// テスト用の ConversationState を作成
-    /// </summary>
-    private ConversationState CreateTestState(
-        Kotonoha currentSister = Kotonoha.Akane,
-        int patienceCount = 0,
-        long? conversationId = null)
-    {
-        return new ConversationState
-        {
-            SystemMessageAkane = "System message for Akane",
-            SystemMessageAoi = "System message for Aoi",
-            CurrentSister = currentSister,
-            PatienceCount = patienceCount,
-            ConversationId = conversationId,
-            ChatMessages = ImmutableArray<ChatMessage>.Empty,
-            LastSavedMessageIndex = 0,
-            LastToolCallSister = Kotonoha.Akane
-        };
-    }
-
-    /// <summary>
     /// テスト用の ConversationService を作成
     /// </summary>
     private ConversationService CreateService(
@@ -219,173 +63,11 @@ public class ConversationServiceTests
             promptRepo,
             chatMessageRepo,
             chatCompletionRepo,
-            new List<ToolFunction>(),
+            [],
             lazyModeHandler,
             dateTimeProvider,
             new MockLogger()
         );
-    }
-
-    /// <summary>
-    /// テスト用の ChatCompletion を作成
-    /// </summary>
-    private ChatCompletion CreateChatCompletion(
-        Kotonoha sister,
-        string text,
-        ChatFinishReason finishReason = ChatFinishReason.Stop)
-    {
-        var response = new ChatResponse
-        {
-            Assistant = sister,
-            Text = text
-        };
-
-        var contentJson = response.ToJson();
-
-        return OpenAIChatModelFactory.ChatCompletion(
-            id: "test-completion-id",
-            model: "gpt-4",
-            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
-            finishReason: finishReason,
-            role: ChatMessageRole.Assistant,
-            content: [ChatMessageContentPart.CreateTextPart(contentJson)]
-        );
-    }
-
-    /// <summary>
-    /// テスト用の ClientResult&lt;ChatCompletion&gt; を作成
-    /// </summary>
-    private ClientResult<ChatCompletion> CreateChatCompletionResult(
-        Kotonoha sister,
-        string text,
-        ChatFinishReason finishReason = ChatFinishReason.Stop)
-    {
-        var completion = CreateChatCompletion(sister, text, finishReason);
-        return ClientResult.FromValue(completion, new MockPipelineResponse());
-    }
-
-    /// <summary>
-    /// テスト用の ChatCompletion を無効な JSON で作成
-    /// </summary>
-    private ChatCompletion CreateInvalidChatCompletion(string invalidJson)
-    {
-        return OpenAIChatModelFactory.ChatCompletion(
-            id: "test-completion-id",
-            model: "gpt-4",
-            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
-            finishReason: ChatFinishReason.Stop,
-            role: ChatMessageRole.Assistant,
-            content: [ChatMessageContentPart.CreateTextPart(invalidJson)]
-        );
-    }
-
-    /// <summary>
-    /// テスト用の ClientResult&lt;ChatCompletion&gt; を無効な JSON で作成
-    /// </summary>
-    private ClientResult<ChatCompletion> CreateInvalidChatCompletionResult(string invalidJson)
-    {
-        var completion = CreateInvalidChatCompletion(invalidJson);
-        return ClientResult.FromValue(completion, new MockPipelineResponse());
-    }
-
-    /// <summary>
-    /// テスト用の ChatCompletion を ToolCalls 付きで作成
-    /// </summary>
-    private ChatCompletion CreateChatCompletionWithToolCalls(
-        Kotonoha sister,
-        string text,
-        params (string id, string name, string arguments)[] toolCalls)
-    {
-        var response = new ChatResponse
-        {
-            Assistant = sister,
-            Text = text
-        };
-
-        var contentJson = response.ToJson();
-
-        var toolCallsList = toolCalls.Select(tc =>
-            ChatToolCall.CreateFunctionToolCall(
-                tc.id,
-                tc.name,
-                BinaryData.FromString(tc.arguments)
-            )).ToArray();
-
-        return OpenAIChatModelFactory.ChatCompletion(
-            id: "test-completion-id",
-            model: "gpt-4",
-            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
-            finishReason: ChatFinishReason.ToolCalls,
-            role: ChatMessageRole.Assistant,
-            content: [ChatMessageContentPart.CreateTextPart(contentJson)],
-            toolCalls: toolCallsList
-        );
-    }
-
-    /// <summary>
-    /// テスト用の ClientResult&lt;ChatCompletion&gt; を ToolCalls 付きで作成
-    /// </summary>
-    private ClientResult<ChatCompletion> CreateChatCompletionResultWithToolCalls(
-        Kotonoha sister,
-        string text,
-        params (string id, string name, string arguments)[] toolCalls)
-    {
-        var completion = CreateChatCompletionWithToolCalls(sister, text, toolCalls);
-        return ClientResult.FromValue(completion, new MockPipelineResponse());
-    }
-
-    /// <summary>
-    /// テスト用の PipelineResponse (ClientResult作成に必要)
-    /// </summary>
-    private class MockPipelineResponse : PipelineResponse
-    {
-        public override int Status => 200;
-        public override string ReasonPhrase => "OK";
-        public override Stream? ContentStream { get; set; }
-        public override BinaryData Content => BinaryData.FromString("{}");
-
-        protected override PipelineResponseHeaders HeadersCore => new MockPipelineResponseHeaders();
-
-        public override BinaryData BufferContent(CancellationToken cancellationToken = default)
-        {
-            return Content;
-        }
-
-        public override ValueTask<BinaryData> BufferContentAsync(CancellationToken cancellationToken = default)
-        {
-            return new ValueTask<BinaryData>(Content);
-        }
-
-        public override void Dispose() { }
-    }
-
-    /// <summary>
-    /// テスト用の PipelineResponseHeaders
-    /// </summary>
-    private class MockPipelineResponseHeaders : PipelineResponseHeaders
-    {
-        private readonly Dictionary<string, string> _headers = new();
-
-        public override IEnumerator<KeyValuePair<string, string>> GetEnumerator()
-        {
-            return _headers.GetEnumerator();
-        }
-
-        public override bool TryGetValue(string name, out string? value)
-        {
-            return _headers.TryGetValue(name, out value);
-        }
-
-        public override bool TryGetValues(string name, out IEnumerable<string>? values)
-        {
-            if (_headers.TryGetValue(name, out var value))
-            {
-                values = new[] { value };
-                return true;
-            }
-            values = null;
-            return false;
-        }
     }
 
     #endregion
@@ -397,7 +79,7 @@ public class ConversationServiceTests
     {
         // Arrange
         var service = CreateService();
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // Act
         var result = service.GetAllMessages(state);
@@ -412,7 +94,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
@@ -436,7 +118,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
@@ -470,7 +152,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
@@ -491,7 +173,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
@@ -512,7 +194,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
@@ -537,7 +219,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // InitialConversationを読み込む
         state = state.LoadInitialConversation(dateTime);
@@ -787,7 +469,7 @@ public class ConversationServiceTests
     {
         // Arrange
         var service = CreateService();
-        var state = CreateTestState();
+        var state = TestStateFactory.CreateTestState();
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -813,10 +495,10 @@ public class ConversationServiceTests
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
-                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "こんにちはやで"))
+                Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "こんにちはやで"))
         };
         var service = CreateService(chatMessageRepo: chatMessageRepo, chatCompletionRepo: chatCompletionRepo);
-        var state = CreateTestState(conversationId: null);
+        var state = TestStateFactory.CreateTestState(conversationId: null);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -837,10 +519,10 @@ public class ConversationServiceTests
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
-                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "はいはい、茜やで"))
+                Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "はいはい、茜やで"))
         };
         var service = CreateService(chatCompletionRepo: chatCompletionRepo);
-        var state = CreateTestState(currentSister: Kotonoha.Aoi, conversationId: 1);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Aoi, conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -852,10 +534,10 @@ public class ConversationServiceTests
         // Assert
         results.Should().NotBeEmpty();
         var finalState = results.Last().state;
-        
+
         // 葵 → 茜 に切り替わっていることを確認
         finalState.CurrentSister.Should().Be(Kotonoha.Akane);
-        
+
         // ChatMessages に姉妹切り替えのメッセージが追加されていることを確認
         var userMessages = finalState.ChatMessages
             .OfType<UserChatMessage>()
@@ -870,10 +552,10 @@ public class ConversationServiceTests
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
-                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "わかったで"))
+                Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "わかったで"))
         };
         var service = CreateService(chatCompletionRepo: chatCompletionRepo);
-        var state = CreateTestState(conversationId: 1);
+        var state = TestStateFactory.CreateTestState(conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -885,17 +567,17 @@ public class ConversationServiceTests
         // Assert
         results.Should().NotBeEmpty();
         var finalState = results.Last().state;
-        
+
         // ChatMessages に UserChatMessage が追加されていることを確認
         var userMessages = finalState.ChatMessages
             .OfType<UserChatMessage>()
             .ToList();
         userMessages.Should().NotBeEmpty();
-        
+
         // 最後に追加されたユーザーメッセージの内容を確認
-        var lastUserMessage = userMessages.Last();
-        lastUserMessage.Content.Should().NotBeEmpty();
-        lastUserMessage.Content[0].Text.Should().Contain("テスト入力");
+        var lastUserMessage = userMessages.Last().Content.AsJson();
+        lastUserMessage.Should().NotBeNull();
+        lastUserMessage.Should().HavePropertyWithStringValue("Text", "テスト入力");
     }
 
     [Fact]
@@ -908,7 +590,7 @@ public class ConversationServiceTests
                 throw new Exception("API Error")
         };
         var service = CreateService(chatCompletionRepo: chatCompletionRepo);
-        var state = CreateTestState(conversationId: 1);
+        var state = TestStateFactory.CreateTestState(conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -926,7 +608,7 @@ public class ConversationServiceTests
     public async Task TalkAsync_PatienceCountが正しく更新されること()
     {
         // Arrange
-        var mockFunction = new MockToolFunction(canBeLazy: true, new MockLogger());
+        var mockFunction = new Helpers.MockToolFunction(canBeLazy: true, new MockLogger());
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
@@ -934,14 +616,14 @@ public class ConversationServiceTests
                 // 最初の呼び出し: ToolCallsを含むCompletion
                 if (!messages.Any(m => m is ToolChatMessage))
                 {
-                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                    return Task.FromResult(ChatCompletionFactory.CreateToolCallsCompletionResult(
                         Kotonoha.Akane,
                         "関数を実行するで",
                         ("call_123", "MockToolFunction", "{}")
                     ));
                 }
                 // 2回目の呼び出し: 通常の応答
-                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "完了したで"));
+                return Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "完了したで"));
             }
         };
         var promptRepo = new MockPromptRepository();
@@ -949,12 +631,12 @@ public class ConversationServiceTests
             promptRepo,
             new MockChatMessageRepository(),
             chatCompletionRepo,
-            new List<ToolFunction> { mockFunction },
+            [mockFunction],
             new MockLazyModeHandler(),
             new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
             new MockLogger()
         );
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0, conversationId: 1);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0, conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -976,7 +658,7 @@ public class ConversationServiceTests
     {
         // Arrange
         var handlerCalled = false;
-        var mockFunction = new MockToolFunction(canBeLazy: true, new MockLogger());
+        var mockFunction = new Helpers.MockToolFunction(canBeLazy: true, new MockLogger());
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
@@ -984,14 +666,14 @@ public class ConversationServiceTests
                 // 最初の呼び出し: ToolCallsを含むCompletion
                 if (!messages.Any(m => m is ToolChatMessage))
                 {
-                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                    return Task.FromResult(ChatCompletionFactory.CreateToolCallsCompletionResult(
                         Kotonoha.Akane,
                         "関数を実行するで",
                         ("call_123", "MockToolFunction", "{}")
                     ));
                 }
                 // 2回目の呼び出し: 通常の応答
-                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "完了したで"));
+                return Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "完了したで"));
             }
         };
         var lazyModeHandler = new MockLazyModeHandler
@@ -1012,12 +694,12 @@ public class ConversationServiceTests
             new MockPromptRepository(),
             new MockChatMessageRepository(),
             chatCompletionRepo,
-            new List<ToolFunction> { mockFunction },
+            [mockFunction],
             lazyModeHandler,
             new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
             new MockLogger()
         );
-        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1034,7 +716,7 @@ public class ConversationServiceTests
     public async Task TalkAsync_怠け癖応答が返されること()
     {
         // Arrange
-        var mockFunction = new MockToolFunction(canBeLazy: true, new MockLogger());
+        var mockFunction = new Helpers.MockToolFunction(canBeLazy: true, new MockLogger());
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
@@ -1042,14 +724,14 @@ public class ConversationServiceTests
                 // 最初の呼び出し: ToolCallsを含むCompletion
                 if (!messages.Any(m => m is ToolChatMessage))
                 {
-                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                    return Task.FromResult(ChatCompletionFactory.CreateToolCallsCompletionResult(
                         Kotonoha.Akane,
                         "関数を実行するで",
                         ("call_123", "MockToolFunction", "{}")
                     ));
                 }
                 // 2回目の呼び出し: 怠け癖後の応答
-                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Aoi, "わかりました、やります"));
+                return Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Aoi, "わかりました、やります"));
             }
         };
         var lazyModeHandler = new MockLazyModeHandler
@@ -1067,7 +749,7 @@ public class ConversationServiceTests
                 {
                     WasLazy = true,
                     LazyResponse = lazyResponse,
-                    FinalCompletion = CreateChatCompletion(Kotonoha.Aoi, "わかりました、やります")
+                    FinalCompletion = ChatCompletionFactory.CreateTextCompletion(Kotonoha.Aoi, "わかりました、やります")
                 };
                 var newState = state.SwitchToSister(Kotonoha.Aoi, dateTime);
                 return Task.FromResult((lazyResult, newState));
@@ -1077,12 +759,12 @@ public class ConversationServiceTests
             new MockPromptRepository(),
             new MockChatMessageRepository(),
             chatCompletionRepo,
-            new List<ToolFunction> { mockFunction },
+            [mockFunction],
             lazyModeHandler,
             new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
             new MockLogger()
         );
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 5, conversationId: 1);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 5, conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1110,7 +792,7 @@ public class ConversationServiceTests
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
-                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "テスト"))
+                Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "テスト"))
         };
         var lazyModeHandler = new MockLazyModeHandler
         {
@@ -1126,7 +808,7 @@ public class ConversationServiceTests
             }
         };
         var service = CreateService(chatCompletionRepo: chatCompletionRepo, lazyModeHandler: lazyModeHandler);
-        var state = CreateTestState(conversationId: 1);
+        var state = TestStateFactory.CreateTestState(conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1147,10 +829,10 @@ public class ConversationServiceTests
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
-                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "こんにちはやで"))
+                Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "こんにちはやで"))
         };
         var service = CreateService(chatCompletionRepo: chatCompletionRepo);
-        var state = CreateTestState(conversationId: 1);
+        var state = TestStateFactory.CreateTestState(conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1162,17 +844,17 @@ public class ConversationServiceTests
         // Assert
         results.Should().NotBeEmpty();
         var finalState = results.Last().state;
-        
+
         // ChatMessages に AssistantChatMessage が追加されていることを確認
         var assistantMessages = finalState.ChatMessages
             .OfType<AssistantChatMessage>()
             .ToList();
         assistantMessages.Should().NotBeEmpty();
-        
+
         // 最後に追加されたアシスタントメッセージの内容を確認
-        var lastAssistantMessage = assistantMessages.Last();
-        lastAssistantMessage.Content.Should().NotBeEmpty();
-        lastAssistantMessage.Content[0].Text.Should().Contain("Akane");
+        var lastAssistantMessage = assistantMessages.Last().Content.AsJson();
+        lastAssistantMessage.Should().NotBeNull();
+        lastAssistantMessage.Should().HavePropertyWithStringValue("Assistant", "Akane");
     }
 
     [Fact]
@@ -1180,7 +862,7 @@ public class ConversationServiceTests
     {
         // Arrange
         var functionInvoked = false;
-        var mockFunction = new MockToolFunction(canBeLazy: false, new MockLogger());
+        var mockFunction = new Helpers.MockToolFunction(canBeLazy: false, new MockLogger());
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
@@ -1188,7 +870,7 @@ public class ConversationServiceTests
                 // 最初の呼び出し: ToolCallsを含むCompletion
                 if (!messages.Any(m => m is ToolChatMessage))
                 {
-                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                    return Task.FromResult(ChatCompletionFactory.CreateToolCallsCompletionResult(
                         Kotonoha.Akane,
                         "関数を実行するで",
                         ("call_123", "MockToolFunction", "{}")
@@ -1196,19 +878,19 @@ public class ConversationServiceTests
                 }
                 // 2回目の呼び出し: ToolChatMessageが追加された後の応答
                 functionInvoked = true;
-                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "完了したで"));
+                return Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "完了したで"));
             }
         };
         var service = new ConversationService(
             new MockPromptRepository(),
             new MockChatMessageRepository(),
             chatCompletionRepo,
-            new List<ToolFunction> { mockFunction },
+            [mockFunction],
             new MockLazyModeHandler(),
             new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
             new MockLogger()
         );
-        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1242,7 +924,7 @@ public class ConversationServiceTests
         };
 
         // IRandomGeneratorのモック（常に成功するように設定）
-        var randomGenerator = new MockRandomGenerator(returnValue: 0.5); // 1/10未満でないので成功
+        var randomGenerator = new Helpers.MockRandomGenerator(0.5); // 1/10未満でないので成功
 
         var forgetMemoryFunction = new ForgetMemory(new MockPromptRepository(), randomGenerator, new MockLogger());
         var chatCompletionRepo = new MockChatCompletionRepository
@@ -1252,14 +934,14 @@ public class ConversationServiceTests
                 // 最初の呼び出し: ForgetMemoryのToolCallsを含むCompletion
                 if (!messages.Any(m => m is ToolChatMessage))
                 {
-                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                    return Task.FromResult(ChatCompletionFactory.CreateToolCallsCompletionResult(
                         Kotonoha.Akane,
-                        "記憶を消すで",
+                        "マスター、今までありがとうな…",
                         ("call_123", "ForgetMemory", "{}")
                     ));
                 }
                 // 2回目の呼び出し: 削除後の応答
-                return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "忘れたで"));
+                return Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "はじめまして"));
             }
         };
 
@@ -1267,12 +949,12 @@ public class ConversationServiceTests
             new MockPromptRepository(),
             chatMessageRepo,
             chatCompletionRepo,
-            new List<ToolFunction> { forgetMemoryFunction },
+            [forgetMemoryFunction],
             new MockLazyModeHandler(),
             new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
             new MockLogger()
         );
-        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1321,10 +1003,10 @@ public class ConversationServiceTests
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
-                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "わかったで"))
+                Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "わかったで"))
         };
         var service = CreateService(chatMessageRepo: chatMessageRepo, chatCompletionRepo: chatCompletionRepo);
-        var state = CreateTestState(conversationId: 1);
+        var state = TestStateFactory.CreateTestState(conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1336,7 +1018,7 @@ public class ConversationServiceTests
         // Assert
         insertCalled.Should().BeTrue("InsertChatMessagesAsync が呼ばれるべき");
         insertedMessages.Should().NotBeEmpty("未保存メッセージが保存されるべき");
-        
+
         // ユーザーメッセージとアシスタントメッセージが保存されていることを確認
         insertedMessages.Should().HaveCountGreaterThanOrEqualTo(2);
     }
@@ -1348,10 +1030,10 @@ public class ConversationServiceTests
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
-                Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "こんにちはやで"))
+                Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "こんにちはやで"))
         };
         var service = CreateService(chatCompletionRepo: chatCompletionRepo);
-        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1363,16 +1045,16 @@ public class ConversationServiceTests
         // Assert
         results.Should().NotBeEmpty();
         var finalResult = results.Last();
-        
+
         // ConversationResult が返されることを確認
         finalResult.result.Should().NotBeNull();
-        
+
         // Message が正しく設定されていることを確認
         finalResult.result!.Message.Should().Be("こんにちはやで");
-        
+
         // Sister が正しく設定されていることを確認
         finalResult.result.Sister.Should().Be(Kotonoha.Akane);
-        
+
         // Functions は null または空のリストであることを確認（ツール呼び出しなし）
         (finalResult.result.Functions == null || finalResult.result.Functions.Count == 0).Should().BeTrue();
     }
@@ -1384,10 +1066,10 @@ public class ConversationServiceTests
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
-                Task.FromResult(CreateInvalidChatCompletionResult("This is not a valid JSON"))
+                Task.FromResult(ChatCompletionFactory.CreateInvalidCompletionResult("This is not a valid JSON"))
         };
         var service = CreateService(chatCompletionRepo: chatCompletionRepo);
-        var state = CreateTestState(conversationId: 1);
+        var state = TestStateFactory.CreateTestState(conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1406,7 +1088,7 @@ public class ConversationServiceTests
     {
         // Arrange
         var callCount = 0;
-        var mockFunction = new MockToolFunction(canBeLazy: false, new MockLogger());
+        var mockFunction = new Helpers.MockToolFunction(canBeLazy: false, new MockLogger());
         var chatCompletionRepo = new MockChatCompletionRepository
         {
             CompleteChatAsyncFunc = (messages, options) =>
@@ -1417,7 +1099,7 @@ public class ConversationServiceTests
                 // 最初の呼び出し: ToolCallsを含むCompletion
                 if (toolMessages.Count == 0)
                 {
-                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                    return Task.FromResult(ChatCompletionFactory.CreateToolCallsCompletionResult(
                         Kotonoha.Akane,
                         "最初の関数を実行するで",
                         ("call_1", "MockToolFunction", "{}")
@@ -1426,7 +1108,7 @@ public class ConversationServiceTests
                 // 2回目の呼び出し: さらにToolCallsを含むCompletion
                 else if (toolMessages.Count == 1)
                 {
-                    return Task.FromResult(CreateChatCompletionResultWithToolCalls(
+                    return Task.FromResult(ChatCompletionFactory.CreateToolCallsCompletionResult(
                         Kotonoha.Akane,
                         "次の関数も実行するで",
                         ("call_2", "MockToolFunction", "{}")
@@ -1435,7 +1117,7 @@ public class ConversationServiceTests
                 // 3回目の呼び出し: 通常の応答（Stop）
                 else
                 {
-                    return Task.FromResult(CreateChatCompletionResult(Kotonoha.Akane, "全部完了したで"));
+                    return Task.FromResult(ChatCompletionFactory.CreateTextCompletionResult(Kotonoha.Akane, "全部完了したで"));
                 }
             }
         };
@@ -1443,12 +1125,12 @@ public class ConversationServiceTests
             new MockPromptRepository(),
             new MockChatMessageRepository(),
             chatCompletionRepo,
-            new List<ToolFunction> { mockFunction },
+            [mockFunction],
             new MockLazyModeHandler(),
             new MockDateTimeProvider(new DateTime(2025, 1, 1, 12, 0, 0)),
             new MockLogger()
         );
-        var state = CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, conversationId: 1);
 
         // Act
         var results = new List<(ConversationState state, ConversationResult? result)>();
@@ -1484,7 +1166,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState(currentSister: Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane);
 
         // Act
         var result = service.TrySwitchSister("茜ちゃん、おはよう", dateTime, state);
@@ -1501,7 +1183,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState(currentSister: Kotonoha.Aoi);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Aoi);
 
         // Act
         var result = service.TrySwitchSister("茜ちゃん、お願い", dateTime, state);
@@ -1519,7 +1201,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState(currentSister: Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane);
 
         // Act
         var result = service.TrySwitchSister("葵ちゃん、教えて", dateTime, state);
@@ -1537,7 +1219,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState(currentSister: Kotonoha.Aoi);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Aoi);
 
         // Act
         var result = service.TrySwitchSister("あかねちゃん、お願い", dateTime, state);
@@ -1555,7 +1237,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState(currentSister: Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane);
 
         // Act
         var result = service.TrySwitchSister("あおいちゃん、教えて", dateTime, state);
@@ -1573,7 +1255,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState(currentSister: Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane);
 
         // Act
         var result = service.TrySwitchSister("こんにちは", dateTime, state);
@@ -1590,7 +1272,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState(currentSister: Kotonoha.Aoi);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Aoi);
 
         // Act - 「茜ちゃん」が先に出現
         var result = service.TrySwitchSister("茜ちゃんと葵ちゃん", dateTime, state);
@@ -1606,7 +1288,7 @@ public class ConversationServiceTests
         // Arrange
         var service = CreateService();
         var dateTime = new DateTime(2025, 1, 1, 12, 0, 0);
-        var state = CreateTestState(currentSister: Kotonoha.Akane);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane);
 
         // Act - 姉妹名を含まない入力
         var result = service.TrySwitchSister("今日の天気は？", dateTime, state);

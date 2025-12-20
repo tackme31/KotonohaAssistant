@@ -1,174 +1,15 @@
-﻿using System.Collections.Immutable;
-using System.Text.Json;
-using System.Text.Json.Nodes;
+﻿using System.Text.Json.Nodes;
 using FluentAssertions;
-using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Services;
+using KotonohaAssistant.AI.Tests.Helpers;
 using KotonohaAssistant.Core;
-using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
 
 namespace KotonohaAssistant.AI.Tests.Services;
 
 public class LazyModeHandlerTests
 {
-    #region Test Helpers
-
-    /// <summary>
-    /// テスト用のモック IRandomGenerator
-    /// </summary>
-    private class MockRandomGenerator : IRandomGenerator
-    {
-        private readonly double _value;
-
-        public MockRandomGenerator(double value)
-        {
-            _value = value;
-        }
-
-        public double NextDouble() => _value;
-    }
-
-    /// <summary>
-    /// テスト用のモック ToolFunction
-    /// </summary>
-    private class MockToolFunction : ToolFunction
-    {
-        private readonly bool _canBeLazy;
-
-        public MockToolFunction(bool canBeLazy, ILogger logger) : base(logger)
-        {
-            _canBeLazy = canBeLazy;
-        }
-
-        public override bool CanBeLazy => _canBeLazy;
-        public override string Description => "Mock function";
-        public override string Parameters => "{}";
-
-        public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
-        {
-            arguments = new Dictionary<string, object>();
-            return true;
-        }
-
-        public override Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state)
-        {
-            return Task.FromResult("{}");
-        }
-    }
-
-    /// <summary>
-    /// テスト用のモック ILogger
-    /// </summary>
-    private class MockLogger : ILogger
-    {
-        public void LogInformation(string message) { }
-        public void LogWarning(string message) { }
-        public void LogError(string message) { }
-        public void LogError(Exception exception) { }
-    }
-
-    /// <summary>
-    /// テスト用の ConversationState を作成
-    /// </summary>
-    private ConversationState CreateTestState(
-        Kotonoha currentSister = Kotonoha.Akane,
-        int patienceCount = 0)
-    {
-        return new ConversationState
-        {
-            SystemMessageAkane = "System message for Akane",
-            SystemMessageAoi = "System message for Aoi",
-            CurrentSister = currentSister,
-            PatienceCount = patienceCount,
-            ChatMessages = ImmutableArray<ChatMessage>.Empty
-        };
-    }
-
-    /// <summary>
-    /// テスト用の関数辞書を作成
-    /// </summary>
-    private Dictionary<string, ToolFunction> CreateFunctionDictionary(bool canBeLazy = true)
-    {
-        var logger = new MockLogger();
-        return new Dictionary<string, ToolFunction>
-        {
-            ["test_function"] = new MockToolFunction(canBeLazy, logger)
-        };
-    }
-
-    /// <summary>
-    /// テスト用の ChatCompletion を作成（Stop のみ）
-    /// </summary>
-    private ChatCompletion CreateStopCompletion()
-    {
-        return OpenAIChatModelFactory.ChatCompletion(
-            id: "test-id",
-            model: "gpt-4",
-            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
-            finishReason: ChatFinishReason.Stop,
-            content: [ChatMessageContentPart.CreateTextPart("Test response")]
-        );
-    }
-
-    /// <summary>
-    /// テスト用の ChatCompletion を作成（ToolCalls）
-    /// </summary>
-    private ChatCompletion CreateToolCallsCompletion(string functionName = "test_function")
-    {
-        return OpenAIChatModelFactory.ChatCompletion(
-            id: "test-id",
-            model: "gpt-4",
-            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
-            finishReason: ChatFinishReason.ToolCalls,
-            toolCalls: [
-                ChatToolCall.CreateFunctionToolCall(
-                    "call_123",
-                    functionName,
-                    BinaryData.FromObjectAsJson(new { })
-                )
-            ]
-        );
-    }
-
-    /// <summary>
-    /// テスト用の ChatCompletion を作成（複数ToolCalls）
-    /// </summary>
-    private ChatCompletion CreateMultipleToolCallsCompletion(params string[] functionNames)
-    {
-        var toolCalls = functionNames.Select((name, index) =>
-            ChatToolCall.CreateFunctionToolCall(
-                $"call_{index}",
-                name,
-                BinaryData.FromObjectAsJson(new { })
-            )).ToArray();
-
-        return OpenAIChatModelFactory.ChatCompletion(
-            id: "test-id",
-            model: "gpt-4",
-            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
-            finishReason: ChatFinishReason.ToolCalls,
-            toolCalls: toolCalls
-        );
-    }
-
-    /// <summary>
-    /// テスト用の ChatCompletion を作成（テキスト応答）
-    /// </summary>
-    private ChatCompletion CreateTextCompletion(string text)
-    {
-        return OpenAIChatModelFactory.ChatCompletion(
-            id: "test-id",
-            model: "gpt-4",
-            createdAt: DateTimeOffset.FromUnixTimeSeconds(1234567890),
-            finishReason: ChatFinishReason.Stop,
-            role: ChatMessageRole.Assistant,
-            content: [ChatMessageContentPart.CreateTextPart(text)]
-        );
-    }
-
-    #endregion
 
     #region ShouldBeLazy の挙動テスト（HandleLazyModeAsync経由）
 
@@ -176,13 +17,13 @@ public class LazyModeHandlerTests
     public async Task HandleLazyModeAsync_FinishReasonがToolCallsでない場合_怠けないこと()
     {
         // Arrange
-        var functions = CreateFunctionDictionary();
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary();
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState();
-        var completion = CreateStopCompletion(); // FinishReason = Stop
+        var state = TestStateFactory.CreateTestState();
+        var completion = ChatCompletionFactory.CreateStopCompletion(); // FinishReason = Stop
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCalled = false;
@@ -208,13 +49,13 @@ public class LazyModeHandlerTests
     public async Task HandleLazyModeAsync_CanBeLazyがfalseの関数を含む場合_怠けないこと()
     {
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: false); // CanBeLazy = false
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: false); // CanBeLazy = false
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState();
-        var completion = CreateToolCallsCompletion("test_function"); // FinishReason = ToolCalls
+        var state = TestStateFactory.CreateTestState();
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function"); // FinishReason = ToolCalls
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCalled = false;
@@ -240,13 +81,13 @@ public class LazyModeHandlerTests
     public async Task HandleLazyModeAsync_PatienceCountが3より大きい場合_必ず怠けること()
     {
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.5); // 怠けない確率だが、PatienceCount > 3 なので無視される
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.5); // 怠けない確率だが、PatienceCount > 3 なので無視される
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(patienceCount: 4); // PatienceCount > 3
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(patienceCount: 4); // PatienceCount > 3
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCallCount = 0;
@@ -259,12 +100,12 @@ public class LazyModeHandlerTests
             if (regenerateCallCount == 1)
             {
                 // 1回目: 怠け癖応答
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(lazyResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(lazyResponseJson));
             }
             else
             {
                 // 2回目: 引き受ける応答
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(acceptResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(acceptResponseJson));
             }
         }
 
@@ -285,13 +126,13 @@ public class LazyModeHandlerTests
     public async Task HandleLazyModeAsync_PatienceCount3以下でランダムがfalse_怠けないこと()
     {
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.1); // 0.1 以上なので怠けない
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.1); // 0.1 以上なので怠けない
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(patienceCount: 3); // PatienceCount <= 3
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(patienceCount: 3); // PatienceCount <= 3
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCalled = false;
@@ -317,13 +158,13 @@ public class LazyModeHandlerTests
     public async Task HandleLazyModeAsync_PatienceCount3以下でランダムがtrue_怠けること()
     {
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 0.1 未満なので怠ける
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 0.1 未満なので怠ける
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(patienceCount: 2); // PatienceCount <= 3
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(patienceCount: 2); // PatienceCount <= 3
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCallCount = 0;
@@ -336,12 +177,12 @@ public class LazyModeHandlerTests
             if (regenerateCallCount == 1)
             {
                 // 1回目: 怠け癖応答
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(lazyResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(lazyResponseJson));
             }
             else
             {
                 // 2回目: 引き受ける応答
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(acceptResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(acceptResponseJson));
             }
         }
 
@@ -365,13 +206,13 @@ public class LazyModeHandlerTests
     public async Task HandleLazyModeAsync_怠け癖発動_正常に完了すること()
     {
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCallCount = 0;
@@ -386,12 +227,12 @@ public class LazyModeHandlerTests
             if (regenerateCallCount == 1)
             {
                 // 1回目: 怠け癖応答
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(lazyResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(lazyResponseJson));
             }
             else
             {
                 // 2回目: 引き受ける応答
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(acceptResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(acceptResponseJson));
             }
         }
 
@@ -431,13 +272,13 @@ public class LazyModeHandlerTests
     public async Task HandleLazyModeAsync_茜から葵への怠け癖委譲_正しいインストラクションが追加されること()
     {
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var capturedStates = new List<ConversationState>();
@@ -449,11 +290,11 @@ public class LazyModeHandlerTests
             capturedStates.Add(s);
             if (capturedStates.Count == 1)
             {
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(lazyResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(lazyResponseJson));
             }
             else
             {
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(acceptResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(acceptResponseJson));
             }
         }
 
@@ -467,22 +308,20 @@ public class LazyModeHandlerTests
 
         // 2. BeginLazyModeAkane instructionが挿入される
         var firstCallState = capturedStates[0];
-        var beginLazyMessage = firstCallState.ChatMessages[0];
-        var beginLazyJson = JsonNode.Parse(beginLazyMessage.Content[0].Text);
-        beginLazyJson.Should().NotBeNull();
-        beginLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        beginLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
+        var beginLazyMessage = firstCallState.ChatMessages[0].Content.AsJson();
+        beginLazyMessage.Should().NotBeNull();
+        beginLazyMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        beginLazyMessage.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
 
         // 3. 姉妹が Aoi に切り替わる
         var secondCallState = capturedStates[1];
         secondCallState.CurrentSister.Should().Be(Kotonoha.Aoi);
 
         // 4. EndLazyModeAoi instructionが挿入される
-        var endLazyMessage = secondCallState.ChatMessages[2];
-        var endLazyJson = JsonNode.Parse(endLazyMessage.Content[0].Text);
-        endLazyJson.Should().NotBeNull();
-        endLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        endLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAoi);
+        var endLazyMessage = secondCallState.ChatMessages[2].Content.AsJson();
+        endLazyMessage.Should().NotBeNull();
+        endLazyMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        endLazyMessage.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAoi);
 
         // 5. 怠け癖が正常に完了
         result.WasLazy.Should().BeTrue();
@@ -492,13 +331,13 @@ public class LazyModeHandlerTests
     public async Task HandleLazyModeAsync_葵から茜への怠け癖委譲_正しいインストラクションが追加されること()
     {
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Aoi, patienceCount: 0);
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Aoi, patienceCount: 0);
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var capturedStates = new List<ConversationState>();
@@ -510,11 +349,11 @@ public class LazyModeHandlerTests
             capturedStates.Add(s);
             if (capturedStates.Count == 1)
             {
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(lazyResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(lazyResponseJson));
             }
             else
             {
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(acceptResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(acceptResponseJson));
             }
         }
 
@@ -528,22 +367,20 @@ public class LazyModeHandlerTests
 
         // 2. BeginLazyModeAoi instructionが挿入される
         var firstCallState = capturedStates[0];
-        var beginLazyMessage = firstCallState.ChatMessages[0];
-        var beginLazyJson = JsonNode.Parse(beginLazyMessage.Content[0].Text);
-        beginLazyJson.Should().NotBeNull();
-        beginLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        beginLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAoi);
+        var beginLazyMessage = firstCallState.ChatMessages[0].Content.AsJson();
+        beginLazyMessage.Should().NotBeNull();
+        beginLazyMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        beginLazyMessage.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAoi);
 
         // 3. 姉妹が Akane に切り替わる
         var secondCallState = capturedStates[1];
         secondCallState.CurrentSister.Should().Be(Kotonoha.Akane);
 
         // 4. EndLazyModeAkane instructionが挿入される
-        var endLazyMessage = secondCallState.ChatMessages[2];
-        var endLazyJson = JsonNode.Parse(endLazyMessage.Content[0].Text);
-        endLazyJson.Should().NotBeNull();
-        endLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        endLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAkane);
+        var endLazyMessage = secondCallState.ChatMessages[2].Content.AsJson();
+        endLazyMessage.Should().NotBeNull();
+        endLazyMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        endLazyMessage.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAkane);
 
         // 5. 怠け癖が正常に完了
         result.WasLazy.Should().BeTrue();
@@ -553,13 +390,13 @@ public class LazyModeHandlerTests
     public async Task HandleLazyModeAsync_LazyResponseが正しくパースされること()
     {
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCallCount = 0;
@@ -573,11 +410,11 @@ public class LazyModeHandlerTests
             regenerateCallCount++;
             if (regenerateCallCount == 1)
             {
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(lazyResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(lazyResponseJson));
             }
             else
             {
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(acceptResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(acceptResponseJson));
             }
         }
 
@@ -616,13 +453,13 @@ public class LazyModeHandlerTests
         // - FinalCompletion = 元の completion
 
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCalled = false;
@@ -630,7 +467,7 @@ public class LazyModeHandlerTests
         {
             regenerateCalled = true;
             // 怠け癖応答として ToolCalls を返す（異常系）
-            return Task.FromResult<ChatCompletion?>(CreateToolCallsCompletion("another_function"));
+            return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateSimpleToolCallsCompletion("another_function"));
         }
 
         // Act
@@ -645,11 +482,10 @@ public class LazyModeHandlerTests
 
         // CancelLazyMode instruction が追加されている
         newState.ChatMessages.Should().HaveCount(2);
-        var cancelMessage = newState.ChatMessages[1];
-        var cancelJson = JsonNode.Parse(cancelMessage.Content[0].Text);
-        cancelJson.Should().NotBeNull();
-        cancelJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        cancelJson.Should().HavePropertyWithStringValue("Text", Instruction.CancelLazyMode);
+        var cancelMessage = newState.ChatMessages[1].Content.AsJson();
+        cancelMessage.Should().NotBeNull();
+        cancelMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        cancelMessage.Should().HavePropertyWithStringValue("Text", Instruction.CancelLazyMode);
     }
 
     [Fact]
@@ -664,13 +500,13 @@ public class LazyModeHandlerTests
         // - FinalCompletion = 元の completion
 
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Aoi, patienceCount: 0);
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Aoi, patienceCount: 0);
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCalled = false;
@@ -693,11 +529,10 @@ public class LazyModeHandlerTests
 
         // CancelLazyMode instruction が追加されている
         newState.ChatMessages.Should().HaveCount(2);
-        var cancelMessage = newState.ChatMessages[1];
-        var cancelJson = JsonNode.Parse(cancelMessage.Content[0].Text);
-        cancelJson.Should().NotBeNull();
-        cancelJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        cancelJson.Should().HavePropertyWithStringValue("Text", Instruction.CancelLazyMode);
+        var cancelMessage = newState.ChatMessages[1].Content.AsJson();
+        cancelMessage.Should().NotBeNull();
+        cancelMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        cancelMessage.Should().HavePropertyWithStringValue("Text", Instruction.CancelLazyMode);
     }
 
     #endregion
@@ -716,13 +551,13 @@ public class LazyModeHandlerTests
         // - state には怠け癖応答までのメッセージが含まれている
 
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCallCount = 0;
@@ -734,7 +569,7 @@ public class LazyModeHandlerTests
             if (regenerateCallCount == 1)
             {
                 // 1回目: 怠け癖応答は正常に生成
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(lazyResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(lazyResponseJson));
             }
             else
             {
@@ -775,13 +610,13 @@ public class LazyModeHandlerTests
         //   - state に EndLazyMode instruction が追加されている
 
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var capturedStates = new List<ConversationState>();
@@ -793,11 +628,11 @@ public class LazyModeHandlerTests
             capturedStates.Add(s);
             if (capturedStates.Count == 1)
             {
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(lazyResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(lazyResponseJson));
             }
             else
             {
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(acceptResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(acceptResponseJson));
             }
         }
 
@@ -812,10 +647,10 @@ public class LazyModeHandlerTests
         var firstCallState = capturedStates[0];
         firstCallState.CurrentSister.Should().Be(Kotonoha.Akane);
         firstCallState.ChatMessages.Should().HaveCount(1);
-        var beginLazyJson = JsonNode.Parse(firstCallState.ChatMessages[0].Content[0].Text);
-        beginLazyJson.Should().NotBeNull();
-        beginLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        beginLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
+        var firstBeginLazyMessage = firstCallState.ChatMessages[0].Content.AsJson();
+        firstBeginLazyMessage.Should().NotBeNull();
+        firstBeginLazyMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        firstBeginLazyMessage.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
 
         // 2回目の呼び出し時
         var secondCallState = capturedStates[1];
@@ -823,21 +658,19 @@ public class LazyModeHandlerTests
         secondCallState.ChatMessages.Should().HaveCount(3);
 
         // BeginLazy instruction
-        var beginLazyMessage = secondCallState.ChatMessages[0];
-        var beginLazyMessageJson = JsonNode.Parse(beginLazyMessage.Content[0].Text);
-        beginLazyMessageJson.Should().NotBeNull();
-        beginLazyMessageJson.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
+        var secondBeginLazyMessageJson = secondCallState.ChatMessages[0].Content.AsJson();
+        secondBeginLazyMessageJson.Should().NotBeNull();
+        secondBeginLazyMessageJson.Should().HavePropertyWithStringValue("Text", Instruction.BeginLazyModeAkane);
 
         // 怠け癖応答
         var lazyResponseMessage = secondCallState.ChatMessages[1];
         lazyResponseMessage.Content[0].Text.Should().Be(lazyResponseJson);
 
         // EndLazy instruction
-        var endLazyMessage = secondCallState.ChatMessages[2];
-        var endLazyJson = JsonNode.Parse(endLazyMessage.Content[0].Text);
-        endLazyJson.Should().NotBeNull();
-        endLazyJson.Should().HavePropertyWithStringValue("InputType", "Instruction");
-        endLazyJson.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAoi);
+        var endLazyMessage = secondCallState.ChatMessages[2].Content.AsJson();
+        endLazyMessage.Should().NotBeNull();
+        endLazyMessage.Should().HavePropertyWithStringValue("InputType", "Instruction");
+        endLazyMessage.Should().HavePropertyWithStringValue("Text", Instruction.EndLazyModeAoi);
     }
 
     #endregion
@@ -853,14 +686,14 @@ public class LazyModeHandlerTests
         // - 他の条件次第で怠け癖は発動しうる
 
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.5); // 怠けない確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.5); // 怠けない確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
         // 存在しない関数名を含む completion
-        var completion = CreateToolCallsCompletion("non_existent_function");
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("non_existent_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCalled = false;
@@ -892,18 +725,18 @@ public class LazyModeHandlerTests
         // - FinalCompletion = 元の completion
 
         // Arrange
-        var logger = new MockLogger();
-        var functions = new Dictionary<string, ToolFunction>
+        var logger = new Helpers.MockLogger();
+        var functions = new Dictionary<string, Functions.ToolFunction>
         {
-            ["lazy_function"] = new MockToolFunction(canBeLazy: true, logger),
-            ["non_lazy_function"] = new MockToolFunction(canBeLazy: false, logger)
+            ["lazy_function"] = new Helpers.MockToolFunction(canBeLazy: true, logger),
+            ["non_lazy_function"] = new Helpers.MockToolFunction(canBeLazy: false, logger)
         };
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
         // 複数の関数呼び出しを含む completion（一部が CanBeLazy = false）
-        var completion = CreateMultipleToolCallsCompletion("lazy_function", "non_lazy_function");
+        var completion = ChatCompletionFactory.CreateMultipleToolCallsCompletion("lazy_function", "non_lazy_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCalled = false;
@@ -936,13 +769,13 @@ public class LazyModeHandlerTests
         // - FinalCompletion = 引き受ける応答
 
         // Arrange
-        var functions = CreateFunctionDictionary(canBeLazy: true);
-        var logger = new MockLogger();
-        var randomGenerator = new MockRandomGenerator(0.05); // 怠ける確率
+        var functions = TestStateFactory.CreateFunctionDictionary(canBeLazy: true);
+        var logger = new Helpers.MockLogger();
+        var randomGenerator = new Helpers.MockRandomGenerator(0.05); // 怠ける確率
         var handler = new LazyModeHandler(functions, logger, randomGenerator);
 
-        var state = CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
-        var completion = CreateToolCallsCompletion("test_function");
+        var state = TestStateFactory.CreateTestState(currentSister: Kotonoha.Akane, patienceCount: 0);
+        var completion = ChatCompletionFactory.CreateSimpleToolCallsCompletion("test_function");
         var dateTime = new DateTime(2025, 1, 1);
 
         var regenerateCallCount = 0;
@@ -955,12 +788,12 @@ public class LazyModeHandlerTests
             if (regenerateCallCount == 1)
             {
                 // 1回目: 不正な JSON を返す
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(invalidJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(invalidJson));
             }
             else
             {
                 // 2回目: 引き受ける応答
-                return Task.FromResult<ChatCompletion?>(CreateTextCompletion(acceptResponseJson));
+                return Task.FromResult<ChatCompletion?>(ChatCompletionFactory.CreateRawTextCompletion(acceptResponseJson));
             }
         }
 

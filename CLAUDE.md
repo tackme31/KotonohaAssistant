@@ -448,6 +448,44 @@ dotnet test --filter FullyQualifiedName~ConversationStateExtensionsTests
 - `IDateTimeProvider` interface allows injecting fixed timestamps in tests
 - Immutable `ConversationState` makes testing pure functions straightforward
 
+### Code Coverage
+
+Measure test coverage using Coverlet:
+
+```bash
+# Run tests with coverage (using settings file)
+dotnet test KotonohaAssistant.AI.Tests/KotonohaAssistant.AI.Tests.csproj --settings KotonohaAssistant.AI.Tests/coverlet.runsettings
+
+# Run tests with coverage (inline options)
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+**Coverage Settings** (`coverlet.runsettings`):
+- Excludes test assemblies, auto-generated code, and migrations
+- Generates Cobertura, OpenCover, and JSON formats
+- Skips auto-properties for cleaner reports
+
+**Generate HTML Report**:
+
+1. Install ReportGenerator (one-time setup):
+```bash
+dotnet tool install -g dotnet-reportgenerator-globaltool
+```
+
+2. Generate and view report:
+```bash
+# Generate HTML report
+reportgenerator -reports:"KotonohaAssistant.AI.Tests/TestResults/**/coverage.cobertura.xml" -targetdir:"TestResults/CoverageReport" -reporttypes:Html
+
+# Open report in browser (Windows)
+start TestResults/CoverageReport/index.html
+```
+
+**Helper Script** (see `generate-coverage.ps1`):
+```powershell
+.\generate-coverage.ps1
+```
+
 ### Integration Testing
 
 Test features through the CLI app:

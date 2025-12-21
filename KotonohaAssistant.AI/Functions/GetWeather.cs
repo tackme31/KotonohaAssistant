@@ -20,6 +20,22 @@ public class GetWeather(IPromptRepository promptRepository, IWeatherRepository w
     private readonly IWeatherRepository _weatherRepository = weatherRepository;
     private readonly (double lat, double lon) _location = location;
 
+    protected override bool ValidateParameters<T>(T parameters)
+    {
+        if (parameters is not Parameters args)
+        {
+            return false;
+        }
+
+        if (!DateTime.TryParse(args.Date, out _))
+        {
+            Logger.LogWarning($"Invalid date format: {args.Date}");
+            return false;
+        }
+
+        return true;
+    }
+
     public override async Task<string?> Invoke(JsonDocument argumentsDoc, IReadOnlyConversationState state)
     {
         var args = Deserialize<Parameters>(argumentsDoc);
@@ -28,11 +44,7 @@ public class GetWeather(IPromptRepository promptRepository, IWeatherRepository w
             return null;
         }
 
-        if (!DateTime.TryParse(args.Date, out var date))
-        {
-            return null;
-        }
-
+        var date = DateTime.Parse(args.Date);
         try
         {
             var weathers = await _weatherRepository.GetWeather(date, _location);

@@ -20,6 +20,28 @@ public class MakeTimeBasedPromise
 
     protected override Type ParameterType => typeof(Parameters);
 
+    protected override bool ValidateParameters<T>(T parameters)
+    {
+        if (parameters is not Parameters args)
+        {
+            return false;
+        }
+
+        if (!TimeSpan.TryParse(args.TimeToCall, out _))
+        {
+            Logger.LogWarning($"Invalid time format: {args.TimeToCall}");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(args.WhatToSayWhenTheTimeComes))
+        {
+            Logger.LogWarning($"WhatToSayWhenTheTimeComes is required.");
+            return false;
+        }
+
+        return true;
+    }
+
     public override async Task<string?> Invoke(JsonDocument argumentsDoc, IReadOnlyConversationState state)
     {
         var args = Deserialize<Parameters>(argumentsDoc);
@@ -28,11 +50,7 @@ public class MakeTimeBasedPromise
             return null;
         }
 
-        if (!TimeSpan.TryParse(args.TimeToCall, out var time))
-        {
-            return null;
-        }
-
+        var time = TimeSpan.Parse(args.TimeToCall);
         var savePath = Path.Combine(voiceDirectory, args.WhatToSayWhenTheTimeComes);
         try
         {

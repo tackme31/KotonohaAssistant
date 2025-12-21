@@ -293,38 +293,3 @@ public class MockAlarmClient : IAlarmClient
         // No resources to dispose
     }
 }
-
-/// <summary>
-/// テスト用のモック ICalendarEventRepository
-/// </summary>
-public class MockCalendarEventRepository : ICalendarEventRepository
-{
-    public Func<DateTime, Task<IList<Google.Apis.Calendar.v3.Data.Event>>>? GetEventsAsyncFunc { get; set; }
-    public Func<string, DateTime, TimeSpan?, Task<Google.Apis.Calendar.v3.Data.Event>>? CreateEventAsyncFunc { get; set; }
-
-    public int GetEventsAsyncCallCount { get; private set; }
-    public int CreateEventAsyncCallCount { get; private set; }
-
-    public Task<IList<Google.Apis.Calendar.v3.Data.Event>> GetEventsAsync(DateTime date)
-    {
-        GetEventsAsyncCallCount++;
-        return GetEventsAsyncFunc?.Invoke(date) ?? Task.FromResult<IList<Google.Apis.Calendar.v3.Data.Event>>(new List<Google.Apis.Calendar.v3.Data.Event>());
-    }
-
-    public Task<Google.Apis.Calendar.v3.Data.Event> CreateEventAsync(string title, DateTime date, TimeSpan? time = null)
-    {
-        CreateEventAsyncCallCount++;
-        return CreateEventAsyncFunc?.Invoke(title, date, time) ?? Task.FromResult(new Google.Apis.Calendar.v3.Data.Event
-        {
-            Summary = title,
-            Start = new Google.Apis.Calendar.v3.Data.EventDateTime
-            {
-                DateTimeDateTimeOffset = date.Date + (time ?? TimeSpan.Zero)
-            },
-            End = new Google.Apis.Calendar.v3.Data.EventDateTime
-            {
-                DateTimeDateTimeOffset = date.Date + (time ?? TimeSpan.Zero)
-            }
-        });
-    }
-}

@@ -1,5 +1,4 @@
 ﻿using System.Collections.Immutable;
-using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core;
 using KotonohaAssistant.Core.Utils;
@@ -38,12 +37,12 @@ public static class TestStateFactory
     /// <summary>
     /// テスト用の関数辞書を作成
     /// </summary>
-    public static Dictionary<string, ToolFunction> CreateFunctionDictionary(
+    public static Dictionary<string, Functions.ToolFunction> CreateFunctionDictionary(
         bool canBeLazy = true,
         ILogger? logger = null)
     {
         logger ??= new MockLogger();
-        return new Dictionary<string, ToolFunction>
+        return new Dictionary<string, Functions.ToolFunction>
         {
             ["test_function"] = new MockToolFunction(canBeLazy, logger)
         };

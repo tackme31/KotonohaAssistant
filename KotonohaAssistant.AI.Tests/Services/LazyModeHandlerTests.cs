@@ -4,7 +4,6 @@ using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.AI.Tests.Helpers;
 using KotonohaAssistant.Core;
-using KotonohaAssistant.AI.Functions;
 using OpenAI.Chat;
 
 namespace KotonohaAssistant.AI.Tests.Services;
@@ -727,7 +726,7 @@ public class LazyModeHandlerTests
 
         // Arrange
         var logger = new Helpers.MockLogger();
-        var functions = new Dictionary<string, ToolFunction>
+        var functions = new Dictionary<string, Functions.ToolFunction>
         {
             ["lazy_function"] = new Helpers.MockToolFunction(canBeLazy: true, logger),
             ["non_lazy_function"] = new Helpers.MockToolFunction(canBeLazy: false, logger)

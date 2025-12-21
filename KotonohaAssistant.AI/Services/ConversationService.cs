@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-﻿using System.Runtime.Serialization;
-using System.Text.Json;
-=======
-﻿using System.Text.Json;
+﻿﻿using System.Text.Json;
 using System.Text.Json.Nodes;
->>>>>>> 45b5b57 (ToolFunctionのプロパティ定義にJsonSchemaExporterを使用)
 using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
@@ -408,24 +403,14 @@ public class ConversationService
                 }
 
                 _logger.LogInformation($"{LogPrefix} Executing function: {toolCall.FunctionName}");
-                var result = await function.Invoke(doc, _state);
+                var result = await function.Invoke(doc, state);
                 if (result is null)
                 {
-<<<<<<< HEAD
-                    _logger.LogWarning($"{LogPrefix} Failed to parse arguments of '{toolCall.FunctionName}'.");
-                    state = state.AddToolMessage(toolCall.Id, $"Failed to parse arguments of '{toolCall.FunctionName}'.");
-                    continue;
-                }
-
-                _logger.LogInformation($"{LogPrefix} Executing function: {toolCall.FunctionName}");
-                var result = await function.Invoke(arguments, state);
-=======
                     _logger.LogWarning($"{LogPrefix} Failed to invoke function '{toolCall.FunctionName}'.");
-                    _state.AddToolMessage(toolCall.Id, $"Failed to invoke function: '{toolCall.FunctionName}'.");
+                    state.AddToolMessage(toolCall.Id, $"Failed to invoke function: '{toolCall.FunctionName}'.");
                     continue;
                 }
 
->>>>>>> 45b5b57 (ToolFunctionのプロパティ定義にJsonSchemaExporterを使用)
                 invokedFunctions.Add(new ConversationFunction
                 {
                     Name = toolCall.FunctionName,

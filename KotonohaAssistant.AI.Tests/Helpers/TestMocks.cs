@@ -1,4 +1,5 @@
 ﻿using System.ClientModel.Primitives;
+using System.Text.Json;
 using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
@@ -79,6 +80,7 @@ public class MockRandomGenerator : IRandomGenerator
 /// </summary>
 public class MockToolFunction : ToolFunction
 {
+    private record Parameters();
     private readonly bool _canBeLazy;
 
     public MockToolFunction(bool canBeLazy, ILogger logger) : base(logger)
@@ -88,17 +90,11 @@ public class MockToolFunction : ToolFunction
 
     public override bool CanBeLazy => _canBeLazy;
     public override string Description => "Mock function";
-    public override string Parameters => "{}";
+    protected override Type ParameterType => typeof(Parameters);
 
-    public override bool TryParseArguments(System.Text.Json.JsonDocument doc, out IDictionary<string, object> arguments)
+    public override Task<string?> Invoke(JsonDocument argumentsDoc, ConversationState state)
     {
-        arguments = new Dictionary<string, object>();
-        return true;
-    }
-
-    public override Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state)
-    {
-        return Task.FromResult("{}");
+        return Task.FromResult<string?>("{}");
     }
 }
 

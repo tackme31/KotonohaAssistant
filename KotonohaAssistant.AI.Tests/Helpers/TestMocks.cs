@@ -328,3 +328,19 @@ public class MockCalendarEventRepository : ICalendarEventRepository
         });
     }
 }
+
+/// <summary>
+/// テスト用のモック IWeatherRepository
+/// </summary>
+public class MockWeatherRepository : IWeatherRepository
+{
+    public Func<DateTime, (double lat, double lon), Task<List<Weather>>>? GetWeatherFunc { get; set; }
+
+    public int GetWeatherCallCount { get; private set; }
+
+    public Task<List<Weather>> GetWeather(DateTime date, (double lat, double lon) location)
+    {
+        GetWeatherCallCount++;
+        return GetWeatherFunc?.Invoke(date, location) ?? Task.FromResult(new List<Weather>());
+    }
+}

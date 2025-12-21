@@ -19,6 +19,23 @@ public class GetCalendarEvent(IPromptRepository promptRepository, ICalendarEvent
 
     private readonly ICalendarEventRepository _calendarEventService = calendarEventRepository;
 
+    protected override bool ValidateParameters<T>(T parameters)
+    {
+        if (parameters is not Parameters args)
+        {
+            return false;
+        }
+
+        // 日付の検証
+        if (!DateTime.TryParse(args.Date, out _))
+        {
+            Logger.LogWarning($"Invalid date format: {args.Date}");
+            return false;
+        }
+
+        return true;
+    }
+
     public override async Task<string?> Invoke(JsonDocument argumentsDoc, IReadOnlyConversationState state)
     {
         var args = Deserialize<Parameters>(argumentsDoc);
@@ -27,10 +44,7 @@ public class GetCalendarEvent(IPromptRepository promptRepository, ICalendarEvent
             return null;
         }
 
-        if (!DateTime.TryParse(args.Date, out var date))
-        {
-            return null;
-        }
+        var date = DateTime.Parse(args.Date);
 
         try
         {

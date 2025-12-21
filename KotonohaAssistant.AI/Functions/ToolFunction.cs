@@ -1,5 +1,11 @@
-﻿using System.Text;
+﻿using System.ComponentModel;
+using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Schema;
+using System.Text.Json.Serialization.Metadata;
+using System.Text.Unicode;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 using OpenAI.Chat;
@@ -8,7 +14,6 @@ namespace KotonohaAssistant.AI.Functions;
 
 public abstract class ToolFunction(ILogger logger)
 {
-
     protected ILogger Logger { get; } = logger;
 
     /// <summary>
@@ -17,9 +22,9 @@ public abstract class ToolFunction(ILogger logger)
     public abstract string Description { get; }
 
     /// <summary>
-    /// 関数のパラメータ
+    /// パラメータの型
     /// </summary>
-    public abstract string Parameters { get; }
+    protected abstract Type ParameterType { get; }
 
     /// <summary>
     /// 怠け癖対象かどうか
@@ -27,27 +32,95 @@ public abstract class ToolFunction(ILogger logger)
     public virtual bool CanBeLazy { get; set; } = true;
 
     /// <summary>
-    /// 引数のパース処理
-    /// </summary>
-    /// <param name="doc"></param>
-    /// <param name="arguments"></param>
-    /// <returns></returns>
-    public abstract bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments);
-
-    /// <summary>
     /// 関数の実行処理
     /// </summary>
-    /// <param name="arguments"></param>
+    /// <param name="argumentsDoc"></param>
     /// <param name="state"></param>
     /// <returns></returns>
-    public abstract Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state);
+    public abstract Task<string?> Invoke(JsonDocument argumentsDoc, ConversationState state);
 
+    /// <summary>
+    /// JsonDocumentをパースします
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="doc"></param>
+    /// <returns></returns>
+    protected T? Deserialize<T>(JsonDocument doc)
+    {
+        try
+        {
+            return doc.RootElement.Deserialize<T>(options: new()
+            {
+                PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Disallow
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex);
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// ツール定義を作成します
+    /// </summary>
+    /// <returns></returns>
     public ChatTool CreateChatTool()
     {
+        var jsonSchema = JsonSchemaExporter.GetJsonSchemaAsNode(
+                options: new()
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+                },
+                ParameterType,
+                exporterOptions: new()
+                {
+                    TreatNullObliviousAsNonNullable = true,
+                    TransformSchemaNode = (context, schema) =>
+                    {
+                        if (schema is not JsonObject newSchema)
+                        {
+                            return schema;
+                        }
+
+                        // ルートの処理
+                        if (context.Path is [])
+                        {
+                            newSchema.Add("additionalProperties", false);
+                            if (!newSchema.TryGetPropertyValue("properties", out _))
+                            {
+                                newSchema.Add("properties", new JsonObject());
+                            }
+                        }
+
+                        // descriptionの処理
+                        var attributeProvider = context.PropertyInfo?.AttributeProvider ?? context.TypeInfo.Type;
+                        var descriptionAttr = attributeProvider?
+                            .GetCustomAttributes(inherit: true)
+                            .OfType<DescriptionAttribute>()
+                            .FirstOrDefault();
+                        if (descriptionAttr is not null)
+                        {
+                            newSchema.Insert(0, "description", descriptionAttr.Description);
+                        }
+
+                        return newSchema;
+                    },
+                });
+
+        var parameters = jsonSchema.ToJsonString(
+            options: new()
+            {
+                WriteIndented = true,
+                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+            });
+
         return ChatTool.CreateFunctionTool(
           functionName: GetType().Name,
           functionDescription: Description,
-          functionParameters: BinaryData.FromBytes(Encoding.UTF8.GetBytes(Parameters))
+          functionParameters: BinaryData.FromBytes(Encoding.UTF8.GetBytes(parameters))
         );
     }
 }

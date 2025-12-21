@@ -1,71 +1,45 @@
-﻿using System.Text.Json;
-using KotonohaAssistant.AI.Extensions;
+﻿using System.ComponentModel;
+using System.Text.Json;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEventRepository calendarEventRepository, ILogger logger) : ToolFunction(logger)
+public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEventRepository calendarEventRepository, ILogger logger)
+    : ToolFunction(logger)
 {
+    private record Parameters(
+        [property: Description("作成する予定のタイトル")]
+        string Title,
+        [property: Description("予定の日にち。形式はyyyy/MM/dd")]
+        string Date,
+        [property: Description("予定の時間。HH:mm形式。不明な場合はnull")]
+        string? Time);
+
     public override string Description => promptRepository.CreateCalendarEventDescription;
-
-    public override string Parameters => """
-{
-    "type": "object",
-    "properties": {
-        "title": {
-            "type": "string",
-            "description": "作成する予定のタイトル"
-        },
-        "date": {
-            "type": "string",
-            "description": "予定の日にち。yyyy/MM/dd形式"
-        },
-        "time": {
-            "type": "string",
-            "description": "予定の時間。HH:mm形式。不明な場合はnull"
-        }
-    },
-    "required": [ "title", "date" ],
-    "additionalProperties": false
-}
-""";
-
+    protected override Type ParameterType => typeof(Parameters);
+    
     private readonly ICalendarEventRepository _calendarEventRepository = calendarEventRepository;
 
-    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+    public override async Task<string?> Invoke(JsonDocument argumentsDoc, ConversationState state)
     {
-        arguments = new Dictionary<string, object>();
-
-        var title = doc.RootElement.GetStringProperty("title");
-        if (string.IsNullOrWhiteSpace(title))
+        var args = Deserialize<Parameters>(argumentsDoc);
+        if (args is null)
         {
-            return false;
-        }
-        arguments["title"] = title;
-
-        var date = doc.RootElement.GetDateTimeProperty("date");
-        if (date is null)
-        {
-            return false;
-        }
-        arguments["date"] = date;
-
-        var time = doc.RootElement.GetTimeSpanProperty("time");
-        if (time is not null)
-        {
-            arguments["time"] = time;
+            return null;
         }
 
-        return true;
-    }
+        var title = args.Title;
+        if (!DateTime.TryParse(args.Date, out var date))
+        {
+            return null;
+        }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state)
-    {
-        var title = (string)arguments["title"];
-        var date = (DateTime)arguments["date"];
-        var time = arguments.ContainsKey("time") ? (TimeSpan?)arguments["time"] : default(TimeSpan?);
+        if (!TimeSpan.TryParse(args.Time, out var time))
+        {
+            return null;
+        }
 
         try
         {

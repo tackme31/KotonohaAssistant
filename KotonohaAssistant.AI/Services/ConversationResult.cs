@@ -12,6 +12,6 @@ public class ConversationResult
 public class ConversationFunction
 {
     public required string Name { get; set; }
-    public required IDictionary<string, object> Arguments { get; set; }
+    public required IDictionary<string, object?> Arguments { get; set; }
     public required string Result { get; set; }
 }

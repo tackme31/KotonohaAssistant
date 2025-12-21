@@ -1,51 +1,39 @@
-﻿using System.Text;
+﻿using System.ComponentModel;
+using System.Text;
 using System.Text.Json;
-using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class GetCalendarEvent(IPromptRepository promptRepository, ICalendarEventRepository calendarEventRepository, ILogger logger) : ToolFunction(logger)
+public class GetCalendarEvent(IPromptRepository promptRepository, ICalendarEventRepository calendarEventRepository, ILogger logger)
+    : ToolFunction(logger)
 {
-    public override string Description => promptRepository.GetCalendarEventDescription;
+    protected record Parameters(
+        [property: Description("予定を取得する日にち。形式はyyyy/MM/dd")]
+        string Date);
 
-    public override string Parameters => """
-{
-    "type": "object",
-    "properties": {
-        "date": {
-            "type": "string",
-            "description": "予定を取得する日にち。形式はyyyy/MM/dd"
-        }
-    },
-    "required": [ "date" ],
-    "additionalProperties": false
-}
-""";
+    public override string Description => promptRepository.GetCalendarEventDescription;
+    protected override Type ParameterType => typeof(Parameters);
 
     private readonly ICalendarEventRepository _calendarEventService = calendarEventRepository;
 
-    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+    public override async Task<string?> Invoke(JsonDocument argumentsDoc, ConversationState state)
     {
-        arguments = new Dictionary<string, object>();
-
-        var date = doc.RootElement.GetDateTimeProperty("date");
-        if (date is null)
+        var args = Deserialize<Parameters>(argumentsDoc);
+        if (args is null)
         {
-            return false;
+            return null;
         }
-        arguments["date"] = date;
 
-        return true;
-    }
+        if (!DateTime.TryParse(args.Date, out var date))
+        {
+            return null;
+        }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state)
-    {
         try
         {
-            var date = (DateTime)arguments["date"];
             var events = await _calendarEventService.GetEventsAsync(date);
             var sb = new StringBuilder();
             sb.AppendLine($"## {date:M月d日}の予定");

@@ -1,55 +1,37 @@
-﻿using System.Text.Json;
-using KotonohaAssistant.AI.Extensions;
+﻿using System.ComponentModel;
+using System.Text.Json;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StartTimer(IPromptRepository promptRepository, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
+public class StartTimer(IPromptRepository promptRepository, IAlarmClient alarmClient, ILogger logger)
+    : ToolFunction(logger)
 {
+    private record Parameters(
+        [property: Description("タイマーの秒数")]
+        int Seconds);
+
     public override string Description => promptRepository.StartTimerDescription;
 
-    public override string Parameters => """
-{
-    "type": "object",
-    "properties": {
-        "seconds": {
-            "type": "number",
-            "description": "タイマーの秒数"
-        }
-    },
-    "required": [ "seconds" ],
-    "additionalProperties": false
-}
-""";
+    protected override Type ParameterType => typeof(Parameters);
 
     public override bool CanBeLazy => false;
 
-    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+    public override async Task<string?> Invoke(JsonDocument argumentsDoc, ConversationState state)
     {
-        arguments = new Dictionary<string, object>();
-
-        var seconds = doc.RootElement.GetIntProperty("seconds");
-        if (seconds is null)
+        var args = Deserialize<Parameters>(argumentsDoc);
+        if (args == null)
         {
-            return false;
+            return null;
         }
-
-        arguments["seconds"] = seconds.Value;
-
-        return true;
-    }
-
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, ConversationState state)
-    {
-        var seconds = (int)arguments["seconds"];
 
         try
         {
-            await alarmClient.StartTimer(TimeSpan.FromSeconds(seconds));
+            await alarmClient.StartTimer(TimeSpan.FromSeconds(args.Seconds));
 
-            var time = new TimeSpan(0, 0, seconds);
+            var time = new TimeSpan(0, 0, args.Seconds);
             if (time.TotalSeconds < 60)
             {
                 return $"タイマーを開始しました。: {time.Seconds}秒";

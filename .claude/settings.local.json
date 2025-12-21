@@ -16,9 +16,7 @@
       "mcp__serena__get_symbols_overview",
       "mcp__serena__find_file",
       "Bash(cat:*)",
-      "Bash(ls:*)",
-      "Skill(create-unit-test-cases)",
-      "Skill(implement-unit-test-cases)"
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

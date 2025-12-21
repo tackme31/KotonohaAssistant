@@ -19,8 +19,39 @@ public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEv
 
     public override string Description => promptRepository.CreateCalendarEventDescription;
     protected override Type ParameterType => typeof(Parameters);
-    
+
     private readonly ICalendarEventRepository _calendarEventRepository = calendarEventRepository;
+
+    protected override bool ValidateParameters<T>(T parameters)
+    {
+        if (parameters is not Parameters args)
+        {
+            return false;
+        }
+
+        // タイトルの検証
+        if (string.IsNullOrWhiteSpace(args.Title))
+        {
+            Logger.LogWarning("Title is required");
+            return false;
+        }
+
+        // 日付の検証
+        if (!DateTime.TryParse(args.Date, out _))
+        {
+            Logger.LogWarning($"Invalid date format: {args.Date}");
+            return false;
+        }
+
+        // 時間の検証（オプショナル）
+        if (args.Time != null && !TimeSpan.TryParse(args.Time, out _))
+        {
+            Logger.LogWarning($"Invalid time format: {args.Time}");
+            return false;
+        }
+
+        return true;
+    }
 
     public override async Task<string?> Invoke(JsonDocument argumentsDoc, ConversationState state)
     {
@@ -31,15 +62,8 @@ public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEv
         }
 
         var title = args.Title;
-        if (!DateTime.TryParse(args.Date, out var date))
-        {
-            return null;
-        }
-
-        if (!TimeSpan.TryParse(args.Time, out var time))
-        {
-            return null;
-        }
+        var date = DateTime.Parse(args.Date);
+        TimeSpan? time = args.Time != null ? TimeSpan.Parse(args.Time) : null;
 
         try
         {
@@ -53,6 +77,5 @@ public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEv
 
             return "予定の作成に失敗しました。";
         }
-
     }
 }

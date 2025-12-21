@@ -49,11 +49,20 @@ public abstract class ToolFunction(ILogger logger)
     {
         try
         {
-            return doc.RootElement.Deserialize<T>(options: new()
+            var result = doc.RootElement.Deserialize<T>(options: new()
             {
                 PropertyNameCaseInsensitive = true,
                 ReadCommentHandling = JsonCommentHandling.Disallow
             });
+
+            // 追加のカスタムバリデーション
+            if (result != null && !ValidateParameters(result))
+            {
+                Logger.LogWarning($"Parameter validation failed for {typeof(T).Name}");
+                return default;
+            }
+
+            return result;
         }
         catch (Exception ex)
         {
@@ -61,6 +70,14 @@ public abstract class ToolFunction(ILogger logger)
             return default;
         }
     }
+
+    /// <summary>
+    /// パラメータの追加バリデーション（サブクラスでオーバーライド可能）
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="parameters">デシリアライズされたパラメータ</param>
+    /// <returns>バリデーションが成功した場合true</returns>
+    protected virtual bool ValidateParameters<T>(T parameters) => true;
 
     /// <summary>
     /// ツール定義を作成します

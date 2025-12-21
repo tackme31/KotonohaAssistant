@@ -1,71 +1,69 @@
-﻿using System.Text.Json;
-using KotonohaAssistant.AI.Extensions;
+﻿using System.ComponentModel;
+using System.Text.Json;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEventRepository calendarEventRepository, ILogger logger) : ToolFunction(logger)
+public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEventRepository calendarEventRepository, ILogger logger)
+    : ToolFunction(logger)
 {
-    public override string Description => promptRepository.CreateCalendarEventDescription;
+    private record Parameters(
+        [property: Description("作成する予定のタイトル")]
+        string Title,
+        [property: Description("予定の日にち。形式はyyyy/MM/dd")]
+        string Date,
+        [property: Description("予定の時間。HH:mm形式。不明な場合はnull")]
+        string? Time);
 
-    public override string Parameters => """
-{
-    "type": "object",
-    "properties": {
-        "title": {
-            "type": "string",
-            "description": "作成する予定のタイトル"
-        },
-        "date": {
-            "type": "string",
-            "description": "予定の日にち。yyyy/MM/dd形式"
-        },
-        "time": {
-            "type": "string",
-            "description": "予定の時間。HH:mm形式。不明な場合はnull"
-        }
-    },
-    "required": [ "title", "date" ],
-    "additionalProperties": false
-}
-""";
+    public override string Description => promptRepository.CreateCalendarEventDescription;
+    protected override Type ParameterType => typeof(Parameters);
 
     private readonly ICalendarEventRepository _calendarEventRepository = calendarEventRepository;
 
-    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+    protected override bool ValidateParameters<T>(T parameters)
     {
-        arguments = new Dictionary<string, object>();
-
-        var title = doc.RootElement.GetStringProperty("title");
-        if (string.IsNullOrWhiteSpace(title))
+        if (parameters is not Parameters args)
         {
             return false;
         }
-        arguments["title"] = title;
 
-        var date = doc.RootElement.GetDateTimeProperty("date");
-        if (date is null)
+        // タイトルの検証
+        if (string.IsNullOrWhiteSpace(args.Title))
         {
+            Logger.LogWarning("Title is required");
             return false;
         }
-        arguments["date"] = date;
 
-        var time = doc.RootElement.GetTimeSpanProperty("time");
-        if (time is not null)
+        // 日付の検証
+        if (!DateTime.TryParse(args.Date, out _))
         {
-            arguments["time"] = time;
+            Logger.LogWarning($"Invalid date format: {args.Date}");
+            return false;
+        }
+
+        // 時間の検証（オプショナル）
+        if (args.Time != null && !TimeSpan.TryParse(args.Time, out _))
+        {
+            Logger.LogWarning($"Invalid time format: {args.Time}");
+            return false;
         }
 
         return true;
     }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override async Task<string?> Invoke(JsonDocument argumentsDoc, IReadOnlyConversationState state)
     {
-        var title = (string)arguments["title"];
-        var date = (DateTime)arguments["date"];
-        var time = arguments.ContainsKey("time") ? (TimeSpan?)arguments["time"] : default(TimeSpan?);
+        var args = Deserialize<Parameters>(argumentsDoc);
+        if (args is null)
+        {
+            return null;
+        }
+
+        var title = args.Title;
+        var date = DateTime.Parse(args.Date);
+        TimeSpan? time = args.Time != null ? TimeSpan.Parse(args.Time) : null;
 
         try
         {
@@ -79,6 +77,5 @@ public class CreateCalendarEvent(IPromptRepository promptRepository, ICalendarEv
 
             return "予定の作成に失敗しました。";
         }
-
     }
 }

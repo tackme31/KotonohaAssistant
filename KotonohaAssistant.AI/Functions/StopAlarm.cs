@@ -5,28 +5,18 @@ using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class StopAlarm(IPromptRepository promptRepository, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
+public class StopAlarm(IPromptRepository promptRepository, IAlarmClient alarmClient, ILogger logger)
+    : ToolFunction(logger)
 {
+    private record Parameters();
+
     public override string Description => promptRepository.StopAlarmDescription;
 
-    public override string Parameters => """
-{
-    "type": "object",
-    "properties": {},
-    "required": [],
-    "additionalProperties": false
-}
-""";
+    protected override Type ParameterType => typeof(Parameters);
 
     public override bool CanBeLazy => false;
 
-    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
-    {
-        arguments = new Dictionary<string, object>();
-        return true;
-    }
-
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
+    public override async Task<string?> Invoke(JsonDocument argumentsDoc, IReadOnlyConversationState state)
     {
         try
         {

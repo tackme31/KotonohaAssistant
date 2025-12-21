@@ -22,7 +22,6 @@ public class ForgetMemory(IPromptRepository promptRepository, IRandomGenerator r
     public override Task<string?> Invoke(JsonDocument argumentsDoc, ConversationState state)
     {
         // 1/10の確率で失敗する。頑張ってもっかい説得してね。
-        var r = new Random();
         if (randomGenerator.NextDouble() < 1d / 10d)
         {
             Logger.LogInformation("記憶の削除に失敗しました");

@@ -1,65 +1,42 @@
-﻿using System.Text.Json;
-using KotonohaAssistant.AI.Extensions;
+﻿using System.ComponentModel;
+using System.Text.Json;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class MakeTimeBasedPromise(IPromptRepository promptRepository, string voiceDirectory, IVoiceClient voiceClient, IAlarmClient alarmClient, ILogger logger) : ToolFunction(logger)
+public class MakeTimeBasedPromise
+    (IPromptRepository promptRepository, string voiceDirectory, IVoiceClient voiceClient, IAlarmClient alarmClient, ILogger logger)
+    : ToolFunction(logger)
 {
+    private record Parameters(
+        [property: Description("設定時間。フォーマットはHH:mm")]
+        string TimeToCall,
+        [property: Description("時間が来て「呼ぶ」ときに言うメッセージ。")]
+        string WhatToSayWhenTheTimeComes);
+
     public override string Description => promptRepository.MakeTimeBasedPromise;
 
-    public override string Parameters => """
-{
-    "type": "object",
-    "properties": {
-        "timeToCall": {
-            "type": "string",
-            "description": "設定時間。フォーマットはHH:mm"
-        },
-        "whatToSayWhenTheTimeComes": {
-            "type": "string",
-            "description": "時間が来て「呼ぶ」ときに言うメッセージ。"
-        }
-    },
-    "required": [ "timeToCall", "whatToSayWhenTheTimeComes" ],
-    "additionalProperties": false
-}
-""";
+    protected override Type ParameterType => typeof(Parameters);
 
-    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+    public override async Task<string?> Invoke(JsonDocument argumentsDoc, IReadOnlyConversationState state)
     {
-        arguments = new Dictionary<string, object>();
-
-        var time = doc.RootElement.GetTimeSpanProperty("timeToCall");
-        if (time is null)
+        var args = Deserialize<Parameters>(argumentsDoc);
+        if (args is null)
         {
-            return false;
+            return null;
         }
 
-        arguments["timeToCall"] = time;
-
-        var messageForCallingWhenTheTimeComes = doc.RootElement.GetStringProperty("whatToSayWhenTheTimeComes");
-        if (messageForCallingWhenTheTimeComes is null)
+        if (!TimeSpan.TryParse(args.TimeToCall, out var time))
         {
-            return false;
+            return null;
         }
 
-        arguments["messageForCallingWhenTheTimeComes"] = messageForCallingWhenTheTimeComes;
-
-        return true;
-    }
-
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
-    {
-        var time = (TimeSpan)arguments["timeToCall"];
-        var message = (string)arguments["messageForCallingWhenTheTimeComes"];
-        var savePath = Path.Combine(voiceDirectory, message);
-
+        var savePath = Path.Combine(voiceDirectory, args.WhatToSayWhenTheTimeComes);
         try
         {
-            await voiceClient.ExportVoiceAsync(state.CurrentSister, Core.Emotion.Calm, message, savePath);
+            await voiceClient.ExportVoiceAsync(state.CurrentSister, Core.Emotion.Calm, args.WhatToSayWhenTheTimeComes, savePath);
             await alarmClient.AddAlarm(time, savePath + ".wav", isRepeated: false);
         }
         catch (Exception ex)

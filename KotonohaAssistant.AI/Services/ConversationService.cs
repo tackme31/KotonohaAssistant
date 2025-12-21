@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using KotonohaAssistant.AI.Functions;
 using KotonohaAssistant.AI.Prompts;
 using KotonohaAssistant.AI.Repositories;
@@ -389,19 +390,19 @@ public class ConversationService
                     continue;
                 }
 
-                if (!function.TryParseArguments(doc, out var arguments))
+                _logger.LogInformation($"{LogPrefix} Executing function: {toolCall.FunctionName}");
+                var result = await function.Invoke(doc, _state);
+                if (result is null)
                 {
-                    _logger.LogWarning($"{LogPrefix} Failed to parse arguments of '{toolCall.FunctionName}'.");
-                    _state.AddToolMessage(toolCall.Id, $"Failed to parse arguments of '{toolCall.FunctionName}'.");
+                    _logger.LogWarning($"{LogPrefix} Failed to invoke function '{toolCall.FunctionName}'.");
+                    _state.AddToolMessage(toolCall.Id, $"Failed to invoke function: '{toolCall.FunctionName}'.");
                     continue;
                 }
 
-                _logger.LogInformation($"{LogPrefix} Executing function: {toolCall.FunctionName}");
-                var result = await function.Invoke(arguments, _state);
                 invokedFunctions.Add(new ConversationFunction
                 {
                     Name = toolCall.FunctionName,
-                    Arguments = arguments,
+                    Arguments = doc.RootElement.EnumerateObject().ToDictionary(obj => obj.Name, obj => (object)obj.Value.GetString()),
                     Result = result
                 });
 

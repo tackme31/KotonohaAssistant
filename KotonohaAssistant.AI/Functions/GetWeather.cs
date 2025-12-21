@@ -1,52 +1,40 @@
-﻿using System.Text;
+﻿using System.ComponentModel;
+using System.Text;
 using System.Text.Json;
-using KotonohaAssistant.AI.Extensions;
 using KotonohaAssistant.AI.Repositories;
 using KotonohaAssistant.AI.Services;
 using KotonohaAssistant.Core.Utils;
 
 namespace KotonohaAssistant.AI.Functions;
 
-public class GetWeather(IPromptRepository promptRepository, IWeatherRepository weatherRepository, (double lat, double lon) location, ILogger logger) : ToolFunction(logger)
+public class GetWeather(IPromptRepository promptRepository, IWeatherRepository weatherRepository, (double lat, double lon) location, ILogger logger)
+    : ToolFunction(logger)
 {
-    public override string Description => promptRepository.GetWeatherDescription;
+    private record Parameters(
+        [property: Description("天気を取得する日にち。形式はyyyy/MM/dd")]
+        string Date);
 
-    public override string Parameters => """
-{
-    "type": "object",
-    "properties": {
-        "date": {
-            "type": "string",
-            "description": "天気を取得する日にち。形式はyyyy/MM/dd"
-        }
-    },
-    "required": [ "date" ],
-    "additionalProperties": false
-}
-""";
+    public override string Description => promptRepository.GetWeatherDescription;
+    protected override Type ParameterType => typeof(Parameters);
 
     private readonly IWeatherRepository _weatherRepository = weatherRepository;
     private readonly (double lat, double lon) _location = location;
 
-    public override bool TryParseArguments(JsonDocument doc, out IDictionary<string, object> arguments)
+    public override async Task<string?> Invoke(JsonDocument argumentsDoc, IReadOnlyConversationState state)
     {
-        arguments = new Dictionary<string, object>();
-
-        var date = doc.RootElement.GetDateTimeProperty("date");
-        if (date is null)
+        var args = Deserialize<Parameters>(argumentsDoc);
+        if (args is null)
         {
-            return false;
+            return null;
         }
-        arguments["date"] = date.Value;
 
-        return true;
-    }
+        if (!DateTime.TryParse(args.Date, out var date))
+        {
+            return null;
+        }
 
-    public override async Task<string> Invoke(IDictionary<string, object> arguments, IReadOnlyConversationState state)
-    {
         try
         {
-            var date = (DateTime)arguments["date"];
             var weathers = await _weatherRepository.GetWeather(date, _location);
             if (weathers is null or [])
             {
